@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  app:
+    container_name: mesh_bot
+    build: ./
+    env_file: .env
+    volumes:
+      - .:/src
+    restart: always

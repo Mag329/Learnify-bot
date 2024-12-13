@@ -61,8 +61,8 @@ notifications_all = InlineKeyboardMarkup(
 
 menu = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="Посещаемость", callback_data="visits")],
-        [InlineKeyboardButton(text="Профиль", callback_data="profile")],
+        [InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits")],
+        [InlineKeyboardButton(text="👤 Профиль", callback_data="profile")],
     ]
 )
 

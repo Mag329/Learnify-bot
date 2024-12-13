@@ -6,6 +6,7 @@ services:
     env_file: .env
     environment:
       - TZ=Europe/Moscow
+      - TMPDIR='/var/tmp'
     volumes:
       - .:/src
     restart: always

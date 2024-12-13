@@ -68,7 +68,7 @@ class Settings(Base):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(
-        db.Integer, db.ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+        db.BigInteger, db.ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
     )
     enable_new_mark_notification = db.Column(db.Boolean, default=True)
     enable_homework_notification = db.Column(db.Boolean, default=True)

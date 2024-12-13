@@ -19,7 +19,11 @@ from app.handlers.user import (
     notifications,
     settings,
     schedule,
+    menu,
     other
+)
+from app.handlers.admin import (
+    panel
 )
 from app.middlewares.middlewares import AllowedUsersMiddleware, CheckUserInDbMiddleware
 from app.utils.database import Base, engine_db, run_migrations
@@ -29,7 +33,7 @@ import app.keyboards.user.keyboards as kb
 
 env = Env()
 
-bot = Bot(
+bot = Bot(   
     token=env.str("TOKEN", default=TOKEN),
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
 )
@@ -50,27 +54,35 @@ async def on_stop():
 async def main():
     logging.info("Starting bot...")
 
-    # logging.info("Run migrations...")
-    # try:
-    #     await run_migrations()
-    # except Exception as e:
-    #     logging.critical(f"Error during migrations: {e}")
-    #     return
+    if env.bool("USE_ALEMBIC", default=False):
+        logging.info("Run migrations...")
+        try:
+            await run_migrations()
+        except Exception as e:
+            logging.critical(f"Error during migrations: {e}")
+            return
 
     async with engine_db.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     logging.info("Setting bot...")
 
-    # dp.startup.register(on_startup)
-    # dp.shutdown.register(on_stop)
+    if not env.bool("DEV", default=False):
+        dp.startup.register(on_startup)
+        dp.shutdown.register(on_stop)
 
+    # User
     dp.include_router(auth.router)
     dp.include_router(marks.router)
     dp.include_router(homeworks.router)
     dp.include_router(notifications.router)
     dp.include_router(settings.router)
     dp.include_router(schedule.router)
+    dp.include_router(menu.router)
+    
+    # Admin
+    dp.include_router(panel.router)
+    
     dp.include_router(other.router)
 
     # dp.message.middleware(AllowedUsersMiddleware())

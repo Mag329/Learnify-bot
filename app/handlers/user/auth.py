@@ -59,7 +59,7 @@ async def cmd_start(message: Message):
             await session.commit()
 
             await message.answer(
-                text=SUCCESSFUL_AUTH.format(profile.profile.first_name, profile.profile.last_name),
+                text=SUCCESSFUL_AUTH.format(profile.profile.first_name, profile.profile.last_name, profile.profile.middle_name),
                 reply_markup=await kb.main(message.from_user.id),
             )
         else:
@@ -177,7 +177,7 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                     await session.commit()
                     
                     await message.answer(
-                        text=SUCCESSFUL_AUTH.format(profile.profile.first_name, profile.profile.last_name),
+                        text=SUCCESSFUL_AUTH.format(profile.profile.first_name, profile.profile.last_name, profile.profile.middle_name),
                         reply_markup=await kb.main(message.from_user.id),
                     )
                     

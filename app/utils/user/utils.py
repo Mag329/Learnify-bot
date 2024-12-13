@@ -1,4 +1,5 @@
 import random
+import phonenumbers
 from datetime import datetime, timedelta
 
 from octodiary.apis import AsyncMobileAPI
@@ -251,6 +252,81 @@ async def get_schedule(user_id, date_object, short=True):
             else:
                 replased_text = "\n    👤 - 🔄 замена"
                 text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i>\n    📍 {event.room_number}{replased_text if event.replaced else ""}\n\n'
+        
+    except Exception as e:
+        text = ERROR_MESSAGE
+        
+    return text
+
+
+
+async def get_visits(user_id, date_object):
+    try:
+        api, user = await get_student(user_id)
+        
+        date_start_week = date_object - timedelta(days=date_object.weekday())
+        date_week_end = date_start_week + timedelta(days=6)
+        
+        visits = await api.get_visits(
+            profile_id=user.profile_id,
+            student_id=user.student_id,
+            contract_id=user.contract_id,
+            from_date=date_start_week,
+            to_date=date_week_end,
+        )
+        
+        text = f'📊 <b>Посещения за неделю ({date_start_week.strftime("%d.%m")}-{date_week_end.strftime("%d.%m")}):</b>\n\n'
+        
+        for visit in reversed(visits.payload):
+            text += f'📅 <b>{visit.date.strftime("%d %B (%a)")}:</b>\n'
+            for visit_in_day in visit.visits:
+                text += f"    🔒 {visit_in_day.in_}\n    ⏱️ {visit_in_day.duration}\n    🔓 {visit_in_day.out}\n\n"    
+        
+    except Exception as e:
+        text = ERROR_MESSAGE
+        
+    return text
+
+
+async def get_profile(user_id):
+    try:
+        api, user = await get_student(user_id)
+        
+        data = await api.get_person_data(
+            person_id=user.person_id,
+            profile_id=user.profile_id
+        )
+        
+        profile = await api.get_family_profile(profile_id=user.profile_id)
+        
+        phone = phonenumbers.parse(f"+7{profile.profile.phone}")
+
+        current_date = datetime.today()
+        age = current_date.year - data.birthdate.year
+        if (current_date.month, current_date.day) < (data.birthdate.month, data.birthdate.day):
+            age -= 1
+            
+        for children in profile.children:
+            if children.last_name == data.lastname and children.first_name == data.firstname and children.middle_name == data.patronymic:
+                school = children.school
+                class_name = children.class_name
+
+        text = "👤 <b>Профиль</b>\n\n"
+        text += f"🆔 <b>ID</b>: <code>{data.id}</code>\n"
+        text += f"📝 <b>Имя:</b> <code>{data.firstname}</code>\n"
+        text += f"📜 <b>Фамилия:</b> <code>{data.lastname}</code>\n"
+        text += f"🧬 <b>Отчество:</b> <code>{data.patronymic}</code>\n\n"
+
+        text += f"✉️ <b>Почта</b>: <code>{profile.profile.email}</code>\n"
+        text += f"📱 <b>Телефон</b>: <code>{phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.INTERNATIONAL)}</code>\n"
+        text += f"🪪 <b>СНИЛС</b>: <code>{data.snils[:3]}-{data.snils[3:6]}-{data.snils[6:9]}-{data.snils[9:]}</code>\n\n"
+
+        text += f"🎂 <b>Дата рождения</b>: <code>{data.birthdate.strftime('%d %B %Y')}</code>\n"
+        text += f"🔢 <b>Возраст</b>: <code>{age}</code>\n\n"
+        
+        text += f"🏫 <b>Школа</b>: <code>{school.short_name}</code>\n"
+        text += f"🧑‍💼 <b>Директор</b>: <code>{school.principal}</code>\n"
+        text += f"📚 <b>Класс</b>: <code>{class_name}</code>\n\n"
         
     except Exception as e:
         text = ERROR_MESSAGE

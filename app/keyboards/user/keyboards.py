@@ -70,7 +70,7 @@ visits = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(text="⬅️", callback_data="visits_left"),
-            InlineKeyboardButton(text="📅", callback_data="visits_today"),
+            InlineKeyboardButton(text="📅", callback_data="visits_this_week"),
             InlineKeyboardButton(text="➡️", callback_data="visits_right"),
         ],
         [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
@@ -91,27 +91,24 @@ delete_message = InlineKeyboardMarkup(
 
 
 async def main(user_id):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
-        settings = result.scalar_one_or_none()
+    keyboard = ReplyKeyboardBuilder()
 
-        keyboard = ReplyKeyboardBuilder()
+    keyboard.row(
+        KeyboardButton(text="🔔 Уведомления"),
+        KeyboardButton(text="📅 Расписание"),
+    )
+    keyboard.row(
+        KeyboardButton(text="🎓 Оценки"),
+        KeyboardButton(text="📚 Домашние задания"),
+    )
+        
+    keyboard.row(
+            KeyboardButton(text="📋 Меню"),
+    )
+    
+    keyboard.row(KeyboardButton(text="⚙️ Настройки"))
 
-        keyboard.row(
-            KeyboardButton(text="🔔 Уведомления"),
-            KeyboardButton(text="📅 Расписание"),
-        )
-        keyboard.row(
-            KeyboardButton(text="🎓 Оценки"),
-            KeyboardButton(text="📚 Домашние задания"),
-        )
-        if settings and settings.experimental_features:
-            keyboard.row(
-                KeyboardButton(text="📋 Меню"),
-            )
-        keyboard.row(KeyboardButton(text="⚙️ Настройки"))
-
-        return keyboard.as_markup(resize_keyboard=True)
+    return keyboard.as_markup(resize_keyboard=True)
 
 
 async def user_settings(user_id):

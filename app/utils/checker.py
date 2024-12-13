@@ -14,5 +14,8 @@ async def new_notifications_checker(bot: Bot):
         for user in users:
             result = await get_notifications(user.user_id, is_checker=True)
             if result:
-                chat = await bot.get_chat(user.user_id)
-                await bot.send_message(chat_id=chat.id, text=result, reply_markup=kb.delete_message)
+                try:
+                    chat = await bot.get_chat(user.user_id)
+                    await bot.send_message(chat_id=chat.id, text=result, reply_markup=kb.delete_message)
+                except Exception as e:
+                    continue

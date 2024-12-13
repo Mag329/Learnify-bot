@@ -4,6 +4,8 @@ services:
     container_name: mesh_bot
     build: ./
     env_file: .env
+    environment:
+      - TZ=Europe/Moscow
     volumes:
       - .:/src
     restart: always

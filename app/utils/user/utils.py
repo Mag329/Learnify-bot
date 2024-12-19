@@ -87,7 +87,8 @@ async def get_marks(user_id, date_object):
         
         
         for mark in marks.payload:
-            text += f'{await get_emoji_subject(mark.subject_name)} <b>{mark.subject_name}:</b>\n    <i><code>{await get_mark_with_weight(mark.value, mark.weight)} - {mark.control_form_name}</code></i>\n\n'
+            mark_comment = f"\n<blockquote>{mark.comment}</blockquote>" if mark.comment_exists else ""
+            text += f'{await get_emoji_subject(mark.subject_name)} <b>{mark.subject_name}:</b>\n    <i><code>{await get_mark_with_weight(mark.value, mark.weight)} - {mark.control_form_name}</code></i>{mark_comment}\n\n'
         
         if len(marks.payload) == 0:
             text = f'❌ <b>У вас нет оценок </b>{date_object.strftime("%d %B (%a)")}'
@@ -121,6 +122,38 @@ async def get_homework(user_id, date_object):
         text = ERROR_MESSAGE
 
     return text
+
+
+# async def get_homework_by_subject(user_id, subject_id, date_object):
+#     # try:
+#     if 1 > 0:
+#         api, user = await get_student(user_id)
+        
+#         lesson_info = await api.get_lesson_schedule_item(
+#             profile_id=user.profile_id,
+#             student_id=user.student_id,
+#             lesson_id=int(subject_id),
+#         )
+        
+#         text = f"{await get_emoji_subject(lesson_info.subject_name)} <b>{lesson_info.subject_name}</b> {lesson_info.date.strftime('%d %b')}\n\n"
+        
+#         text += f"    <b>Домашние задание:</b>\n"
+        
+#         materials = []
+        
+#         for homework in lesson_info.lesson_homeworks:
+#             text += f"        - {homework.homework}\n"
+#             materials.append(*[[[url.url for url in item.urls if url.url_type == 'launch'] for item in material.items] for material in homework.materials])
+            
+#         text += f"\n    <b>Для выполнения:<b>"
+#         for material in materials:
+#             text += f"    - {material}"
+            
+          
+#     # except Exception as e:
+#     #     text = ERROR_MESSAGE
+        
+#     return text
 
 
 

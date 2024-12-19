@@ -9,6 +9,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 from datetime import datetime
 
 from app.utils.database import AsyncSessionLocal, db, Settings
+from app.utils.user.utils import get_student, get_emoji_subject
 
 
 start_command = InlineKeyboardMarkup(
@@ -24,6 +25,9 @@ homework = InlineKeyboardMarkup(
             InlineKeyboardButton(text="📅", callback_data="homework_today"),
             InlineKeyboardButton(text="➡️", callback_data="homework_right"),
         ],
+        # [
+        #     InlineKeyboardButton(text="Выбрать предмет", callback_data="choose_subject_homework"),
+        # ]
     ]
 )
 
@@ -146,3 +150,23 @@ async def user_settings(user_id):
         )
 
         return keyboard.as_markup()
+
+
+# async def subjects_homework(user_id):
+#     api, user = await get_student(user_id)
+    
+#     subjects = await api.get_subjects(
+#         student_id=user.student_id,
+#         profile_id=user.profile_id
+#     )
+    
+#     keyboard = InlineKeyboardBuilder()
+    
+#     for subject in subjects.payload:
+#         keyboard.row(InlineKeyboardButton(text=f"{await get_emoji_subject(subject.subject_name)} {subject.subject_name}", callback_data=f'select_subject_homework_{subject.subject_id}'))
+    
+#     keyboard = keyboard.adjust(2)
+    
+#     keyboard.row(InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_homework"))
+    
+#     return keyboard.as_markup()

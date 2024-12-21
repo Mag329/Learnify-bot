@@ -11,13 +11,12 @@ import logging
 import subprocess
 from envparse import Env
 
-from config import PG_USER, PG_PASSWORD, PG_HOST, PG_PORT, PG_DB
-
 
 env = Env()
+env.read_envfile()
 
 Base = declarative_base()
-DATABASE_URL = f'postgresql+asyncpg://{env.str("PG_USER", default=PG_USER)}:{env.str("PG_PASSWORD", default=PG_PASSWORD)}@{env.str("PG_HOST", default=PG_HOST)}:{env.str("PG_PORT", default=PG_PORT)}/{env.str("PG_DB", default=PG_DB)}'
+DATABASE_URL = f'postgresql+asyncpg://{env.str("PG_USER")}:{env.str("PG_PASSWORD")}@{env.str("PG_HOST")}:{env.str("PG_PORT")}/{env.str("PG_DB")}'
 engine_db = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = sessionmaker(
     bind=engine_db, class_=AsyncSession, expire_on_commit=False

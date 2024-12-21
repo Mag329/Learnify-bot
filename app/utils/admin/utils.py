@@ -2,13 +2,18 @@ from aiogram import types
 from functools import wraps
 
 from app.utils.database import AsyncSessionLocal, db, User
-from config import ADMIN_USERS, ERROR_MESSAGE
+from config import ERROR_MESSAGE
+from envparse import Env
+
+
+env = Env()
+env.read_envfile()
 
 
 def admin_required(func):
     @wraps(func)
     async def wrapper(message: types.Message, *args, **kwargs):
-        if message.from_user.id in ADMIN_USERS:
+        if message.from_user.id in list(map(int, env.str("ADMIN_USERS").split(","))):
             return await func(message, *args, **kwargs)
         else:
             return None

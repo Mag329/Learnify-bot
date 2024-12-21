@@ -33,9 +33,10 @@ import app.keyboards.user.keyboards as kb
 
 
 env = Env()
+env.read_envfile()
 
 bot = Bot(   
-    token=env.str("TOKEN", default=TOKEN),
+    token=env.str("TOKEN"),
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
 )
 dp = Dispatcher(storage=MemoryStorage())
@@ -45,11 +46,11 @@ scheduler = AsyncIOScheduler()
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
 async def on_startup():
-    await bot.send_message(OWNER_ID, "Бот запущен", reply_markup=kb.delete_message)
+    await bot.send_message(env.str("OWNER_ID"), "Бот запущен", reply_markup=kb.delete_message)
 
 
 async def on_stop():
-    await bot.send_message(OWNER_ID, "Бот остановлен", reply_markup=kb.delete_message)
+    await bot.send_message(env.str("OWNER_ID"), "Бот остановлен", reply_markup=kb.delete_message)
 
 
 async def main():

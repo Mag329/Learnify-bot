@@ -23,3 +23,11 @@ class MarkState(StatesGroup):
 
 class VisitState(StatesGroup):
     date = State()
+
+
+class ResultsState(StatesGroup):
+    quarter = State()
+    data = State()
+    subject = State()
+    line = State()
+    text = State()

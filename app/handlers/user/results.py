@@ -27,7 +27,7 @@ async def results_handler(callback: CallbackQuery, state: FSMContext):
     
     quarter = data.get('quarter') if data.get('quarter') else BASE_QUARTER
     if not data.get('quarter'):
-        await state.update_data(quarter=1)
+        await state.update_data(quarter=2)
     try:
         data = await get_results(callback.from_user.id, quarter)
     except:

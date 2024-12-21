@@ -67,6 +67,7 @@ menu = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits")],
         [InlineKeyboardButton(text="👤 Профиль", callback_data="profile")],
+        [InlineKeyboardButton(text="🏆 Итоги", callback_data="results")],
     ]
 )
 
@@ -77,6 +78,50 @@ visits = InlineKeyboardMarkup(
             InlineKeyboardButton(text="📅", callback_data="visits_this_week"),
             InlineKeyboardButton(text="➡️", callback_data="visits_right"),
         ],
+        [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
+    ]
+)
+
+results = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="⬅️", callback_data="results_left"),
+            InlineKeyboardButton(text="➡️", callback_data="results_right"),
+        ],
+        [InlineKeyboardButton(text="🏆 Общие итоги", callback_data="overall_results")],
+        [InlineKeyboardButton(text="📅 Выбрать четверть", callback_data="choose_quarter")],
+        [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
+    ]
+)
+
+overall_results_with_next_line = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="⬇️", callback_data="next_line_results")],
+        [InlineKeyboardButton(text="🏆 Итоги по предметам", callback_data="subjects_results")],
+        [InlineKeyboardButton(text="📅 Выбрать четверть", callback_data="choose_quarter")],
+        [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
+    ]
+)
+
+overall_results = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🏆 Итоги по предметам", callback_data="subjects_results")],
+        [InlineKeyboardButton(text="📅 Выбрать четверть", callback_data="choose_quarter")],
+        [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
+    ]
+)
+
+quarters = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="1️⃣", callback_data="choose_quarter_1"), InlineKeyboardButton(text="2️⃣", callback_data="choose_quarter_2")],
+        # [InlineKeyboardButton(text="3️⃣", callback_data="choose_quarter_3"), InlineKeyboardButton(text="4️⃣", callback_data="choose_quarter_4")],
+        [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
+    ]
+)
+
+get_results = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🏆 Подвести итоги", callback_data="results")],
         [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
     ]
 )

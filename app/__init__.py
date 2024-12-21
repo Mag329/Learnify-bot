@@ -20,6 +20,7 @@ from app.handlers.user import (
     settings,
     schedule,
     menu,
+    results,
     other
 )
 from app.handlers.admin import (
@@ -79,6 +80,7 @@ async def main():
     dp.include_router(settings.router)
     dp.include_router(schedule.router)
     dp.include_router(menu.router)
+    dp.include_router(results.router)
     
     # Admin
     dp.include_router(panel.router)

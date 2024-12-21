@@ -2,20 +2,22 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from typing import Callable, Dict, Any, Awaitable
 
-from config import ALLOWED_USERS, START_MESSAGE
+from config import START_MESSAGE
 import app.keyboards.user.keyboards as kb
 from app.utils.database import AsyncSessionLocal, db, User
 from app.states.user.states import AuthState
+from envparse import env
 
 
+env.read_envfile()
         
-
+        
 class AllowedUsersMiddleware(BaseMiddleware):
     async def __call__(self,
                         handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
                         event: TelegramObject,
                         data: Dict[str, Any]):
-        if event.from_user.id in ALLOWED_USERS:
+        if event.from_user.id in list(map(int, env.str("ALLOWED_USERS").split(","))):
             return await handler(event, data)
         
         

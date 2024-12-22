@@ -426,7 +426,7 @@ async def get_results(user_id, quarter):
                 subject_info['marks_count'] = dict(Counter(marks))
                 marks_by_grade.update(marks)
                 
-                subject_info['mark'] = subject_marks_info.periods[quater].value
+                subject_info['mark'] = subject_marks_info.periods[quarter].value
                 
                 for mark in marks:
                     global_marks.append(mark)

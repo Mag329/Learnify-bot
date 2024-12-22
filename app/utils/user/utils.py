@@ -585,7 +585,7 @@ async def results_format(data, state, subject=None, quarter=None):
         text = f"<b>Общие результаты</b> ({quarter} четверть)\n"
         text += f'    📝 <i>Общее количество оценок:</i> <span class="tg-spoiler">{data["total_grades"]}</span>\n'
         text += f'    🏅 <i>Самая частая оценка:</i> <span class="tg-spoiler">{data["frequent_grade_overall"]}</span>\n'
-        text += f'    🌟 <i>Больше всего предметов:</i> <span class="tg-spoiler">{await get_emoji_subject(data["most_resultive_subject"]["name"])} {data["most_resultive_subject"]["name"]} - {data["most_resultive_subject"]["marks_count"]}</span>\n\n'
+        text += f'    🌟 <i>Больше всего оценок:</i> <span class="tg-spoiler">{await get_emoji_subject(data["most_resultive_subject"]["name"])} {data["most_resultive_subject"]["name"]} - {data["most_resultive_subject"]["marks_count"]}</span>\n\n'
 
         text += '    📔 <b>Оценки:</b>\n'
         for grade, count in sorted(data['grades_count'].items(), reverse=True):

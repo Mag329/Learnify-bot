@@ -436,7 +436,7 @@ async def get_results(user_id, quarter):
                     max_marks_subject_name = subject.subject_name
                     max_marks_subject_amount = len(marks)
 
-            subject_data.append(subject_info)
+                subject_data.append(subject_info)
 
         # Получение информации о четверти
         periods_schedules = await api.get_periods_schedules(

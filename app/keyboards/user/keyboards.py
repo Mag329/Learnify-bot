@@ -18,6 +18,12 @@ start_command = InlineKeyboardMarkup(
     ]
 )
 
+reauth = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🚪 Выйти из аккаунта", callback_data="exit_from_account")]
+    ]
+)
+
 homework = InlineKeyboardMarkup(
     inline_keyboard=[
         [

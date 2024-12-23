@@ -8,8 +8,9 @@ from datetime import datetime, timedelta
 
 from octodiary.apis import AsyncMobileAPI
 from octodiary.urls import Systems
+from octodiary.exceptions import APIError
 
-from config import START_MESSAGE, SUCCESSFUL_AUTH
+from config import START_MESSAGE, SUCCESSFUL_AUTH, ERROR_MESSAGE, ERROR_403_MESSAGE
 import app.keyboards.user.keyboards as kb
 from app.utils.database import AsyncSessionLocal, db, User, Settings
 from app.utils.user.utils import get_student
@@ -45,16 +46,22 @@ async def cmd_start(message: Message):
             
             # user.token = new_token
             # await session.commit()
-                    
-            profile_id = (await api.get_users_profile_info())[0].id
+            try:
+                profile_id = (await api.get_users_profile_info())[0].id
 
-            profile = await api.get_family_profile(profile_id=profile_id)
-            
-            user.profile_id = profile_id
-            user.role = profile.profile.type
-            user.person_id = profile.children[0].contingent_guid
-            user.student_id = profile.children[0].id
-            user.contract_id = profile.children[0].contract_id
+                profile = await api.get_family_profile(profile_id=profile_id)
+                
+                user.profile_id = profile_id
+                user.role = profile.profile.type
+                user.person_id = profile.children[0].contingent_guid
+                user.student_id = profile.children[0].id
+                user.contract_id = profile.children[0].contract_id
+            except APIError as e:
+                if e.status_code == 403:
+                    await message.answer(
+                        text=ERROR_403_MESSAGE,
+                        reply_markup=kb.reauth,
+                    )
             
             await session.commit()
 

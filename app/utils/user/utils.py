@@ -426,7 +426,7 @@ async def get_results(user_id, quarter):
                 subject_info['marks_count'] = dict(Counter(marks))
                 marks_by_grade.update(marks)
                 
-                subject_info['mark'] = subject_marks_info.periods[1].value
+                subject_info['mark'] = subject_marks_info.periods[quarter].value
                 
                 for mark in marks:
                     global_marks.append(mark)
@@ -468,7 +468,7 @@ async def get_results(user_id, quarter):
             student_id=user.student_id,
             profile_id=user.profile_id,
             from_date=quarters[quarter][0],
-            to_date=quarters[quarter][1],
+            to_date=date.today(),
         )
 
         dates = [item.date for item in homeworks_short.payload]
@@ -598,8 +598,8 @@ async def results_format(data, state, subject=None, quarter=None):
         
         text += f'    🕒 <i>Самый долгий день:</i> <span class="tg-spoiler">{data["longest_day"]["date"].strftime("%d %B")} - {await minutes_to_time(data["longest_day"]["duration"])}</span>\n'
         text += f'    📅 <i>Самый короткий день:</i> <span class="tg-spoiler">{data["shortest_day"]["date"].strftime("%d %B")} - {await minutes_to_time(data["shortest_day"]["duration"])}</span>\n'
-        text += f'    ⏰ <i>Самый ранний заход:</i> <span class="tg-spoiler">{data["earliest_in"]["time"]}</span>\n'
-        text += f'    ⏳ <i>Самый поздний уход:</i> <span class="tg-spoiler">{data["latest_out"]["time"]}</span>\n'
+        text += f'    ⏰ <i>Самый ранний заход:</i> <span class="tg-spoiler">{data["earliest_in"]["date"].strftime("%d %B")} - {data["earliest_in"]["time"]}</span>\n'
+        text += f'    ⏳ <i>Самый поздний уход:</i> <span class="tg-spoiler">{data["latest_out"]["date"].strftime("%d %B")} - {data["latest_out"]["time"]}</span>\n'
 
         
     return text 

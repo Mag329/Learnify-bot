@@ -23,7 +23,9 @@ async def marks_handler(message: Message, state: FSMContext):
     await state.set_state(MarkState.date)
     await state.update_data(date=date)
     
-    await message.answer(await get_marks(message.from_user.id, date),reply_markup=kb.mark)
+    text = await get_marks(message.from_user.id, date)
+    if text:
+        await message.answer(text,reply_markup=kb.mark)
     
     
 
@@ -42,10 +44,12 @@ async def mark_left_callback_handler(callback: CallbackQuery, state: FSMContext)
 
     await state.update_data(date=date)
 
-    await callback.message.edit_text(
-        await get_marks(callback.from_user.id, date),
-        reply_markup=kb.mark,
-    )
+    text = await get_marks(callback.from_user.id, date)
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.mark,
+        )
 
 
 @router.callback_query(F.data == "mark_right")
@@ -63,15 +67,12 @@ async def mark_right_callback_handler(callback: CallbackQuery, state: FSMContext
 
     await state.update_data(date=date)
 
-    try:
-        text = await get_marks(callback.from_user.id, date)
-    except Exception as e:
-        text = ERROR_MESSAGE
-    
-    await callback.message.edit_text(
-        text,
-        reply_markup=kb.mark,
-    )
+    text = await get_marks(callback.from_user.id, date)
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.mark,
+        )
 
 
 @router.callback_query(F.data == "mark_today")
@@ -81,7 +82,9 @@ async def mark_today_callback_handler(callback: CallbackQuery, state: FSMContext
     await state.set_state(MarkState.date)
     await state.update_data(date=datetime.now())
 
-    await callback.message.edit_text(
-        await get_marks(callback.from_user.id, datetime.now()),
-        reply_markup=kb.mark,
-    )
+    text = await get_marks(callback.from_user.id, datetime.now())
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.mark,
+        )

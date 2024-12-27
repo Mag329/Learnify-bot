@@ -20,9 +20,9 @@ user_tasks = {}
 
 async def update_detailed_schedule(message: Message, user_id: int, date: datetime):
     detailed_schedule = await get_schedule(user_id, date, False)
-    
-    if message.html_text != detailed_schedule:
-        await message.edit_text(detailed_schedule, reply_markup=kb.schedule)
+    if detailed_schedule:
+        if message.html_text != detailed_schedule:
+            await message.edit_text(detailed_schedule, reply_markup=kb.schedule)
 
 
 async def cancel_previous_task(user_id: int):
@@ -37,16 +37,18 @@ async def schedule_handler(message: Message, state: FSMContext):
     await state.set_state(ScheduleState.date)
     await state.update_data(date=datetime.now())
 
-    schedule_message = await message.answer(
-        await get_schedule(message.from_user.id, datetime.now()),
-        reply_markup=kb.schedule,
-    )
+    text = await get_schedule(message.from_user.id, datetime.now())
+    if text:
+        schedule_message = await message.answer(
+            text,
+            reply_markup=kb.schedule,
+        )
 
-    # Отменяем предыдущую задачу и создаём новую
-    await cancel_previous_task(message.from_user.id)
-    user_tasks[message.from_user.id] = asyncio.create_task(
-        update_detailed_schedule(schedule_message, message.from_user.id, datetime.now())
-    )
+        # Отменяем предыдущую задачу и создаём новую
+        await cancel_previous_task(message.from_user.id)
+        user_tasks[message.from_user.id] = asyncio.create_task(
+            update_detailed_schedule(schedule_message, message.from_user.id, datetime.now())
+        )
 
 
 @router.callback_query(F.data == "schedule_left")
@@ -64,16 +66,18 @@ async def schedule_left_callback_handler(callback: CallbackQuery, state: FSMCont
 
     await state.update_data(date=date)
 
-    await callback.message.edit_text(
-        await get_schedule(callback.from_user.id, date),
-        reply_markup=kb.schedule,
-    )
+    text = await get_schedule(callback.from_user.id, date)
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.schedule,
+        )
 
-    # Отменяем предыдущую задачу и создаём новую
-    await cancel_previous_task(callback.from_user.id)
-    user_tasks[callback.from_user.id] = asyncio.create_task(
-        update_detailed_schedule(callback.message, callback.from_user.id, date)
-    )
+        # Отменяем предыдущую задачу и создаём новую
+        await cancel_previous_task(callback.from_user.id)
+        user_tasks[callback.from_user.id] = asyncio.create_task(
+            update_detailed_schedule(callback.message, callback.from_user.id, date)
+        )
 
 
 @router.callback_query(F.data == "schedule_right")
@@ -91,16 +95,18 @@ async def schedule_right_callback_handler(callback: CallbackQuery, state: FSMCon
 
     await state.update_data(date=date)
 
-    await callback.message.edit_text(
-        await get_schedule(callback.from_user.id, date),
-        reply_markup=kb.schedule,
-    )
+    text = await get_schedule(callback.from_user.id, date)
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.schedule,
+        )
 
-    # Отменяем предыдущую задачу и создаём новую
-    await cancel_previous_task(callback.from_user.id)
-    user_tasks[callback.from_user.id] = asyncio.create_task(
-        update_detailed_schedule(callback.message, callback.from_user.id, date)
-    )
+        # Отменяем предыдущую задачу и создаём новую
+        await cancel_previous_task(callback.from_user.id)
+        user_tasks[callback.from_user.id] = asyncio.create_task(
+            update_detailed_schedule(callback.message, callback.from_user.id, date)
+        )
 
 
 @router.callback_query(F.data == "schedule_today")
@@ -110,13 +116,15 @@ async def schedule_today_callback_handler(callback: CallbackQuery, state: FSMCon
     await state.set_state(ScheduleState.date)
     await state.update_data(date=datetime.now())
 
-    await callback.message.edit_text(
-        await get_schedule(callback.from_user.id, datetime.now()),
-        reply_markup=kb.schedule,
-    )
+    text = await get_schedule(callback.from_user.id, datetime.now())
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.schedule,
+        )
 
-    # Отменяем предыдущую задачу и создаём новую
-    await cancel_previous_task(callback.from_user.id)
-    user_tasks[callback.from_user.id] = asyncio.create_task(
-        update_detailed_schedule(callback.message, callback.from_user.id, datetime.now())
-    )
+        # Отменяем предыдущую задачу и создаём новую
+        await cancel_previous_task(callback.from_user.id)
+        user_tasks[callback.from_user.id] = asyncio.create_task(
+            update_detailed_schedule(callback.message, callback.from_user.id, datetime.now())
+        )

@@ -12,7 +12,6 @@ from app.utils.database import AsyncSessionLocal, db, User, Settings
 from app.utils.user.utils import get_homework
 from app.states.user.states import HomeworkState
 
-
 router = Router()
 
 
@@ -23,11 +22,13 @@ async def howeworks_handler(message: Message, state: FSMContext):
     
     await state.set_state(HomeworkState.date)
     await state.update_data(date=date)
-
-    await message.answer(
-        await get_homework(message.from_user.id, date),
-        reply_markup=kb.homework,
-    )
+    text = await get_homework(message.from_user.id, date)
+    
+    if text:
+        await message.answer(
+            text,
+            reply_markup=kb.homework,
+        )
     
     
 @router.callback_query(F.data == "homework_left")
@@ -44,11 +45,13 @@ async def homework_left_callback_handler(callback: CallbackQuery, state: FSMCont
         date = datetime.now()
 
     await state.update_data(date=date)
-
-    await callback.message.edit_text(
-        await get_homework(callback.from_user.id, date),
-        reply_markup=kb.homework,
-    )
+    
+    text = await get_homework(callback.from_user.id, date)
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.homework,
+        )
 
 
 @router.callback_query(F.data == "homework_right")
@@ -66,10 +69,12 @@ async def homework_right_callback_handler(callback: CallbackQuery, state: FSMCon
 
     await state.update_data(date=date)
 
-    await callback.message.edit_text(
-        await get_homework(callback.from_user.id, date),
-        reply_markup=kb.homework,
-    )
+    text = await get_homework(callback.from_user.id, date)
+    if text:    
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.homework,
+        )
 
 
 @router.callback_query(F.data == "homework_today")
@@ -79,10 +84,12 @@ async def homework_today_callback_handler(callback: CallbackQuery, state: FSMCon
     await state.set_state(HomeworkState.date)
     await state.update_data(date=datetime.now())
 
-    await callback.message.edit_text(
-        await get_homework(callback.from_user.id, datetime.now()),
-        reply_markup=kb.homework,
-    )
+    text = await get_homework(callback.from_user.id, datetime.now())
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.homework,
+        )
 
 
 # @router.callback_query(F.data == "choose_subject_homework")

@@ -28,25 +28,21 @@ async def results_handler(callback: CallbackQuery, state: FSMContext):
     quarter = data.get('quarter') if data.get('quarter') else BASE_QUARTER
     if not data.get('quarter'):
         await state.update_data(quarter=2)
-    try:
-        data = await get_results(callback.from_user.id, quarter)
-    except:
-        await callback.message.edit_text(
-            text=ERROR_MESSAGE
-        )
-        return
+        
+    data = await get_results(callback.from_user.id, quarter)
     
-    await state.set_state(ResultsState.data)
-    await state.update_data(data=data)
-    await state.set_state(ResultsState.subject)
-    await state.update_data(subject=0)
-    
-    text = await results_format(data, 'subjects', 0, quarter)
-    
-    await callback.message.edit_text(
-        text=text,
-        reply_markup=kb.results,
-    )
+    if data:
+        await state.set_state(ResultsState.data)
+        await state.update_data(data=data)
+        await state.set_state(ResultsState.subject)
+        await state.update_data(subject=0)
+        
+        text = await results_format(data, 'subjects', 0, quarter)
+        if text:
+            await callback.message.edit_text(
+                text=text,
+                reply_markup=kb.results,
+            )
     
 
 @router.callback_query(F.data == "results_right")
@@ -65,11 +61,11 @@ async def results_right_handler(callback: CallbackQuery, state: FSMContext):
         await state.update_data(subject=subject)
         
         text = await results_format(data, 'subjects', subject, quarter=data['quarter'])
-        
-        await callback.message.edit_text(
-            text=text,
-            reply_markup=kb.results,
-        )
+        if text:
+            await callback.message.edit_text(
+                text=text,
+                reply_markup=kb.results,
+            )
         
         
 @router.callback_query(F.data == "results_left")
@@ -88,11 +84,11 @@ async def results_left_handler(callback: CallbackQuery, state: FSMContext):
         await state.update_data(subject=subject)
         
         text = await results_format(data, 'subjects', subject, quarter=data['quarter'])
-        
-        await callback.message.edit_text(
-            text=text,
-            reply_markup=kb.results,
-        )
+        if text:
+            await callback.message.edit_text(
+                text=text,
+                reply_markup=kb.results,
+            )
         
         
 @router.callback_query(F.data == "subjects_results")
@@ -104,11 +100,11 @@ async def subjects_results_handler(callback: CallbackQuery, state: FSMContext):
         await state.update_data(subject=0)
         
         text = await results_format(data, 'subjects', 0)
-        
-        await callback.message.edit_text(
-            text=text,
-            reply_markup=kb.results,
-        )
+        if text:
+            await callback.message.edit_text(
+                text=text,
+                reply_markup=kb.results,
+            )
         
         
 @router.callback_query(F.data == "overall_results")
@@ -118,17 +114,18 @@ async def overall_results_handler(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     if data is not []:
         text = await results_format(data, 'overall_results', quarter=data['quarter'])
-        text = text.split('\n')
-        
-        await state.set_state(ResultsState.line)
-        await state.update_data(line=1)
-        await state.set_state(ResultsState.text)
-        await state.update_data(text=text)
-        
-        await callback.message.edit_text(
-            text=text[0],
-            reply_markup=kb.overall_results_with_next_line,
-        )
+        if text:
+            text = text.split('\n')
+            
+            await state.set_state(ResultsState.line)
+            await state.update_data(line=1)
+            await state.set_state(ResultsState.text)
+            await state.update_data(text=text)
+            
+            await callback.message.edit_text(
+                text=text[0],
+                reply_markup=kb.overall_results_with_next_line,
+            )
         
         
 @router.callback_query(F.data == "next_line_results")

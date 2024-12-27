@@ -28,10 +28,12 @@ async def visits_handler(callback: CallbackQuery, state: FSMContext):
     await state.set_state(VisitState.date)
     await state.update_data(date=datetime.now())
 
-    await callback.message.edit_text(
-        text=await get_visits(callback.from_user.id, datetime.now()),
-        reply_markup=kb.visits,
-    )
+    text = await get_visits(callback.from_user.id, datetime.now())
+    if text:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=kb.visits,
+        )
 
 
 @router.callback_query(F.data == "visits_left")
@@ -49,10 +51,12 @@ async def visits_left_handler(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(date=date)
 
-    await callback.message.edit_text(
-        text=await get_visits(callback.from_user.id, date),
-        reply_markup=kb.visits,
-    )
+    text = await get_visits(callback.from_user.id, date)
+    if text:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=kb.visits,
+        )
 
 
 @router.callback_query(F.data == "visits_right")
@@ -70,10 +74,12 @@ async def visits_left_handler(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(date=date)
 
-    await callback.message.edit_text(
-        text=await get_visits(callback.from_user.id, date),
-        reply_markup=kb.visits,
-    )
+    text = await get_visits(callback.from_user.id, date)
+    if text:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=kb.visits,
+        )
 
 
 @router.callback_query(F.data == "visits_this_week")
@@ -83,20 +89,24 @@ async def visits_today_callback_handler(callback: CallbackQuery, state: FSMConte
     await state.set_state(VisitState.date)
     await state.update_data(date=datetime.now())
 
-    await callback.message.edit_text(
-        await get_visits(callback.from_user.id, datetime.now()),
-        reply_markup=kb.visits,
-    )
+    text = await get_visits(callback.from_user.id, datetime.now())
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.visits,
+        )
 
 
 @router.callback_query(F.data == "profile")
 async def profile_callback_handler(callback: CallbackQuery):
     await callback.answer()
 
-    await callback.message.edit_text(
-        text=await get_profile(callback.from_user.id),
-        reply_markup=kb.back_to_menu,
-    )
+    text = await get_profile(callback.from_user.id)
+    if text:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=kb.back_to_menu,
+        )
 
 
 @router.callback_query(F.data == "back_to_menu")

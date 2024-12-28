@@ -73,6 +73,7 @@ menu = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits")],
         [InlineKeyboardButton(text="👤 Профиль", callback_data="profile")],
+        [InlineKeyboardButton(text="📈 Рейтинг", callback_data="rating_rank_class")],
         [InlineKeyboardButton(text="🏆 Итоги", callback_data="results")],
     ]
 )

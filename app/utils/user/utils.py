@@ -328,6 +328,12 @@ async def get_profile(user_id):
     
     profile = await api.get_family_profile(profile_id=user.profile_id)
     
+    balance = await api.get_status(
+        profile_id=user.profile_id,
+        contract_ids=user.contract_id
+    )
+    balance = balance.students[0].balance / 100
+    
     phone = phonenumbers.parse(f"+7{profile.profile.phone}")
 
     current_date = datetime.today()
@@ -341,21 +347,23 @@ async def get_profile(user_id):
             class_name = children.class_name
 
     text = "👤 <b>Профиль</b>\n\n"
-    text += f"🆔 <b>ID</b>: <code>{data.id}</code>\n"
+    text += f"🆔 <b>ID:</b> <code>{data.id}</code>\n"
     text += f"📝 <b>Имя:</b> <code>{data.firstname}</code>\n"
     text += f"📜 <b>Фамилия:</b> <code>{data.lastname}</code>\n"
     text += f"🧬 <b>Отчество:</b> <code>{data.patronymic}</code>\n\n"
 
-    text += f"✉️ <b>Почта</b>: <code>{profile.profile.email}</code>\n"
-    text += f"📱 <b>Телефон</b>: <code>{phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.INTERNATIONAL)}</code>\n"
-    text += f"🪪 <b>СНИЛС</b>: <code>{data.snils[:3]}-{data.snils[3:6]}-{data.snils[6:9]}-{data.snils[9:]}</code>\n\n"
+    text += f"✉️ <b>Почта:</b> <code>{profile.profile.email}</code>\n"
+    text += f"📱 <b>Телефон:</b> <code>{phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.INTERNATIONAL)}</code>\n"
+    text += f"🪪 <b>СНИЛС:</b> <code>{data.snils[:3]}-{data.snils[3:6]}-{data.snils[6:9]}-{data.snils[9:]}</code>\n\n"
     
-    text += f"🎂 <b>Дата рождения</b>: <code>{data.birthdate.strftime('%d %B %Y')}</code>\n"
-    text += f"🔢 <b>Возраст</b>: <code>{age}</code>\n\n"
+    text += f"💰 <b>Баланс:</b> <code>{balance} ₽</code>\n\n"
     
-    text += f"🏫 <b>Школа</b>: <code>{school.short_name}</code>\n"
-    text += f"🧑‍💼 <b>Директор</b>: <code>{school.principal}</code>\n"
-    text += f"📚 <b>Класс</b>: <code>{class_name}</code>\n\n"
+    text += f"🎂 <b>Дата рождения:</b> <code>{data.birthdate.strftime('%d %B %Y')}</code>\n"
+    text += f"🔢 <b>Возраст:</b> <code>{age}</code>\n\n"
+    
+    text += f"🏫 <b>Школа:</b> <code>{school.short_name}</code>\n"
+    text += f"🧑‍💼 <b>Директор:</b> <code>{school.principal}</code>\n"
+    text += f"📚 <b>Класс:</b> <code>{class_name}</code>\n\n"
         
     return text
 
@@ -595,3 +603,37 @@ async def results_format(data, state, subject=None, quarter=None):
     return text 
 
 
+
+@handle_api_error()
+async def get_rating_rank_class(user_id):
+    api, student = await get_student(user_id)
+    profile = await api.get_family_profile(profile_id=student.profile_id)
+    
+    rating = await api.get_rating_rank_class(
+        profile_id=student.profile_id,
+        person_id=student.person_id,
+        class_unit_id=profile.children[0].class_unit_id,
+    )
+    
+    text = ""
+    
+    grouped = defaultdict(list)
+    for user in rating:
+        grouped[user.rank.average_mark_five].append(user)
+    
+    for avg_mark, users in sorted(grouped.items(), reverse=True):
+        count = len(users)
+        filled = int((avg_mark / 5) * 20)
+        bar = f'{"▇" * filled}{"▁" * (20 - filled)}'
+
+        # Форматирование с фиксированными длинами
+        place = str(users[0].rank.rank_place).rjust(2)
+        avg_mark_str = f'{avg_mark:.2f}'.rjust(5)
+        count_str = str(count)
+        
+        if users[0].person_id == student.person_id:
+            text += f'{place} {bar} {avg_mark_str} ({count_str} чел.) 🌟\n'
+        else:
+            text += f'{place} {bar} {avg_mark_str} ({count_str} чел.)\n'
+            
+    return f"📈 Рейтинг\n<pre>{text}</pre>"

@@ -620,6 +620,8 @@ async def get_rating_rank_class(user_id):
     grouped = defaultdict(list)
     for user in rating:
         grouped[user.rank.average_mark_five].append(user)
+        
+    place_in_class = 0
     
     for avg_mark, users in sorted(grouped.items(), reverse=True):
         count = len(users)
@@ -632,8 +634,9 @@ async def get_rating_rank_class(user_id):
         count_str = str(count)
         
         if users[0].person_id == student.person_id:
+            place_in_class = users[0].rank.rank_place
             text += f'{place} {bar} {avg_mark_str} ({count_str} чел.) 🌟\n'
         else:
             text += f'{place} {bar} {avg_mark_str} ({count_str} чел.)\n'
             
-    return f"📈 Рейтинг\n<pre>{text}</pre>"
+    return f"📈 Рейтинг по классу (ваше место: {place_in_class})\n<pre>{text}</pre>"

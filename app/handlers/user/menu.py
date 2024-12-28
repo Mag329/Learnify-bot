@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import app.keyboards.user.keyboards as kb
 from app.utils.database import AsyncSessionLocal, db, User, Settings
 from app.states.user.states import VisitState
-from app.utils.user.utils import get_visits, get_profile
+from app.utils.user.utils import get_visits, get_profile, get_rating_rank_class
 
 router = Router()
 
@@ -117,3 +117,15 @@ async def back_to_menu_callback_handler(callback: CallbackQuery):
         text="📋 Меню",
         reply_markup=kb.menu,
     )
+
+
+@router.callback_query(F.data == "rating_rank_class")
+async def rating_rank_class_callback_handler(callback: CallbackQuery):
+    await callback.answer()
+
+    text = await get_rating_rank_class(callback.from_user.id)
+    if text:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=kb.back_to_menu,
+        )

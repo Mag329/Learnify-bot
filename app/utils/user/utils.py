@@ -639,4 +639,4 @@ async def get_rating_rank_class(user_id):
         else:
             text += f'{place} {bar} {avg_mark_str} ({count_str} чел.)\n'
             
-    return f"📈 Рейтинг по классу (ваше место: {place_in_class})\n<pre>{text}</pre>"
+    return f"📈 Рейтинг по классу (Ваше место: {place_in_class})\n<pre>{text}</pre>"

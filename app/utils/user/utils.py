@@ -6,10 +6,12 @@ from collections import Counter, defaultdict
 
 from octodiary.apis import AsyncMobileAPI
 from octodiary.urls import Systems
+from octodiary.exceptions import APIError
 
 from app.utils.user.decorators import handle_api_error
-from config import ERROR_MESSAGE
+from config import ERROR_MESSAGE, ERROR_403_MESSAGE
 from app.utils.database import AsyncSessionLocal, db, User, Event, Settings
+import app.keyboards.user.keyboards as kb
 
 
 
@@ -165,97 +167,120 @@ async def get_homework(user_id, date_object):
 
 
 
-@handle_api_error()
 async def get_notifications(user_id, all=False, is_checker=False):
-    api, user = await get_student(user_id)
-    
-    notifications = await api.get_notifications(
-        student_id=user.student_id,
-        profile_id=user.profile_id
-    )
-    
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            db.select(Settings).filter(Settings.user_id == user_id)
+    try:
+        api, user = await get_student(user_id)
+
+        notifications = await api.get_notifications(
+            student_id=user.student_id,
+            profile_id=user.profile_id
         )
-        settings = result.scalar_one_or_none()
         
-        result = await session.execute(db.select(Event).filter(Event.student_id == notifications[0].student_profile_id))
-        notifications_db = {
-            (notif.teacher_id, notif.event_type, notif.date) for notif in result.scalars().all()
-        }
+        if len(notifications) <= 0:
+            if is_checker:
+                return None
+            else:
+                return "❌ <b>У вас нет уведомлений</b>"
         
-        new_notifications = []
         
-        for notification in notifications:
-            notification_id = (notification.author_profile_id, notification.event_type, notification.created_at)
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                db.select(Settings).filter(Settings.user_id == user_id)
+            )
+            settings = result.scalar_one_or_none()
+    
+            result = await session.execute(db.select(Event).filter(Event.student_id == notifications[0].student_profile_id))
+
+            events = result.scalars().all()
+
+            if not events:
+                return None
             
-            if notification_id not in notifications_db:
-                new_notifications.append(notification)
+            notifications_db = {
+                (notif.teacher_id, notif.event_type, notif.date) for notif in events
+            }
+            
+            new_notifications = []
+            for notification in notifications:
+                notification_id = (notification.author_profile_id, notification.event_type, notification.created_at)
                 
-                new_event = Event(
-                    student_id=notification.student_profile_id,
-                    event_type=notification.event_type,
-                    subject_name=notification.subject_name,
-                    date=notification.created_at,
-                    teacher_id=notification.author_profile_id
-                )
-                session.add(new_event)
+                if notification_id not in notifications_db:
+                    new_notifications.append(notification)
+                    
+                    new_event = Event(
+                        student_id=notification.student_profile_id,
+                        event_type=notification.event_type,
+                        subject_name=notification.subject_name,
+                        date=notification.created_at,
+                        teacher_id=notification.author_profile_id
+                    )
+                    session.add(new_event)
+            
+            await session.commit()
         
-        await session.commit()
-    
-    if not all:
-        notifications = new_notifications
-    
-    # Фильтруем уведомления на основе настроек
-    filtered_notifications = []
-    for notification in notifications:
-        if notification.event_type == 'create_mark' and (not is_checker or settings.enable_new_mark_notification):
-            filtered_notifications.append(notification)
-        elif notification.event_type == 'update_mark' and (not is_checker or settings.enable_new_mark_notification):
-            filtered_notifications.append(notification)
-        elif notification.event_type == 'delete_mark' and (not is_checker or settings.enable_new_mark_notification):
-            filtered_notifications.append(notification)
-        elif notification.event_type == 'create_homework' and (not is_checker or settings.enable_homework_notification):
-            filtered_notifications.append(notification)
-        elif notification.event_type == 'update_homework' and (not is_checker or settings.enable_homework_notification):
-            filtered_notifications.append(notification)
-    
-    # Проверяем, есть ли отфильтрованные уведомления
-    if len(filtered_notifications) <= 0:
-        if is_checker:
-            return None
-        return "❌ <b>У вас нет новых уведомлений</b>"
-    
-    # Формируем текст только для отфильтрованных уведомлений
-    text = f"🔔 <b>Уведомления ({len(filtered_notifications)}):</b>\n\n"
-    
-    for notification in filtered_notifications:
-        subject_name = f'{await get_emoji_subject(notification.subject_name)} {notification.subject_name} ({notification.created_at.strftime("%d.%m %H:%M:%S")})\n        '
-            
-        if notification.event_type == 'create_mark':
-            text += subject_name
-            text += f'<b>Новая оценка:</b>\n            <i><code>{await get_mark_with_weight(notification.new_mark_value, notification.new_mark_weight)} - {notification.control_form_name}</code></i>\n\n'
-            
-        elif notification.event_type == 'update_mark':
-            text += subject_name
-            text += f'<b>Изменение оценки:</b>\n            <i><code>{notification.old_mark_value} -> {get_mark_with_weight(notification.new_mark_value, notification.new_mark_weight)} - {notification.control_form_name}</code></i>\n\n'
-            
-        elif notification.event_type == 'delete_mark':
-            text += subject_name
-            text += f'<b>Удаление оценки:</b>\n            <i><code>{notification.old_mark_value} - {notification.control_form_name}</code></i>\n\n'
-            
-        elif notification.event_type == 'create_homework':
-            text += subject_name
-            description = notification.new_hw_description.rstrip("\n")
-            text += f'<b>Новое домашние задание:</b>\n            <i><code>{description}</code></i>\n\n'
-            
-        elif notification.event_type == 'update_homework':
-            text += subject_name
-            description = notification.new_hw_description.rstrip("\n")
-            text += f'<b>Изменение домашних задания:</b>\n            <i><code>{description}</code></i>\n\n'
+        if not all:
+            notifications = new_notifications
         
-    return text
+        # Фильтруем уведомления на основе настроек
+        filtered_notifications = []
+        for notification in notifications:
+            if notification.event_type == 'create_mark' and (not is_checker or settings.enable_new_mark_notification):
+                filtered_notifications.append(notification)
+            elif notification.event_type == 'update_mark' and (not is_checker or settings.enable_new_mark_notification):
+                filtered_notifications.append(notification)
+            elif notification.event_type == 'delete_mark' and (not is_checker or settings.enable_new_mark_notification):
+                filtered_notifications.append(notification)
+            elif notification.event_type == 'create_homework' and (not is_checker or settings.enable_homework_notification):
+                filtered_notifications.append(notification)
+            elif notification.event_type == 'update_homework' and (not is_checker or settings.enable_homework_notification):
+                filtered_notifications.append(notification)
+
+        # Проверяем, есть ли отфильтрованные уведомления
+        if len(filtered_notifications) <= 0:
+            if is_checker:
+                return None
+            return "❌ <b>У вас нет новых уведомлений</b>"
+        
+        # Формируем текст только для отфильтрованных уведомлений
+        text = f"🔔 <b>Уведомления ({len(filtered_notifications)}):</b>\n\n"
+        
+        for notification in filtered_notifications:
+            subject_name = f'{await get_emoji_subject(notification.subject_name)} {notification.subject_name} ({notification.created_at.strftime("%d.%m %H:%M:%S")})\n        '
+                
+            if notification.event_type == 'create_mark':
+                text += subject_name
+                text += f'<b>Новая оценка:</b>\n            <i><code>{await get_mark_with_weight(notification.new_mark_value, notification.new_mark_weight)} - {notification.control_form_name}</code></i>\n\n'
+                
+            elif notification.event_type == 'update_mark':
+                text += subject_name
+                text += f'<b>Изменение оценки:</b>\n            <i><code>{notification.old_mark_value} -> {get_mark_with_weight(notification.new_mark_value, notification.new_mark_weight)} - {notification.control_form_name}</code></i>\n\n'
+                
+            elif notification.event_type == 'delete_mark':
+                text += subject_name
+                text += f'<b>Удаление оценки:</b>\n            <i><code>{notification.old_mark_value} - {notification.control_form_name}</code></i>\n\n'
+                
+            elif notification.event_type == 'create_homework':
+                text += subject_name
+                description = notification.new_hw_description.rstrip("\n")
+                text += f'<b>Новое домашние задание:</b>\n            <i><code>{description}</code></i>\n\n'
+                
+            elif notification.event_type == 'update_homework':
+                text += subject_name
+                description = notification.new_hw_description.rstrip("\n")
+                text += f'<b>Изменение домашних задания:</b>\n            <i><code>{description}</code></i>\n\n'
+            
+        return text
+
+    except APIError as e:
+        if not is_checker:
+            if e.status_code in [401, 403]:
+                await user_send_message(user_id, ERROR_403_MESSAGE, kb.reauth)
+            else:
+                await user_send_message(user_id, ERROR_MESSAGE, kb.delete_message)
+    except Exception as e:
+        print(e)
+        if not is_checker:
+            await user_send_message(user_id, ERROR_MESSAGE, kb.delete_message)
 
 
 @handle_api_error()

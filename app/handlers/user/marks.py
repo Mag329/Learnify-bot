@@ -19,15 +19,14 @@ router = Router()
 @router.message(F.text == "🎓 Оценки")
 async def marks_handler(message: Message, state: FSMContext):
     date = datetime.now()
-    
+
     await state.set_state(MarkState.date)
     await state.update_data(date=date)
-    
+
     text = await get_marks(message.from_user.id, date)
     if text:
-        await message.answer(text,reply_markup=kb.mark)
-    
-    
+        await message.answer(text, reply_markup=kb.mark)
+
 
 @router.callback_query(F.data == "mark_left")
 async def mark_left_callback_handler(callback: CallbackQuery, state: FSMContext):

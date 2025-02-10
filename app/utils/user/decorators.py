@@ -7,8 +7,9 @@ import app.keyboards.user.keyboards as kb
 
 def handle_api_error():
     from app.utils.user.utils import user_send_message
+
     def decorator(func):
-        async def wrapper(user_id, *args, **kwargs):           
+        async def wrapper(user_id, *args, **kwargs):
             try:
                 return await func(user_id, *args, **kwargs)
             except APIError as e:
@@ -18,5 +19,7 @@ def handle_api_error():
                     await user_send_message(user_id, ERROR_MESSAGE, kb.delete_message)
             except Exception as e:
                 await user_send_message(user_id, ERROR_MESSAGE, kb.delete_message)
+
         return wrapper
+
     return decorator

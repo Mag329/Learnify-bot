@@ -15,22 +15,21 @@ from app.states.user.states import HomeworkState
 router = Router()
 
 
-
 @router.message(F.text == "📚 Домашние задания")
 async def howeworks_handler(message: Message, state: FSMContext):
     date = datetime.now()
-    
+
     await state.set_state(HomeworkState.date)
     await state.update_data(date=date)
     text = await get_homework(message.from_user.id, date)
-    
+
     if text:
         await message.answer(
             text,
             reply_markup=kb.homework,
         )
-    
-    
+
+
 @router.callback_query(F.data == "homework_left")
 async def homework_left_callback_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
@@ -45,7 +44,7 @@ async def homework_left_callback_handler(callback: CallbackQuery, state: FSMCont
         date = datetime.now()
 
     await state.update_data(date=date)
-    
+
     text = await get_homework(callback.from_user.id, date)
     if text:
         await callback.message.edit_text(
@@ -70,7 +69,7 @@ async def homework_right_callback_handler(callback: CallbackQuery, state: FSMCon
     await state.update_data(date=date)
 
     text = await get_homework(callback.from_user.id, date)
-    if text:    
+    if text:
         await callback.message.edit_text(
             text,
             reply_markup=kb.homework,
@@ -100,8 +99,8 @@ async def homework_today_callback_handler(callback: CallbackQuery, state: FSMCon
 #         "Выберите предмет",
 #         reply_markup=await kb.subjects_homework(callback.from_user.id),
 #     )
-    
-    
+
+
 # @router.callback_query(F.data == "back_to_homework")
 # async def back_to_homework_callback_handler(callback: CallbackQuery, state: FSMContext):
 #     await callback.answer()
@@ -119,8 +118,7 @@ async def homework_today_callback_handler(callback: CallbackQuery, state: FSMCon
 #         await get_homework(callback.from_user.id, date),
 #         reply_markup=kb.homework,
 #     )
-    
-    
+
 
 # @router.callback_query(F.data.startswith("select_subject_homework_"))
 # async def subject_homework_callback_handler(callback: CallbackQuery, state: FSMContext):

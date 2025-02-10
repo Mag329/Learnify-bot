@@ -1,9 +1,9 @@
-BOT_VERSION = "1.3.2"
+BOT_VERSION = "1.3.3"
 
 
 # Bot info
-DEVELOPER = '@Mag329'
-DEVELOPER_SITE = 'https://mag329.site'
+DEVELOPER = "@Mag329"
+DEVELOPER_SITE = "https://mag329.site"
 
 
 # Other

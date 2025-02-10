@@ -14,10 +14,12 @@ router = Router()
 
 @router.message(F.text == "⚙️ Настройки")
 async def settings(message: Message):
-    text = f'⚙️ <b>Настройки</b>\n\n🤖 <b>Информация о боте</b>\n    - 📦 <b>Версия бота:</b> {BOT_VERSION}\n    - 👨‍💻 <b>Разработчик:</b> {DEVELOPER}\n    - 🌐 <b>Сайт разработчика:</b> {DEVELOPER_SITE}'
-    
+    text = f"⚙️ <b>Настройки</b>\n\n🤖 <b>Информация о боте</b>\n    - 📦 <b>Версия бота:</b> {BOT_VERSION}\n    - 👨‍💻 <b>Разработчик:</b> {DEVELOPER}\n    - 🌐 <b>Сайт разработчика:</b> {DEVELOPER_SITE}"
+
     await message.answer(
-        text, reply_markup=await kb.user_settings(message.from_user.id), disable_web_page_preview=True
+        text,
+        reply_markup=await kb.user_settings(message.from_user.id),
+        disable_web_page_preview=True,
     )
 
 

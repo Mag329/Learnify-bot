@@ -499,7 +499,7 @@ async def minutes_to_time(duration_minutes):
     return f"{hours} ч. {minutes} мин."
 
 
-# @handle_api_error()
+@handle_api_error()
 async def get_results(user_id, quarter):
     quarter = int(quarter) - 1
 
@@ -583,9 +583,6 @@ async def get_results(user_id, quarter):
 
     if current_start:
         quarters.append((current_start, sorted_schedules[-1].date))
-
-    print(quarter)
-    print(quarters)
     
     homeworks_short = await api.get_homeworks_short(
         student_id=user.student_id,

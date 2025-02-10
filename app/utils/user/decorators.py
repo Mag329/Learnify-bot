@@ -1,7 +1,7 @@
 import logging
 from octodiary.exceptions import APIError
 
-from config import ERROR_403_MESSAGE, ERROR_MESSAGE
+from config import ERROR_403_MESSAGE, ERROR_MESSAGE, ERROR_500_MESSAGE
 import app.keyboards.user.keyboards as kb
 
 
@@ -15,6 +15,8 @@ def handle_api_error():
             except APIError as e:
                 if e.status_code in [401, 403]:
                     await user_send_message(user_id, ERROR_403_MESSAGE, kb.reauth)
+                elif e.status_code in [500, 501, 502]:
+                    await user_send_message(user_id, ERROR_500_MESSAGE, kb.delete_message)
                 else:
                     await user_send_message(user_id, ERROR_MESSAGE, kb.delete_message)
             except Exception as e:

@@ -89,3 +89,4 @@ class Settings(Base):
     enable_new_mark_notification = db.Column(db.Boolean, default=True)
     enable_homework_notification = db.Column(db.Boolean, default=True)
     experimental_features = db.Column(db.Boolean, default=False)
+

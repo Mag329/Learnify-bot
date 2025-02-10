@@ -499,7 +499,7 @@ async def minutes_to_time(duration_minutes):
     return f"{hours} ч. {minutes} мин."
 
 
-@handle_api_error()
+# @handle_api_error()
 async def get_results(user_id, quarter):
     quarter = int(quarter) - 1
 
@@ -552,12 +552,16 @@ async def get_results(user_id, quarter):
 
             subject_data.append(subject_info)
 
+
+    today = date.today()
+    start_year = today.year if today >= date(today.year, 9, 1) else today.year - 1
+    
     # Получение информации о четверти
     periods_schedules = await api.get_periods_schedules(
         student_id=user.student_id,
         profile_id=user.profile_id,
-        from_date=datetime(date.today().year, 9, 1),
-        to_date=datetime(date.today().year + 1, 6, 1),
+        from_date=datetime(start_year, 9, 1),
+        to_date=datetime(start_year + 1, 6, 1),
     )
 
     quarters = []
@@ -580,6 +584,9 @@ async def get_results(user_id, quarter):
     if current_start:
         quarters.append((current_start, sorted_schedules[-1].date))
 
+    print(quarter)
+    print(quarters)
+    
     homeworks_short = await api.get_homeworks_short(
         student_id=user.student_id,
         profile_id=user.profile_id,

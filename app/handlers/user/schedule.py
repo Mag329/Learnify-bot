@@ -18,6 +18,7 @@ router = Router()
 # Словарь для хранения задач пользователей
 user_tasks = {}
 
+
 async def update_detailed_schedule(message: Message, user_id: int, date: datetime):
     detailed_schedule = await get_schedule(user_id, date, False)
     if detailed_schedule:
@@ -47,7 +48,9 @@ async def schedule_handler(message: Message, state: FSMContext):
         # Отменяем предыдущую задачу и создаём новую
         await cancel_previous_task(message.from_user.id)
         user_tasks[message.from_user.id] = asyncio.create_task(
-            update_detailed_schedule(schedule_message, message.from_user.id, datetime.now())
+            update_detailed_schedule(
+                schedule_message, message.from_user.id, datetime.now()
+            )
         )
 
 
@@ -126,5 +129,7 @@ async def schedule_today_callback_handler(callback: CallbackQuery, state: FSMCon
         # Отменяем предыдущую задачу и создаём новую
         await cancel_previous_task(callback.from_user.id)
         user_tasks[callback.from_user.id] = asyncio.create_task(
-            update_detailed_schedule(callback.message, callback.from_user.id, datetime.now())
+            update_detailed_schedule(
+                callback.message, callback.from_user.id, datetime.now()
+            )
         )

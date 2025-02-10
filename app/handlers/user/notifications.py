@@ -18,13 +18,13 @@ router = Router()
 @router.message(F.text == "🔔 Уведомления")
 async def notifications_handler(message: Message):
     text = await get_notifications(message.from_user.id)
-    if text:    
+    if text:
         await message.answer(
             text,
             reply_markup=kb.notifications_all,
         )
-    
-    
+
+
 @router.callback_query(F.data == "notifications_new")
 async def notification_all_handler(callback: CallbackQuery):
     await callback.answer()

@@ -20,7 +20,11 @@ start_command = InlineKeyboardMarkup(
 
 reauth = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="🚪 Выйти из аккаунта", callback_data="exit_from_account")]
+        [
+            InlineKeyboardButton(
+                text="🚪 Выйти из аккаунта", callback_data="exit_from_account"
+            )
+        ]
     ]
 )
 
@@ -96,7 +100,11 @@ results = InlineKeyboardMarkup(
             InlineKeyboardButton(text="➡️", callback_data="results_right"),
         ],
         [InlineKeyboardButton(text="🏆 Общие итоги", callback_data="overall_results")],
-        [InlineKeyboardButton(text="📅 Выбрать четверть", callback_data="choose_quarter")],
+        [
+            InlineKeyboardButton(
+                text="📅 Выбрать четверть", callback_data="choose_quarter"
+            )
+        ],
         [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
     ]
 )
@@ -104,23 +112,42 @@ results = InlineKeyboardMarkup(
 overall_results_with_next_line = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="⬇️", callback_data="next_line_results")],
-        [InlineKeyboardButton(text="🏆 Итоги по предметам", callback_data="subjects_results")],
-        [InlineKeyboardButton(text="📅 Выбрать четверть", callback_data="choose_quarter")],
+        [
+            InlineKeyboardButton(
+                text="🏆 Итоги по предметам", callback_data="subjects_results"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="📅 Выбрать четверть", callback_data="choose_quarter"
+            )
+        ],
         [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
     ]
 )
 
 overall_results = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="🏆 Итоги по предметам", callback_data="subjects_results")],
-        [InlineKeyboardButton(text="📅 Выбрать четверть", callback_data="choose_quarter")],
+        [
+            InlineKeyboardButton(
+                text="🏆 Итоги по предметам", callback_data="subjects_results"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="📅 Выбрать четверть", callback_data="choose_quarter"
+            )
+        ],
         [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
     ]
 )
 
 quarters = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="1️⃣", callback_data="choose_quarter_1"), InlineKeyboardButton(text="2️⃣", callback_data="choose_quarter_2")],
+        [
+            InlineKeyboardButton(text="1️⃣", callback_data="choose_quarter_1"),
+            InlineKeyboardButton(text="2️⃣", callback_data="choose_quarter_2"),
+        ],
         # [InlineKeyboardButton(text="3️⃣", callback_data="choose_quarter_3"), InlineKeyboardButton(text="4️⃣", callback_data="choose_quarter_4")],
         [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
     ]
@@ -157,11 +184,11 @@ async def main(user_id):
         KeyboardButton(text="🎓 Оценки"),
         KeyboardButton(text="📚 Домашние задания"),
     )
-        
+
     keyboard.row(
-            KeyboardButton(text="📋 Меню"),
+        KeyboardButton(text="📋 Меню"),
     )
-    
+
     keyboard.row(KeyboardButton(text="⚙️ Настройки"))
 
     return keyboard.as_markup(resize_keyboard=True)
@@ -180,14 +207,14 @@ async def user_settings(user_id):
                 callback_data="enable_new_mark_notification_settings",
             )
         )
-        
+
         keyboard.row(
             InlineKeyboardButton(
                 text=f'Уведомления о новых ДЗ {"✅" if settings.enable_homework_notification else "❌"}',
                 callback_data="enable_homework_notification_settings",
             )
-        )  
-        
+        )
+
         # keyboard.row(
         #     InlineKeyboardButton(
         #         text=f'Экспериментальные функции {"✅" if settings.experimental_features else "❌"}',
@@ -206,19 +233,19 @@ async def user_settings(user_id):
 
 # async def subjects_homework(user_id):
 #     api, user = await get_student(user_id)
-    
+
 #     subjects = await api.get_subjects(
 #         student_id=user.student_id,
 #         profile_id=user.profile_id
 #     )
-    
+
 #     keyboard = InlineKeyboardBuilder()
-    
+
 #     for subject in subjects.payload:
 #         keyboard.row(InlineKeyboardButton(text=f"{await get_emoji_subject(subject.subject_name)} {subject.subject_name}", callback_data=f'select_subject_homework_{subject.subject_id}'))
-    
+
 #     keyboard = keyboard.adjust(2)
-    
+
 #     keyboard.row(InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_homework"))
-    
+
 #     return keyboard.as_markup()

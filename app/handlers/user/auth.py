@@ -39,18 +39,18 @@ async def cmd_start(message: Message):
                 session.add(settings)
 
             await session.commit()
-            
+
             api, student = await get_student(message.from_user.id)
-            
+
             # new_token = await api.refresh_token(student.token)
-            
+
             # user.token = new_token
             # await session.commit()
             try:
                 profile_id = (await api.get_users_profile_info())[0].id
 
                 profile = await api.get_family_profile(profile_id=profile_id)
-                
+
                 user.profile_id = profile_id
                 user.role = profile.profile.type
                 user.person_id = profile.children[0].contingent_guid
@@ -62,11 +62,15 @@ async def cmd_start(message: Message):
                         text=ERROR_403_MESSAGE,
                         reply_markup=kb.reauth,
                     )
-            
+
             await session.commit()
 
             await message.answer(
-                text=SUCCESSFUL_AUTH.format(profile.profile.last_name, profile.profile.first_name, profile.profile.middle_name),
+                text=SUCCESSFUL_AUTH.format(
+                    profile.profile.last_name,
+                    profile.profile.first_name,
+                    profile.profile.middle_name,
+                ),
                 reply_markup=await kb.main(message.from_user.id),
             )
         else:
@@ -79,7 +83,10 @@ async def cmd_start(message: Message):
 @router.callback_query(F.data == "login")
 async def login_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    await callback.message.edit_text(text="⚡ Для доступа к информации <b>Московской электронной школы (МЭШ)</b> необходим логин от <b>mos.ru</b>.\n\nВы можете ввести:\n  - 👤 Логин\n  - ✉️ Email\n  - 📱 Номер телефон (в формате +7 без пробелов)\n\n⚠️ <b>Важно:</b> Для авторизации у Вас должен быть привязан номер телефона к аккаунту mos.ru\n\n⚠️ <b>Важно:</b> Мы не сохраняем данные вашей авторизации. Вся информация используется только для подключения к системе и предоставления данных.", reply_markup=None)
+    await callback.message.edit_text(
+        text="⚡ Для доступа к информации <b>Московской электронной школы (МЭШ)</b> необходим логин от <b>mos.ru</b>.\n\nВы можете ввести:\n  - 👤 Логин\n  - ✉️ Email\n  - 📱 Номер телефон (в формате +7 без пробелов)\n\n⚠️ <b>Важно:</b> Для авторизации у Вас должен быть привязан номер телефона к аккаунту mos.ru\n\n⚠️ <b>Важно:</b> Мы не сохраняем данные вашей авторизации. Вся информация используется только для подключения к системе и предоставления данных.",
+        reply_markup=None,
+    )
 
     await state.set_state(AuthState.main_message)
     await state.update_data(main_message=callback.message.message_id)
@@ -115,10 +122,12 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
 
         try:
             api = AsyncMobileAPI(system=Systems.MES)
-            sms_code = await api.login(username=data["login"], password=data["password"])
+            sms_code = await api.login(
+                username=data["login"], password=data["password"]
+            )
             await state.set_state(AuthState.sms_code_class)
             await state.update_data(sms_code_class=sms_code)
-            
+
             await bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=data["main_message"],
@@ -135,8 +144,8 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
             )
             await state.clear()
             return
-        
-        
+
+
 @router.message(F.text, AuthState.sms_code_class)
 async def password_handler(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
@@ -158,9 +167,9 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                         user = User(user_id=message.from_user.id, token=token)
                         session.add(user)
                         await session.commit()
-                    
+
                     api, _ = await get_student(message.from_user.id)
-                    
+
                     profile_id = (await api.get_users_profile_info())[0].id
 
                     profile = await api.get_family_profile(profile_id=profile_id)
@@ -169,9 +178,9 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                     user.person_id = profile.children[0].contingent_guid
                     user.student_id = profile.children[0].id
                     user.contract_id = profile.children[0].contract_id
-                    
+
                     await session.commit()
-                    
+
                     result = await session.execute(
                         db.select(Settings).filter_by(user_id=user.user_id)
                     )
@@ -180,14 +189,18 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                     if not settings:
                         settings = Settings(user_id=message.from_user.id)
                         session.add(settings)
-                    
+
                     await session.commit()
-                    
+
                     await message.answer(
-                        text=SUCCESSFUL_AUTH.format(profile.profile.last_name, profile.profile.first_name, profile.profile.middle_name),
+                        text=SUCCESSFUL_AUTH.format(
+                            profile.profile.last_name,
+                            profile.profile.first_name,
+                            profile.profile.middle_name,
+                        ),
                         reply_markup=await kb.main(message.from_user.id),
                     )
-                    
+
                 else:
                     raise Exception("Invalid SMS code")
 
@@ -212,5 +225,3 @@ async def delete_message_handler(callback: CallbackQuery, bot: Bot):
 # @router.message(F.text == "📡 Состояние серверов МЭШ")
 # async def schedule_handler(message: Message):
 #     await message.answer(await api.server_status(message.from_user.id))
-
-

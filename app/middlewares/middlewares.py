@@ -10,17 +10,18 @@ from envparse import env
 
 
 env.read_envfile()
-        
-        
+
+
 class AllowedUsersMiddleware(BaseMiddleware):
-    async def __call__(self,
-                        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
-                        event: TelegramObject,
-                        data: Dict[str, Any]):
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: Dict[str, Any],
+    ):
         if event.from_user.id in list(map(int, env.str("ALLOWED_USERS").split(","))):
             return await handler(event, data)
-        
-        
+
 
 class CheckUserInDbMiddleware(BaseMiddleware):
     async def __call__(

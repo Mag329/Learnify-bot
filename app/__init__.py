@@ -21,21 +21,18 @@ from app.handlers.user import (
     schedule,
     menu,
     results,
-    other
+    other,
 )
-from app.handlers.admin import (
-    panel
-)
+from app.handlers.admin import panel
 from app.middlewares.middlewares import AllowedUsersMiddleware, CheckUserInDbMiddleware
 from app.utils.database import Base, engine_db, run_migrations
-from app.utils.checker import new_notifications_checker
 import app.keyboards.user.keyboards as kb
 
 
 env = Env()
 env.read_envfile()
 
-bot = Bot(   
+bot = Bot(
     token=env.str("TOKEN"),
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
 )
@@ -45,12 +42,17 @@ scheduler = AsyncIOScheduler()
 
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
+
 async def on_startup():
-    await bot.send_message(env.str("OWNER_ID"), "Бот запущен", reply_markup=kb.delete_message)
+    await bot.send_message(
+        env.str("OWNER_ID"), "Бот запущен", reply_markup=kb.delete_message
+    )
 
 
 async def on_stop():
-    await bot.send_message(env.str("OWNER_ID"), "Бот остановлен", reply_markup=kb.delete_message)
+    await bot.send_message(
+        env.str("OWNER_ID"), "Бот остановлен", reply_markup=kb.delete_message
+    )
 
 
 async def main():
@@ -82,10 +84,10 @@ async def main():
     dp.include_router(schedule.router)
     dp.include_router(menu.router)
     dp.include_router(results.router)
-    
+
     # Admin
     dp.include_router(panel.router)
-    
+
     dp.include_router(other.router)
 
     # dp.message.middleware(AllowedUsersMiddleware())
@@ -93,13 +95,16 @@ async def main():
 
     # dp.message.middleware(CheckUserInDbMiddleware())
 
-    # dp.message.middleware(WorkingTimeMiddleware())
-    # dp.callback_query.middleware(WorkingTimeMiddleware())
-
     await bot.delete_webhook(drop_pending_updates=True)
 
+    from app.utils.checkers import new_notifications_checker, replaced_checker
+
     await new_notifications_checker(bot)
-    scheduler.add_job(new_notifications_checker, "interval", minutes=5, args=(bot,))
+    scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))
+
+    await replaced_checker(bot)
+    scheduler.add_job(replaced_checker, "interval", minutes=10, args=(bot,))
+
     scheduler.start()
 
     logging.info("Polling bot...")

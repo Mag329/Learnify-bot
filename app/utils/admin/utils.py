@@ -17,6 +17,7 @@ def admin_required(func):
             return await func(message, *args, **kwargs)
         else:
             return None
+
     return wrapper
 
 
@@ -27,10 +28,8 @@ async def main_page():
             users = result.scalars().all()
 
             text = f"⚙️ <b>Админ панель</b>\n\n<b>Пользователей в БД</b>: {len(users)}"
-        
+
     except Exception as e:
         text = f"{ERROR_MESSAGE}\n<code>{e}</code>"
-        
+
     return text
-
-

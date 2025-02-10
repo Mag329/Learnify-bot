@@ -7,8 +7,10 @@ from app.utils.database import run_migrations
 
 if __name__ == "__main__":
     # Set up colored logging
-    coloredlogs.install(level='INFO', fmt='%(asctime)s %(name)s[%(process)d] %(levelname)s: %(message)s')
-    
+    coloredlogs.install(
+        level="INFO", fmt="%(asctime)s %(name)s[%(process)d] %(levelname)s: %(message)s"
+    )
+
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():

@@ -62,12 +62,29 @@ class Event(Base):
     teacher_id = db.Column(db.BigInteger, nullable=False)
 
 
+# БД для сохранения уведомлений, которые созданы ботом и не приходят с API МЭШ
+class BotNotification(Base):
+    __tablename__ = "bot_notifications"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    type = db.Column(db.String, nullable=False)
+    text = db.Column(db.String, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now(), nullable=False)
+
+
 class Settings(Base):
     __tablename__ = "settings"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(
-        db.BigInteger, db.ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
+        db.BigInteger,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
     )
     enable_new_mark_notification = db.Column(db.Boolean, default=True)
     enable_homework_notification = db.Column(db.Boolean, default=True)

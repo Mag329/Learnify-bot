@@ -50,3 +50,7 @@ async def replaced_checker(bot: Bot):
                     )
                 except Exception as e:
                     continue
+
+
+# async def school_presence_checker(bot: Bot):
+#     ...

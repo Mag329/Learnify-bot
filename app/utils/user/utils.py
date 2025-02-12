@@ -372,16 +372,16 @@ async def get_replaced(user_id, date_object):
             for notification in result.scalars().all():
                 await session.delete(notification)
                 await session.commit()
-
+            
+            print(user_id)
             if have_replaced:
-
                 result: BotNotification = await session.execute(
                     db.select(BotNotification).filter_by(
                         user_id=user_id, text=text, type="replaced"
                     )
                 )
                 notifications = result.scalars().all()
-
+                print(notifications)
                 if not notifications:
                     notification = BotNotification(
                         user_id=user_id, type="replaced", text=text

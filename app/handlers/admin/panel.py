@@ -1,15 +1,16 @@
 from aiogram import F, Router, Bot
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, InputMediaPhoto
+from aiogram.types import Message, CallbackQuery, InputMediaPhoto, FSInputFile
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 from datetime import datetime, timedelta
+import os
 
 from octodiary.apis import AsyncMobileAPI
 from octodiary.urls import Systems
 
-from config import UPDATE_NOTIFICATION_HEADER, UPDATE_NOTIFICATION_FOOTER
+from config import UPDATE_NOTIFICATION_HEADER, UPDATE_NOTIFICATION_FOOTER, LOG_FILE
 import app.keyboards.admin.keyboards as kb
 import app.keyboards.user.keyboards as user_kb
 from app.states.admin.states import UpdateNotificationState
@@ -107,3 +108,14 @@ async def cancel_update_notification_handler(
         "Рассылка отменена",
         reply_markup=kb.back_to_admin_panel,
     )
+
+
+@router.message(Command('logs'))
+@admin_required
+async def logs_handler(message: Message, state: FSMContext):
+    if not os.path.exists(LOG_FILE):
+        await message.answer("Лог-файл не найден.")
+        return
+
+    log_file = FSInputFile(LOG_FILE)  # Загружаем файл
+    await message.answer_document(document=log_file, caption="")

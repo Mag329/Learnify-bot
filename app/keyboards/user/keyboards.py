@@ -228,6 +228,11 @@ async def user_settings(user_id):
                 text="🚪 Выйти из аккаунта", callback_data="exit_from_account"
             )
         )
+        keyboard.row(
+            InlineKeyboardButton(
+                text="Закрыть", callback_data="delete_message"
+            )
+        )
 
         return keyboard.as_markup()
 

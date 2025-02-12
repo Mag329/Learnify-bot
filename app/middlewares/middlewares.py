@@ -1,8 +1,9 @@
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject
+from aiogram.types import TelegramObject, Message, CallbackQuery, Update
 from typing import Callable, Dict, Any, Awaitable
+import logging
 
-from config import START_MESSAGE
+from config import START_MESSAGE, LOG_FILE
 import app.keyboards.user.keyboards as kb
 from app.utils.database import AsyncSessionLocal, db, User
 from app.states.user.states import AuthState
@@ -10,6 +11,18 @@ from envparse import env
 
 
 env.read_envfile()
+
+# Создаем отдельный логгер для middleware
+middleware_logger = logging.getLogger("middleware_logger")
+middleware_logger.setLevel(logging.INFO)
+
+# Добавляем только файловый обработчик (без консоли)
+file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+
+middleware_logger.addHandler(file_handler)
+middleware_logger.propagate = False  # Отключаем передачу логов в root-логгер (чтобы не дублировались)
 
 
 class AllowedUsersMiddleware(BaseMiddleware):
@@ -58,3 +71,27 @@ class CheckUserInDbMiddleware(BaseMiddleware):
                     return
         else:
             return await handler(event, data)
+
+
+class LoggingMiddleware(BaseMiddleware):
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: Dict[str, Any],
+    ):
+        user = None
+        if isinstance(event, Message):
+            user = event.from_user
+            user_info = f"{user.full_name} (@{user.username}, ID: {user.id})"
+            middleware_logger.info(f"Message from {user_info}: {event.text}")
+
+        elif isinstance(event, CallbackQuery):
+            user = event.from_user
+            user_info = f"{user.full_name} (@{user.username}, ID: {user.id})"
+            middleware_logger.info(f"CallbackQuery from {user_info}: {event.data}")
+
+        # Логируем вызов хэндлера
+        middleware_logger.info(f"Calling handler: {handler.__name__} with data: {data}")
+
+        return await handler(event, data)

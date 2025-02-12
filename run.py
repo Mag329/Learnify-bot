@@ -12,7 +12,7 @@ from config import LOG_FILE
 log_dir = os.path.dirname(LOG_FILE)  # Получаем путь к папке
 
 if log_dir and not os.path.exists(log_dir):  # Если путь не пустой и папки нет
-    os.makedirs(log_dir)  # Создаем папку
+    os.makedirs(log_dir, exist_ok=True)  # Создаем папку
 
 if __name__ == "__main__":    
     logger = logging.getLogger()

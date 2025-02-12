@@ -2,6 +2,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery, Update
 from typing import Callable, Dict, Any, Awaitable
 import logging
+import os
 
 from config import START_MESSAGE, LOG_FILE
 import app.keyboards.user.keyboards as kb
@@ -15,6 +16,12 @@ env.read_envfile()
 # Создаем отдельный логгер для middleware
 middleware_logger = logging.getLogger("middleware_logger")
 middleware_logger.setLevel(logging.INFO)
+
+# Проверяем наличие директории для логов
+log_dir = os.path.dirname(LOG_FILE)  # Получаем путь к папке
+
+if log_dir and not os.path.exists(log_dir):  # Если путь не пустой и папки нет
+    os.makedirs(log_dir, exist_ok=True)  # Создаем папку
 
 # Добавляем только файловый обработчик (без консоли)
 file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")

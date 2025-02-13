@@ -105,8 +105,8 @@ async def main():
     await new_notifications_checker(bot)
     scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))
 
-    await replaced_checker(bot)
-    scheduler.add_job(replaced_checker, "interval", minutes=10, args=(bot,))
+    # await replaced_checker(bot)
+    # scheduler.add_job(replaced_checker, "interval", minutes=10, args=(bot,))
 
     scheduler.start()
 

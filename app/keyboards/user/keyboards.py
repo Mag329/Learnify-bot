@@ -35,9 +35,25 @@ homework = InlineKeyboardMarkup(
             InlineKeyboardButton(text="📅", callback_data="homework_today"),
             InlineKeyboardButton(text="➡️", callback_data="homework_right"),
         ],
-        # [
-        #     InlineKeyboardButton(text="Выбрать предмет", callback_data="choose_subject_homework"),
-        # ]
+        [
+            InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_homework"),
+        ]
+    ]
+)
+
+subject_homework = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="⬅️", callback_data="subject_homework_left"),
+            InlineKeyboardButton(text="📅", callback_data="subject_homework_today"),
+            InlineKeyboardButton(text="➡️", callback_data="subject_homework_right"),
+        ],
+        [
+            InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_homework"),
+        ],
+        [
+            InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_homework")
+        ]
     ]
 )
 
@@ -237,21 +253,21 @@ async def user_settings(user_id):
         return keyboard.as_markup()
 
 
-# async def subjects_homework(user_id):
-#     api, user = await get_student(user_id)
+async def subjects_homework(user_id):
+    api, user = await get_student(user_id)
 
-#     subjects = await api.get_subjects(
-#         student_id=user.student_id,
-#         profile_id=user.profile_id
-#     )
+    subjects = await api.get_subjects(
+        student_id=user.student_id,
+        profile_id=user.profile_id
+    )
 
-#     keyboard = InlineKeyboardBuilder()
+    keyboard = InlineKeyboardBuilder()
 
-#     for subject in subjects.payload:
-#         keyboard.row(InlineKeyboardButton(text=f"{await get_emoji_subject(subject.subject_name)} {subject.subject_name}", callback_data=f'select_subject_homework_{subject.subject_id}'))
+    for subject in subjects.payload:
+        keyboard.row(InlineKeyboardButton(text=f"{await get_emoji_subject(subject.subject_name)} {subject.subject_name}", callback_data=f'select_subject_homework_{subject.subject_id}'))
 
-#     keyboard = keyboard.adjust(2)
+    keyboard = keyboard.adjust(2)
 
-#     keyboard.row(InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_homework"))
+    keyboard.row(InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_homework"))
 
-#     return keyboard.as_markup()
+    return keyboard.as_markup()

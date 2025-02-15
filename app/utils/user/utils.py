@@ -59,6 +59,9 @@ EMOJI_NUMBERS = {
 
 SUBSCRIPT_MAP = str.maketrans("12345", "₁₂₃₄₅")
 
+# Temp dicts
+temp_events = {}
+
 
 async def user_send_message(user_id, message, markup=None):
     from app import bot
@@ -142,32 +145,84 @@ async def get_homework(user_id, date_object):
     return text
 
 
-# @handle_api_error()
-# async def get_homework_by_subject(user_id, subject_id, date_object):
-# api, user = await get_student(user_id)
+@handle_api_error()
+async def get_homework_by_subject(user_id, subject_id, date_object):
+    api, user = await get_student(user_id)
 
-# lesson_info = await api.get_lesson_schedule_item(
-#     profile_id=user.profile_id,
-#     student_id=user.student_id,
-#     lesson_id=int(subject_id),
-# )
+    if temp_events.get(user_id) is not None and temp_events.get(user_id)['timestamp'] < datetime.now() - timedelta(hours=1):
+        events = temp_events[user_id]["data"]
+        
+    else:
+        events = await api.get_events(
+            person_id=user.person_id,
+            mes_role=user.role,
+            begin_date=date_object,
+            end_date=date_object + timedelta(days=7),
+        )
+        
+        temp_events[user_id] = {
+            "data": events,
+            "timestamp": datetime.now()
+        }
+    
+    subject_name = ''
+    homeworks = []
 
-# text = f"{await get_emoji_subject(lesson_info.subject_name)} <b>{lesson_info.subject_name}</b> {lesson_info.date.strftime('%d %b')}\n\n"
+    for event in events.response:
+        if event.subject_id == subject_id:
+            lesson_info = await api.get_lesson_schedule_item(
+                profile_id=user.profile_id,
+                student_id=user.student_id,
+                lesson_id=event.id,
+                type=event.source
+            )
 
-# text += f"    <b>Домашние задание:</b>\n"
+            subject_name = lesson_info.subject_name
 
-# materials = []
+            materials = []
+            
+            for homework in lesson_info.lesson_homeworks:
+                for material in homework.materials:
+                    # if material.type in ['test_spec_binding', 'game_app', 'workbook', '']:
+                    for item in material.items:
+                        for url in item.urls:
+                            if url.url_type == 'launch':
+                                materials.append({
+                                                "url": url.url,
+                                                "title": item.title,
+                                                "material_type_name": material.type_name,
+                                                "material_type": material.type,
+                                                })
+            
+            homeworks.append({
+                "homeworks": lesson_info.lesson_homeworks,
+                "materials": materials,
+                "date": lesson_info.date,
+                "lesson_id": lesson_info.id,
+            })
 
-# for homework in lesson_info.lesson_homeworks:
-#     text += f"        - {homework.homework}\n"
-#     materials.append(*[[[url.url for url in item.urls if url.url_type == 'launch'] for item in material.items] for material in homework.materials])
-
-# text += f"\n    <b>Для выполнения:<b>"
-# for material in materials:
-#     text += f"    - {material}"
-
-
-#     return text
+    text = f"{await get_emoji_subject(subject_name)} <b>{subject_name}</b>\n\n"
+    
+    for homework in homeworks:
+        if len(homework['homeworks']) > 0 or len(homework['materials']) > 0:
+            text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
+            if len(homework['homeworks']) > 0:
+                text += f"    📚 <b>Домашние задание:</b>\n"
+                for task in homework['homeworks']:
+                    text += f"        - <i><code>{task.homework}</code></i>\n"
+            
+            if len(homework['materials']) > 0:
+                text += f"\n    🔗 <b>Для выполнения:</b>\n"
+                for material in homework['materials']:
+                    text += f'        - <a href="{material["url"]}">{material["title"]} ({material["material_type_name"]})</a>\n'
+            
+            text += "\n"
+        else:
+            text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
+            text += f"    ❌ <b>Нет домашних заданий</b>\n"
+            text += "\n"
+            
+    return text
 
 
 async def get_notifications(user_id, all=False, is_checker=False):

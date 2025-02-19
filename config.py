@@ -20,3 +20,15 @@ ERROR_500_MESSAGE = "❌ <b>Произошла ошибка</b>\nВнутрен�
 SUCCESSFUL_AUTH = "✅ <b>Успешная авторизация</b>\n\nВы вошли как {0} {1} {2}"
 UPDATE_NOTIFICATION_HEADER = "🚀 <b>Обновление</b>\n\n"
 UPDATE_NOTIFICATION_FOOTER = f"\n\n\n<i>Версия бота:</i> {BOT_VERSION}"
+
+
+
+# LOAD
+
+from envparse import Env
+
+env = Env()
+env.read_envfile()
+
+LOGSTASH_HOST = env.str("LOGSTASH_HOST")
+LOGSTASH_PORT = env.int("LOGSTASH_PORT")

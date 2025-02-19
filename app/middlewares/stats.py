@@ -6,7 +6,7 @@ from datetime import datetime
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Message, CallbackQuery, Update
 from typing import Callable, Dict, Any, Awaitable
-from config import BOT_VERSION
+from config import BOT_VERSION, LOGSTASH_HOST, LOGSTASH_PORT
 
 
 env = Env()
@@ -15,9 +15,6 @@ env.read_envfile()
 # Настройка логирования
 middleware_logger = logging.getLogger(__name__)
 
-# Настройка Logstash
-LOGSTASH_HOST = env.str('LOGSTASH_HOST')  # Имя сервиса в Docker
-LOGSTASH_PORT = 5000        # Порт, указанный в logstash.conf
 
 class StatsMiddleware(BaseMiddleware):
     async def __call__(

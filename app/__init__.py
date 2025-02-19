@@ -25,6 +25,7 @@ from app.handlers.user import (
 )
 from app.handlers.admin import panel
 from app.middlewares.middlewares import AllowedUsersMiddleware, CheckUserInDbMiddleware, LoggingMiddleware
+from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
 import app.keyboards.user.keyboards as kb
 
@@ -95,8 +96,12 @@ async def main():
 
     # dp.message.middleware(CheckUserInDbMiddleware())
     
-    dp.message.middleware(LoggingMiddleware())
-    dp.callback_query.middleware(LoggingMiddleware())
+    # dp.message.middleware(LoggingMiddleware())
+    # dp.callback_query.middleware(LoggingMiddleware())
+    
+    dp.update.middleware(LoggingMiddleware())
+    
+    dp.update.middleware(StatsMiddleware())
 
     await bot.delete_webhook(drop_pending_updates=True)
 

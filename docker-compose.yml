@@ -29,6 +29,7 @@ services:
       - elk
 
   logstash:
+    container_name: 'learnify-logstash'
     image: logstash:8.5.0
     ports:
       - "5000:5000"

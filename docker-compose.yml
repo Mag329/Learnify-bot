@@ -10,7 +10,7 @@ services:
     volumes:
       - .:/src
     restart: always
-  depends_on:
+    depends_on:
       - elasticsearch
     networks:
       - elk

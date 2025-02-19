@@ -54,7 +54,7 @@ class StatsMiddleware(BaseMiddleware):
 
             # Время обработки события
             session_end = datetime.utcnow()
-            processing_time = (session_end - session_start)
+            processing_time = (session_end - session_start).total_seconds() * 1000
 
             # Формируем документ для отправки в Logstash
             doc = {

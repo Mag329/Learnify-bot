@@ -13,6 +13,7 @@ from envparse import env
 
 env.read_envfile()
 
+
 # Создаем отдельный логгер для middleware
 middleware_logger = logging.getLogger("middleware_logger")
 middleware_logger.setLevel(logging.INFO)
@@ -88,17 +89,19 @@ class LoggingMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ):
         user = None
-        if isinstance(event, Message):
-            user = event.from_user
+        if event.message:
+            user = event.message.from_user
             user_info = f"{user.full_name} (@{user.username}, ID: {user.id})"
-            middleware_logger.info(f"Message from {user_info}: {event.text}")
+            middleware_logger.info(f"Message from {user_info}: {event.message.text}")
 
-        elif isinstance(event, CallbackQuery):
-            user = event.from_user
+        elif event.callback_query:
+            user = event.callback_query.from_user
             user_info = f"{user.full_name} (@{user.username}, ID: {user.id})"
-            middleware_logger.info(f"CallbackQuery from {user_info}: {event.data}")
+            middleware_logger.info(f"CallbackQuery from {user_info}: {event.callback_query.data}")
 
         # Логируем вызов хэндлера
-        middleware_logger.info(f"Calling handler: {handler.__name__} with data: {data}")
+        # middleware_logger.info(f"Calling handler: {handler.__name__} with data: {data}")
 
         return await handler(event, data)
+    
+    

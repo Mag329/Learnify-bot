@@ -21,6 +21,7 @@ services:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
       - xpack.security.enabled=false
+    restart: always
     ports:
       - "9200:9200"
     volumes:
@@ -37,6 +38,7 @@ services:
       - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
     environment:
       - LS_JAVA_OPTS=-Xms256m -Xmx256m
+    restart: always
     depends_on:
       - elasticsearch
     networks:
@@ -48,6 +50,7 @@ services:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    restart: always      
     depends_on:
       - elasticsearch
     networks:

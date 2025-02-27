@@ -5,12 +5,13 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 from datetime import datetime, timedelta
+import logging
 
 from octodiary.apis import AsyncMobileAPI
 from octodiary.urls import Systems
 from octodiary.exceptions import APIError
 
-from config import START_MESSAGE, SUCCESSFUL_AUTH, ERROR_MESSAGE, ERROR_403_MESSAGE
+from config import START_MESSAGE, SUCCESSFUL_AUTH, ERROR_MESSAGE, ERROR_403_MESSAGE, ERROR_500_MESSAGE, ERROR_408_MESSAGE, AWAIT_RESPONSE_MESSAGE
 import app.keyboards.user.keyboards as kb
 from app.utils.database import AsyncSessionLocal, db, User, Settings
 from app.utils.user.utils import get_student
@@ -18,17 +19,21 @@ from app.states.user.states import AuthState
 
 
 router = Router()
+logger = logging.getLogger(__name__)
+
 
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    async with AsyncSessionLocal() as session:
+    async with AsyncSessionLocal() as session:        
         result = await session.execute(
             db.select(User).filter_by(user_id=message.from_user.id)
         )
         user = result.scalar_one_or_none()
 
         if user:
+            await_message = await message.answer(AWAIT_RESPONSE_MESSAGE)
+            
             result = await session.execute(
                 db.select(Settings).filter_by(user_id=user.user_id)
             )
@@ -46,6 +51,7 @@ async def cmd_start(message: Message):
 
             # user.token = new_token
             # await session.commit()
+            profile = None
             try:
                 profile_id = (await api.get_users_profile_info())[0].id
 
@@ -57,14 +63,34 @@ async def cmd_start(message: Message):
                 user.student_id = profile.children[0].id
                 user.contract_id = profile.children[0].contract_id
             except APIError as e:
-                if e.status_code == 403:
-                    await message.answer(
-                        text=ERROR_403_MESSAGE,
-                        reply_markup=kb.reauth,
-                    )
+                logger.error(f"APIError ({e.status_code}) for user {message.from_user.id}: {e}")
+
+                # Определение сообщения об ошибке в зависимости от статус-кода
+                error_message = ERROR_MESSAGE  # По умолчанию
+                if e.status_code == 408:
+                    error_message = ERROR_408_MESSAGE
+                elif e.status_code in [500, 501, 502]:
+                    error_message = ERROR_500_MESSAGE
+
+                # Редактирование сообщения с учетом ошибки
+                await await_message.edit_text(
+                    text=error_message,
+                    reply_markup=kb.start_command,
+                )
+
+            except Exception as e:
+                logger.exception(f"Unhandled exception for user {message.from_user.id}: {e}")
+
+                # Редактирование сообщения для необработанных исключений
+                await await_message.edit_text(
+                    text="❌ Ошибка авторизации",
+                    reply_markup=kb.start_command,
+                )
 
             await session.commit()
-
+            
+            await await_message.delete()
+            
             await message.answer(
                 text=SUCCESSFUL_AUTH.format(
                     profile.profile.last_name,
@@ -73,6 +99,7 @@ async def cmd_start(message: Message):
                 ),
                 reply_markup=await kb.main(message.from_user.id),
             )
+                
         else:
             await message.answer(
                 text=START_MESSAGE,
@@ -204,16 +231,36 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                 else:
                     raise Exception("Invalid SMS code")
 
-            except Exception as e:
+            except APIError as e:
+                logger.error(f"APIError ({e.status_code}) for user {message.from_user.id}: {e}")
+                await state.clear()
+
+                # Определение сообщения об ошибке в зависимости от статус-кода
+                error_message = ERROR_MESSAGE  # По умолчанию
+                if e.status_code == 408:
+                    error_message = ERROR_408_MESSAGE
+                elif e.status_code in [500, 501, 502]:
+                    error_message = ERROR_500_MESSAGE
+
+                # Редактирование сообщения с учетом ошибки
                 await bot.edit_message_text(
                     chat_id=message.chat.id,
                     message_id=data["main_message"],
-                    text=f"❌ Ошибка авторизации",
+                    text=error_message,
                     reply_markup=kb.start_command,
                 )
+
+            except Exception as e:
+                logger.exception(f"Unhandled exception for user {message.from_user.id}: {e}")
                 await state.clear()
-                print(e)
-                return
+
+                # Редактирование сообщения для необработанных исключений
+                await bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=data["main_message"],
+                    text="❌ Ошибка авторизации",
+                    reply_markup=kb.start_command,
+                )
 
 
 @router.callback_query(F.data == "delete_message")

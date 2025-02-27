@@ -163,6 +163,8 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
             )
 
         except Exception as e:
+            logger.error(f"Error ({e.status_code}) for user {message.from_user.id}: {e}")
+            
             await bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=data["main_message"],

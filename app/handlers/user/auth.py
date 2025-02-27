@@ -162,17 +162,36 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                 reply_markup=None,
             )
 
-        except Exception as e:
-            logger.error(f"Error ({e.status_code}) for user {message.from_user.id}: {e}")
-            
+        except APIError as e:
+            logger.error(f"APIError ({e.status_code}) for user {message.from_user.id}: {e}")
+            await state.clear()
+
+            # Определение сообщения об ошибке в зависимости от статус-кода
+            error_message = ERROR_MESSAGE  # По умолчанию
+            if e.status_code == 408:
+                error_message = ERROR_408_MESSAGE
+            elif e.status_code in [500, 501, 502]:
+                error_message = ERROR_500_MESSAGE
+
+            # Редактирование сообщения с учетом ошибки
             await bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=data["main_message"],
-                text=f"❌ Ошибка авторизации",
+                text=error_message,
                 reply_markup=kb.start_command,
             )
+
+        except Exception as e:
+            logger.exception(f"Unhandled exception for user {message.from_user.id}: {e}")
             await state.clear()
-            return
+
+            # Редактирование сообщения для необработанных исключений
+            await bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=data["main_message"],
+                text="❌ Ошибка авторизации",
+                reply_markup=kb.start_command,
+            )
 
 
 @router.message(F.text, AuthState.sms_code_class)

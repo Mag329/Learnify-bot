@@ -114,8 +114,10 @@ async def back_to_homework_callback_handler(callback: CallbackQuery, state: FSMC
 
     await state.update_data(date=date)
 
+    text, new_date = await get_homework(callback.from_user.id, date)
+    
     await callback.message.edit_text(
-        await get_homework(callback.from_user.id, date),
+        text,
         reply_markup=kb.homework,
     )
 

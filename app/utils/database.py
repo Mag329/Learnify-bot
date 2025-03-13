@@ -49,6 +49,7 @@ class User(Base):
     student_id = db.Column(db.BigInteger, nullable=True, unique=True)
     contract_id = db.Column(db.BigInteger, nullable=True)
     settings = relationship("Settings", backref="user", cascade="all, delete-orphan")
+    active = db.Column(db.Boolean, default=True)
 
 
 class Event(Base):
@@ -62,7 +63,7 @@ class Event(Base):
     teacher_id = db.Column(db.BigInteger, nullable=False)
 
 
-# БД для сохранения уведомлений, которые созданы ботом и не приходят с API МЭШ
+# Таблица для сохранения уведомлений, которые созданы ботом и не приходят с API МЭШ
 class BotNotification(Base):
     __tablename__ = "bot_notifications"
 

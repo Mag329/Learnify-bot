@@ -85,9 +85,9 @@ async def get_mark_with_weight(mark, weight):
 
 
 @handle_api_error()
-async def get_student(user_id):
+async def get_student(user_id, active=True):
     async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(User).filter_by(user_id=user_id))
+        result = await session.execute(db.select(User).filter_by(user_id=user_id, active=active))
         user = result.scalar_one_or_none()
 
         if user:
@@ -121,6 +121,11 @@ async def get_marks(user_id, date_object):
 
     return text
 
+
+# @handle_api_error()
+# async def get_marks_by_subject(user_id, subject_id, quarter):
+    
+    
 
 @handle_api_error()
 async def get_homework(user_id, date_object):

@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 async def cmd_start(message: Message):
     async with AsyncSessionLocal() as session:        
         result = await session.execute(
-            db.select(User).filter_by(user_id=message.from_user.id)
+            db.select(User).filter_by(user_id=message.from_user.id, active=True)
         )
         user = result.scalar_one_or_none()
 
@@ -216,7 +216,7 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                         session.add(user)
                         await session.commit()
 
-                    api, _ = await get_student(message.from_user.id)
+                    api, _ = await get_student(message.from_user.id, active=False)
 
                     profile_id = (await api.get_users_profile_info())[0].id
 
@@ -226,6 +226,7 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                     user.person_id = profile.children[0].contingent_guid
                     user.student_id = profile.children[0].id
                     user.contract_id = profile.children[0].contract_id
+                    user.active = True
 
                     await session.commit()
 
@@ -284,12 +285,24 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                 )
 
 
-@router.callback_query(F.data == "delete_message")
-async def delete_message_handler(callback: CallbackQuery, bot: Bot):
-    await callback.answer()
-    await callback.message.delete()
 
+@router.callback_query(F.data == "exit_from_account")
+async def exit_from_account(callback_query: CallbackQuery):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(User).filter_by(user_id=callback_query.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        if user:
+            user.active = False
+            await session.commit()
 
-# @router.message(F.text == "📡 Состояние серверов МЭШ")
-# async def schedule_handler(message: Message):
-#     await message.answer(await api.server_status(message.from_user.id))
+            await callback_query.answer()
+            await callback_query.message.edit_text(
+                "🚪 Вы вышли из аккаунта", reply_markup=kb.start_command
+            )
+        else:
+            await callback_query.answer()
+            await callback_query.message.edit_text(
+                "❌ Ошибка выхода из аккаунта", reply_markup=kb.start_command
+            )

@@ -87,3 +87,51 @@ async def mark_today_callback_handler(callback: CallbackQuery, state: FSMContext
             text,
             reply_markup=kb.mark,
         )
+
+
+
+@router.callback_query(F.data == "choose_subject_marks")
+async def choose_subject_homework_callback_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+
+    await callback.message.edit_text(
+        "Выберите предмет",
+        reply_markup=await kb.choice_subject(callback.from_user.id, 'marks'),
+    )
+    
+
+@router.callback_query(F.data == "back_to_marks")
+async def back_to_homework_callback_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+
+    data = await state.get_data()
+
+    date = data.get("date")
+
+    if not date:
+        date = datetime.now()
+
+    await state.update_data(date=date)
+
+    await callback.message.edit_text(
+        await get_marks(callback.from_user.id, date),
+        reply_markup=kb.mark,
+    )
+
+
+@router.callback_query(F.data.startswith("select_subject_homework_"))
+async def subject_homework_callback_handler(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+
+    subject_id = int(callback.data.split("_")[-1])
+
+    await state.update_data(subject_id=subject_id)
+    await state.update_data(date=datetime.now())
+
+    text = await get_marks_by_subject(callback.from_user.id, subject_id, datetime.now())
+    await callback.answer()
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.subject_homework,
+        )

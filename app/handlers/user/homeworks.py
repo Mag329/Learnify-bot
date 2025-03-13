@@ -97,7 +97,7 @@ async def choose_subject_homework_callback_handler(callback: CallbackQuery, stat
 
     await callback.message.edit_text(
         "Выберите предмет",
-        reply_markup=await kb.subjects_homework(callback.from_user.id),
+        reply_markup=await kb.choice_subject(callback.from_user.id, 'homework'),
     )
 
 
@@ -146,7 +146,7 @@ async def homework_left_callback_handler(callback: CallbackQuery, state: FSMCont
     subject_id = data.get("subject_id")
 
     if not subject_id:
-        await callback.message.edit_text("Выберите предмет", reply_markup=await kb.subjects_homework(callback.from_user.id))
+        await callback.message.edit_text("Выберите предмет", reply_markup=await kb.choice_subject(callback.from_user.id, 'homework'))
         return
 
     if date:
@@ -173,7 +173,7 @@ async def homework_right_callback_handler(callback: CallbackQuery, state: FSMCon
     subject_id = data.get("subject_id")
 
     if not subject_id:
-        await callback.message.edit_text("Выберите предмет", reply_markup=await kb.subjects_homework(callback.from_user.id))
+        await callback.message.edit_text("Выберите предмет", reply_markup=await kb.choice_subject(callback.from_user.id, 'homework'))
         return
 
     if date:
@@ -199,7 +199,7 @@ async def homework_today_callback_handler(callback: CallbackQuery, state: FSMCon
     subject_id = data.get("subject_id")
 
     if not subject_id:
-        await callback.message.edit_text("Выберите предмет", reply_markup=await kb.subjects_homework(callback.from_user.id))
+        await callback.message.edit_text("Выберите предмет", reply_markup=await kb.choice_subject(callback.from_user.id, 'homework'))
         return
 
     await state.set_state(HomeworkState.date)

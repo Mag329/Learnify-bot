@@ -87,23 +87,4 @@ async def experimental_features_settings(callback: CallbackQuery):
         )
 
 
-@router.callback_query(F.data == "exit_from_account")
-async def exit_from_account(callback_query: CallbackQuery):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            db.select(User).filter_by(user_id=callback_query.from_user.id)
-        )
-        user = result.scalar_one_or_none()
-        if user:
-            await session.delete(user)
-            await session.commit()
 
-            await callback_query.answer()
-            await callback_query.message.edit_text(
-                "🚪 Вы вышли из аккаунта", reply_markup=kb.start_command
-            )
-        else:
-            await callback_query.answer()
-            await callback_query.message.edit_text(
-                "❌ Ошибка выхода из аккаунта", reply_markup=kb.start_command
-            )

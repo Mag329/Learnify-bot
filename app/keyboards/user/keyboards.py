@@ -74,6 +74,25 @@ mark = InlineKeyboardMarkup(
             InlineKeyboardButton(text="📅", callback_data="mark_today"),
             InlineKeyboardButton(text="➡️", callback_data="mark_right"),
         ],
+        # [
+        #     InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_marks"),
+        # ]
+    ]
+)
+
+subject_marks = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="⬅️", callback_data="subject_marks_quarter_left"),
+            InlineKeyboardButton(text="📅", callback_data="subject_marks_quarter_now"),
+            InlineKeyboardButton(text="➡️", callback_data="subject_marks_quarter_right"),
+        ],
+        [
+            InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_marks"),
+        ],
+        [
+            InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_marks")
+        ]
     ]
 )
 
@@ -253,7 +272,7 @@ async def user_settings(user_id):
         return keyboard.as_markup()
 
 
-async def subjects_homework(user_id):
+async def choice_subject(user_id, for_):
     api, user = await get_student(user_id)
 
     subjects = await api.get_subjects(
@@ -264,10 +283,10 @@ async def subjects_homework(user_id):
     keyboard = InlineKeyboardBuilder()
 
     for subject in subjects.payload:
-        keyboard.row(InlineKeyboardButton(text=f"{await get_emoji_subject(subject.subject_name)} {subject.subject_name}", callback_data=f'select_subject_homework_{subject.subject_id}'))
+        keyboard.row(InlineKeyboardButton(text=f"{await get_emoji_subject(subject.subject_name)} {subject.subject_name}", callback_data=f'select_subject_{for_}_{subject.subject_id}'))
 
     keyboard = keyboard.adjust(2)
 
-    keyboard.row(InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_homework"))
+    keyboard.row(InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_{for_}"))
 
     return keyboard.as_markup()

@@ -185,7 +185,8 @@ async def get_homework(user_id, date_object, direction='right'):
 
     for task in homework.payload:
         description = task.description.rstrip("\n")
-        text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}:</b>\n    <code>{description}</code>\n\n"
+        materials = f'<i> (Для выполнения: {task.materials_count[0].amount})</i>' if len(task.materials_count) > 0 else ''
+        text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    <code>{description}</code>\n\n"
 
     if len(homework.payload) == 0:
         text = f'❌ <b>У вас нет домашних заданий на </b>{date_object.strftime("%d %B (%a)")}'
@@ -466,10 +467,10 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
                 type=event.source,
             )
 
-            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i>\n    📍 {event.room_number}\n    👤<i>{lesson_info.teacher.first_name[0]}. {lesson_info.teacher.middle_name[0]}. {lesson_info.teacher.last_name}</i> {" - 🔄 замена" if event.replaced else ""}\n\n'
+            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i> {"  🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}\n    👤<i>{lesson_info.teacher.first_name[0]}. {lesson_info.teacher.middle_name[0]}. {lesson_info.teacher.last_name}</i> {" - 🔄 замена" if event.replaced else ""}\n\n'
         else:
             replaced_text = "\n    👤 - 🔄 замена"
-            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i>\n    📍 {event.room_number}{replaced_text if event.replaced else ""}\n\n'
+            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i> {"  🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}{replaced_text if event.replaced else ""}\n\n'
 
     return text, date_object
 

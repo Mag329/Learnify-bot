@@ -21,7 +21,7 @@ async def howeworks_handler(message: Message, state: FSMContext):
 
     await state.set_state(HomeworkState.date)
     await state.update_data(date=date)
-    text = await get_homework(message.from_user.id, date)
+    text, new_date = await get_homework(message.from_user.id, date)
 
     if text:
         await message.answer(
@@ -43,9 +43,9 @@ async def homework_left_callback_handler(callback: CallbackQuery, state: FSMCont
     else:
         date = datetime.now()
 
-    await state.update_data(date=date)
-
-    text = await get_homework(callback.from_user.id, date)
+    text, new_date = await get_homework(callback.from_user.id, date, 'left')
+    
+    await state.update_data(date=new_date)
     if text:
         await callback.message.edit_text(
             text,
@@ -66,9 +66,9 @@ async def homework_right_callback_handler(callback: CallbackQuery, state: FSMCon
     else:
         date = datetime.now()
 
-    await state.update_data(date=date)
-
-    text = await get_homework(callback.from_user.id, date)
+    text, new_date = await get_homework(callback.from_user.id, date, 'right')
+    
+    await state.update_data(date=new_date)
     if text:
         await callback.message.edit_text(
             text,
@@ -83,7 +83,7 @@ async def homework_today_callback_handler(callback: CallbackQuery, state: FSMCon
     await state.set_state(HomeworkState.date)
     await state.update_data(date=datetime.now())
 
-    text = await get_homework(callback.from_user.id, datetime.now())
+    text, new_date = await get_homework(callback.from_user.id, datetime.now())
     if text:
         await callback.message.edit_text(
             text,

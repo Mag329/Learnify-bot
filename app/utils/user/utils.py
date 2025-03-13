@@ -128,15 +128,42 @@ async def get_marks(user_id, date_object):
     
 
 @handle_api_error()
-async def get_homework(user_id, date_object):
+async def get_homework(user_id, date_object, direction='right'):
     api, user = await get_student(user_id)
 
-    homework = await api.get_homeworks_short(
-        student_id=user.student_id,
-        profile_id=user.profile_id,
-        from_date=date_object,
-        to_date=date_object,
-    )
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(Settings).filter(Settings.user_id == user_id)
+        )
+        settings: Settings = result.scalar_one_or_none()
+        
+    if settings.skip_empty_days_homeworks:
+        homework_count = 0
+        empty_days = 0
+
+        while homework_count <= 0 and empty_days <= 14:
+            homework = await api.get_homeworks_short(
+                student_id=user.student_id,
+                profile_id=user.profile_id,
+                from_date=date_object,
+                to_date=date_object,
+            )
+            homework_count = len(homework.payload)
+            if homework_count <= 0:
+                empty_days += 1
+                if direction == "right":
+                    date_object += timedelta(days=1)  # Переход вправо
+                else:
+                    date_object -= timedelta(days=1)  # Переход влево
+            else:
+                empty_days = 0
+    else:
+        homework = await api.get_homeworks_short(
+            student_id=user.student_id,
+            profile_id=user.profile_id,
+            from_date=date_object,
+            to_date=date_object,
+        )
 
     text = f'📚 <b>Домашние задания на</b> {date_object.strftime("%d %B (%a)")}:\n\n'
 
@@ -147,7 +174,7 @@ async def get_homework(user_id, date_object):
     if len(homework.payload) == 0:
         text = f'❌ <b>У вас нет домашних заданий на </b>{date_object.strftime("%d %B (%a)")}'
 
-    return text
+    return text, date_object
 
 
 @handle_api_error()
@@ -363,16 +390,43 @@ async def get_notifications(user_id, all=False, is_checker=False):
 
 
 @handle_api_error()
-async def get_schedule(user_id, date_object, short=True):
+async def get_schedule(user_id, date_object, short=True, direction="right"):
     api, user = await get_student(user_id)
 
-    schedule = await api.get_events(
-        person_id=user.person_id,
-        mes_role=user.role,
-        begin_date=date_object,
-        end_date=date_object,
-    )
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(Settings).filter(Settings.user_id == user_id)
+        )
+        settings: Settings = result.scalar_one_or_none()
+        
+    if settings.skip_empty_days_schedule:
+        lessons_count = 0
+        empty_days = 0
 
+        while lessons_count <= 0 and empty_days <= 14:
+            schedule = await api.get_events(
+                person_id=user.person_id,
+                mes_role=user.role,
+                begin_date=date_object,
+                end_date=date_object,
+            )
+            lessons_count = schedule.total_count
+            if lessons_count <= 0:
+                empty_days += 1
+                if direction == "right":
+                    date_object += timedelta(days=1)  # Переход вправо
+                else:
+                    date_object -= timedelta(days=1)  # Переход влево
+            else:
+                empty_days = 0
+    else:
+        schedule = await api.get_events(
+            person_id=user.person_id,
+            mes_role=user.role,
+            begin_date=date_object,
+            end_date=date_object,
+        )
+    
     text = f'📅 <b>Расписание на</b> {date_object.strftime("%d %B (%a)")}:\n\n'
 
     for num, event in enumerate(schedule.response, 1):
@@ -392,7 +446,7 @@ async def get_schedule(user_id, date_object, short=True):
             replaced_text = "\n    👤 - 🔄 замена"
             text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i>\n    📍 {event.room_number}{replaced_text if event.replaced else ""}\n\n'
 
-    return text
+    return text, date_object
 
 
 async def get_replaced(user_id, date_object):

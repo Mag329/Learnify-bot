@@ -29,7 +29,7 @@ async def enable_new_mark_notification_settings(callback: CallbackQuery):
         result = await session.execute(
             db.select(Settings).filter_by(user_id=callback.from_user.id)
         )
-        settings = result.scalar_one_or_none()
+        settings: Settings = result.scalar_one_or_none()
 
         if settings:
             settings.enable_new_mark_notification = (
@@ -50,7 +50,7 @@ async def enable_new_mark_notification_settings(callback: CallbackQuery):
         result = await session.execute(
             db.select(Settings).filter_by(user_id=callback.from_user.id)
         )
-        settings = result.scalar_one_or_none()
+        settings: Settings = result.scalar_one_or_none()
 
         if settings:
             settings.enable_homework_notification = (
@@ -71,16 +71,13 @@ async def experimental_features_settings(callback: CallbackQuery):
         result = await session.execute(
             db.select(Settings).filter_by(user_id=callback.from_user.id)
         )
-        settings = result.scalar_one_or_none()
+        settings: Settings = result.scalar_one_or_none()
 
         if settings:
             settings.experimental_features = not settings.experimental_features
             await session.commit()
 
         await callback.answer()
-        await callback.message.answer(
-            "⚙️ Обновление настроек", reply_markup=await kb.main(callback.from_user.id)
-        )
         await callback.message.edit_text(
             text=callback.message.text,
             reply_markup=await kb.user_settings(callback.from_user.id),
@@ -88,3 +85,39 @@ async def experimental_features_settings(callback: CallbackQuery):
 
 
 
+@router.callback_query(F.data == "skip_empty_days_schedule_settings")
+async def skip_empty_days_schedule_settings(callback: CallbackQuery):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(Settings).filter_by(user_id=callback.from_user.id)
+        )
+        settings: Settings = result.scalar_one_or_none()
+
+        if settings:
+            settings.skip_empty_days_schedule = not settings.skip_empty_days_schedule
+            await session.commit()
+
+        await callback.answer()
+        await callback.message.edit_text(
+            text=callback.message.text,
+            reply_markup=await kb.user_settings(callback.from_user.id),
+        )
+        
+
+@router.callback_query(F.data == "skip_empty_days_homeworks_settings")
+async def skip_empty_days_homeworks_settings(callback: CallbackQuery):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(Settings).filter_by(user_id=callback.from_user.id)
+        )
+        settings: Settings = result.scalar_one_or_none()
+
+        if settings:
+            settings.skip_empty_days_homeworks = not settings.skip_empty_days_homeworks
+            await session.commit()
+
+        await callback.answer()
+        await callback.message.edit_text(
+            text=callback.message.text,
+            reply_markup=await kb.user_settings(callback.from_user.id),
+        )

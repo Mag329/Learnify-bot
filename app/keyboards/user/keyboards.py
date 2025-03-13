@@ -250,6 +250,20 @@ async def user_settings(user_id):
                 callback_data="enable_homework_notification_settings",
             )
         )
+        
+        keyboard.row(
+            InlineKeyboardButton(
+                text=f'Пропускать пустые дни в расписание {"✅" if settings.skip_empty_days_schedule else "❌"}',
+                callback_data="skip_empty_days_schedule_settings"
+            )
+        )
+        
+        keyboard.row(
+            InlineKeyboardButton(
+                text=f'Пропускать пустые дни в ДЗ {"✅" if settings.skip_empty_days_homeworks else "❌"}',
+                callback_data="skip_empty_days_homeworks_settings"
+            )
+        )
 
         # keyboard.row(
         #     InlineKeyboardButton(

@@ -89,5 +89,7 @@ class Settings(Base):
     )
     enable_new_mark_notification = db.Column(db.Boolean, default=True)
     enable_homework_notification = db.Column(db.Boolean, default=True)
+    skip_empty_days_schedule = db.Column(db.Boolean, default=True)
+    skip_empty_days_homeworks = db.Column(db.Boolean, default=True)
     experimental_features = db.Column(db.Boolean, default=False)
 

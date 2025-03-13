@@ -20,9 +20,10 @@ async def howeworks_handler(message: Message, state: FSMContext):
     date = datetime.now()
 
     await state.set_state(HomeworkState.date)
-    await state.update_data(date=date)
-    text, new_date = await get_homework(message.from_user.id, date)
 
+    text, new_date = await get_homework(message.from_user.id, date, direction='today')
+    
+    await state.update_data(date=new_date)
     if text:
         await message.answer(
             text,
@@ -81,9 +82,10 @@ async def homework_today_callback_handler(callback: CallbackQuery, state: FSMCon
     await callback.answer()
 
     await state.set_state(HomeworkState.date)
-    await state.update_data(date=datetime.now())
 
-    text, new_date = await get_homework(callback.from_user.id, datetime.now())
+    text, new_date = await get_homework(callback.from_user.id, datetime.now(), direction='today')
+    
+    await state.update_data(date=new_date)
     if text:
         await callback.message.edit_text(
             text,
@@ -105,16 +107,11 @@ async def choose_subject_homework_callback_handler(callback: CallbackQuery, stat
 async def back_to_homework_callback_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
-    data = await state.get_data()
+    date = datetime.now()
 
-    date = data.get("date")
-
-    if not date:
-        date = datetime.now()
-
-    await state.update_data(date=date)
-
-    text, new_date = await get_homework(callback.from_user.id, date)
+    text, new_date = await get_homework(callback.from_user.id, date, direction='today')
+    
+    await state.update_data(date=new_date)
     
     await callback.message.edit_text(
         text,

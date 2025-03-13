@@ -36,9 +36,10 @@ async def cancel_previous_task(user_id: int):
 @router.message(F.text == "📅 Расписание")
 async def schedule_handler(message: Message, state: FSMContext):
     await state.set_state(ScheduleState.date)
-    await state.update_data(date=datetime.now())
 
-    text, new_date = await get_schedule(message.from_user.id, datetime.now())
+    text, new_date = await get_schedule(message.from_user.id, datetime.now(), direction='today')
+    
+    await state.update_data(date=new_date)
     if text:
         schedule_message = await message.answer(
             text,
@@ -49,7 +50,7 @@ async def schedule_handler(message: Message, state: FSMContext):
         await cancel_previous_task(message.from_user.id)
         user_tasks[message.from_user.id] = asyncio.create_task(
             update_detailed_schedule(
-                schedule_message, message.from_user.id, datetime.now()
+                schedule_message, message.from_user.id, new_date
             )
         )
 
@@ -117,9 +118,10 @@ async def schedule_today_callback_handler(callback: CallbackQuery, state: FSMCon
     await callback.answer()
 
     await state.set_state(ScheduleState.date)
-    await state.update_data(date=datetime.now())
 
-    text, new_date = await get_schedule(callback.from_user.id, datetime.now())
+    text, new_date = await get_schedule(callback.from_user.id, datetime.now(), direction='today')
+    
+    await state.update_data(date=new_date)
     if text:
         await callback.message.edit_text(
             text,
@@ -130,6 +132,6 @@ async def schedule_today_callback_handler(callback: CallbackQuery, state: FSMCon
         await cancel_previous_task(callback.from_user.id)
         user_tasks[callback.from_user.id] = asyncio.create_task(
             update_detailed_schedule(
-                callback.message, callback.from_user.id, datetime.now()
+                callback.message, callback.from_user.id, new_date
             )
         )

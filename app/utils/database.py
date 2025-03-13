@@ -91,5 +91,7 @@ class Settings(Base):
     enable_homework_notification = db.Column(db.Boolean, default=True)
     skip_empty_days_schedule = db.Column(db.Boolean, default=True)
     skip_empty_days_homeworks = db.Column(db.Boolean, default=True)
+    next_day_if_lessons_end_schedule = db.Column(db.Boolean, default=True)
+    next_day_if_lessons_end_homeworks = db.Column(db.Boolean, default=True)
     experimental_features = db.Column(db.Boolean, default=False)
 

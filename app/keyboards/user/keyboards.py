@@ -253,15 +253,29 @@ async def user_settings(user_id):
         
         keyboard.row(
             InlineKeyboardButton(
-                text=f'Пропускать пустые дни в расписание {"✅" if settings.skip_empty_days_schedule else "❌"}',
+                text=f'Пропускать пустые дни (расписание) {"✅" if settings.skip_empty_days_schedule else "❌"}',
                 callback_data="skip_empty_days_schedule_settings"
             )
         )
         
         keyboard.row(
             InlineKeyboardButton(
-                text=f'Пропускать пустые дни в ДЗ {"✅" if settings.skip_empty_days_homeworks else "❌"}',
+                text=f'Пропускать пустые дни (ДЗ) {"✅" if settings.skip_empty_days_homeworks else "❌"}',
                 callback_data="skip_empty_days_homeworks_settings"
+            )
+        )
+        
+        keyboard.row(
+            InlineKeyboardButton(
+                text=f'Расписание на завтра{"✅" if settings.next_day_if_lessons_end_schedule else "❌"}',
+                callback_data="next_day_if_lessons_end_schedule_settings"
+            )
+        )
+        
+        keyboard.row(
+            InlineKeyboardButton(
+                text=f'ДЗ на завтра после уроков {"✅" if settings.next_day_if_lessons_end_homeworks else "❌"}',
+                callback_data="next_day_if_lessons_end_homeworks_settings"
             )
         )
 

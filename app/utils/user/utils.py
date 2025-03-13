@@ -1,7 +1,7 @@
 import random
 import phonenumbers
 from statistics import mode, median
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from collections import Counter, defaultdict
 
 from octodiary.apis import AsyncMobileAPI
@@ -158,6 +158,22 @@ async def get_homework(user_id, date_object, direction='right'):
             else:
                 empty_days = 0
     else:
+        homework = await api.get_homeworks_short(
+            student_id=user.student_id,
+            profile_id=user.profile_id,
+            from_date=date_object,
+            to_date=date_object,
+        )
+    
+    schedule = await api.get_events(
+                person_id=user.person_id,
+                mes_role=user.role,
+                begin_date=date_object,
+                end_date=date_object,
+            )
+    
+    if schedule.response and schedule.response[-1].finish_at < datetime.now(timezone.utc) and direction == 'today' and settings.next_day_if_lessons_end_homeworks:
+        date_object += timedelta(days=1)
         homework = await api.get_homeworks_short(
             student_id=user.student_id,
             profile_id=user.profile_id,
@@ -399,7 +415,7 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
         )
         settings: Settings = result.scalar_one_or_none()
         
-    if settings.skip_empty_days_schedule:
+    if settings.skip_empty_days_schedule and short:
         lessons_count = 0
         empty_days = 0
 
@@ -413,13 +429,22 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
             lessons_count = schedule.total_count
             if lessons_count <= 0:
                 empty_days += 1
-                if direction == "right":
+                if direction in ["right", "today"]:
                     date_object += timedelta(days=1)  # Переход вправо
                 else:
                     date_object -= timedelta(days=1)  # Переход влево
             else:
                 empty_days = 0
     else:
+        schedule = await api.get_events(
+            person_id=user.person_id,
+            mes_role=user.role,
+            begin_date=date_object,
+            end_date=date_object,
+        )
+        
+    if schedule.response and schedule.response[-1].finish_at < datetime.now(timezone.utc) and direction == 'today' and short and settings.next_day_if_lessons_end_schedule:
+        date_object += timedelta(days=1)
         schedule = await api.get_events(
             person_id=user.person_id,
             mes_role=user.role,

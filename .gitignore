@@ -6,5 +6,5 @@ __pycache__/
 .DS_Store
 .env
 alembic.ini
-alembic/versions/
+alembic/versions/*
 logs/

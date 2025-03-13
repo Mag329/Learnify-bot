@@ -17,8 +17,4 @@ RUN python3 -m pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY . .
 
-# RUN mv src/alembic.ini . && mv src/alembic/ .
-
-RUN alembic upgrade head
-
-CMD ["python3", "src/run.py"]
+CMD ["python3", "run.py"]

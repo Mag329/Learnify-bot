@@ -1,4 +1,4 @@
-BOT_VERSION = "1.6.1"
+BOT_VERSION = "1.6.2"
 
 
 # Bot info

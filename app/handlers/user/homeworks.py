@@ -17,7 +17,7 @@ router = Router()
 
 @router.message(F.text == "📚 Домашние задания")
 async def howeworks_handler(message: Message, state: FSMContext):
-    date = datetime.now() - timedelta(days=3)
+    date = datetime.now()
 
     await state.set_state(HomeworkState.date)
 

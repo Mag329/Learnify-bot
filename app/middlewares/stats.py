@@ -46,9 +46,7 @@ class StatsMiddleware(BaseMiddleware):
                 action_type = "callback_query"
                 user = event.callback_query.from_user
                 action_data = event.callback_query.data
-            
 
-            
             if user:
                 user_info = {
                     "user_id": user.id,
@@ -75,13 +73,15 @@ class StatsMiddleware(BaseMiddleware):
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.connect((LOGSTASH_HOST, LOGSTASH_PORT))
-                    sock.sendall(json.dumps(doc).encode('utf-8'))
+                    sock.sendall(json.dumps(doc).encode("utf-8"))
                     sock.close()
                 except Exception as e:
                     middleware_logger.error(f"Failed to send data to Logstash: {e}")
 
             # Логируем вызов хэндлера
-            middleware_logger.info(f"Calling handler: {handler.__name__} with data: {data}")
+            middleware_logger.info(
+                f"Calling handler: {handler.__name__} with data: {data}"
+            )
 
         # Продолжаем выполнение хэндлера
         return await handler(event, data)

@@ -89,16 +89,17 @@ async def mark_today_callback_handler(callback: CallbackQuery, state: FSMContext
         )
 
 
-
 @router.callback_query(F.data == "choose_subject_marks")
-async def choose_subject_homework_callback_handler(callback: CallbackQuery, state: FSMContext):
+async def choose_subject_homework_callback_handler(
+    callback: CallbackQuery, state: FSMContext
+):
     await callback.answer()
 
     await callback.message.edit_text(
         "Выберите предмет",
-        reply_markup=await kb.choice_subject(callback.from_user.id, 'marks'),
+        reply_markup=await kb.choice_subject(callback.from_user.id, "marks"),
     )
-    
+
 
 @router.callback_query(F.data == "back_to_marks")
 async def back_to_homework_callback_handler(callback: CallbackQuery, state: FSMContext):

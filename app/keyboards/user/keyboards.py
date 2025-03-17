@@ -36,8 +36,10 @@ homework = InlineKeyboardMarkup(
             InlineKeyboardButton(text="➡️", callback_data="homework_right"),
         ],
         [
-            InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_homework"),
-        ]
+            InlineKeyboardButton(
+                text="📚 Выбрать предмет", callback_data="choose_subject_homework"
+            ),
+        ],
     ]
 )
 
@@ -49,11 +51,11 @@ subject_homework = InlineKeyboardMarkup(
             InlineKeyboardButton(text="➡️", callback_data="subject_homework_right"),
         ],
         [
-            InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_homework"),
+            InlineKeyboardButton(
+                text="📚 Выбрать предмет", callback_data="choose_subject_homework"
+            ),
         ],
-        [
-            InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_homework")
-        ]
+        [InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_homework")],
     ]
 )
 
@@ -88,11 +90,11 @@ subject_marks = InlineKeyboardMarkup(
             InlineKeyboardButton(text="➡️", callback_data="subject_marks_quarter_right"),
         ],
         [
-            InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_marks"),
+            InlineKeyboardButton(
+                text="📚 Выбрать предмет", callback_data="choose_subject_marks"
+            ),
         ],
-        [
-            InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_marks")
-        ]
+        [InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_marks")],
     ]
 )
 
@@ -250,32 +252,32 @@ async def user_settings(user_id):
                 callback_data="enable_homework_notification_settings",
             )
         )
-        
+
         keyboard.row(
             InlineKeyboardButton(
                 text=f'Пропускать пустые дни (расписание) {"✅" if settings.skip_empty_days_schedule else "❌"}',
-                callback_data="skip_empty_days_schedule_settings"
+                callback_data="skip_empty_days_schedule_settings",
             )
         )
-        
+
         keyboard.row(
             InlineKeyboardButton(
                 text=f'Пропускать пустые дни (ДЗ) {"✅" if settings.skip_empty_days_homeworks else "❌"}',
-                callback_data="skip_empty_days_homeworks_settings"
+                callback_data="skip_empty_days_homeworks_settings",
             )
         )
-        
+
         keyboard.row(
             InlineKeyboardButton(
                 text=f'Расписание на завтра{"✅" if settings.next_day_if_lessons_end_schedule else "❌"}',
-                callback_data="next_day_if_lessons_end_schedule_settings"
+                callback_data="next_day_if_lessons_end_schedule_settings",
             )
         )
-        
+
         keyboard.row(
             InlineKeyboardButton(
                 text=f'ДЗ на завтра после уроков {"✅" if settings.next_day_if_lessons_end_homeworks else "❌"}',
-                callback_data="next_day_if_lessons_end_homeworks_settings"
+                callback_data="next_day_if_lessons_end_homeworks_settings",
             )
         )
 
@@ -292,9 +294,7 @@ async def user_settings(user_id):
             )
         )
         keyboard.row(
-            InlineKeyboardButton(
-                text="Закрыть", callback_data="delete_message"
-            )
+            InlineKeyboardButton(text="Закрыть", callback_data="delete_message")
         )
 
         return keyboard.as_markup()
@@ -304,14 +304,18 @@ async def choice_subject(user_id, for_):
     api, user = await get_student(user_id)
 
     subjects = await api.get_subjects(
-        student_id=user.student_id,
-        profile_id=user.profile_id
+        student_id=user.student_id, profile_id=user.profile_id
     )
 
     keyboard = InlineKeyboardBuilder()
 
     for subject in subjects.payload:
-        keyboard.row(InlineKeyboardButton(text=f"{await get_emoji_subject(subject.subject_name)} {subject.subject_name}", callback_data=f'select_subject_{for_}_{subject.subject_id}'))
+        keyboard.row(
+            InlineKeyboardButton(
+                text=f"{await get_emoji_subject(subject.subject_name)} {subject.subject_name}",
+                callback_data=f"select_subject_{for_}_{subject.subject_id}",
+            )
+        )
 
     keyboard = keyboard.adjust(2)
 

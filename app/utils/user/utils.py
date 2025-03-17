@@ -87,7 +87,9 @@ async def get_mark_with_weight(mark, weight):
 @handle_api_error()
 async def get_student(user_id, active=True):
     async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(User).filter_by(user_id=user_id, active=active))
+        result = await session.execute(
+            db.select(User).filter_by(user_id=user_id, active=active)
+        )
         user = result.scalar_one_or_none()
 
         if user:
@@ -124,11 +126,10 @@ async def get_marks(user_id, date_object):
 
 # @handle_api_error()
 # async def get_marks_by_subject(user_id, subject_id, quarter):
-    
-    
+
 
 @handle_api_error()
-async def get_homework(user_id, date_object, direction='right'):
+async def get_homework(user_id, date_object, direction="right"):
     api, user = await get_student(user_id)
 
     async with AsyncSessionLocal() as session:
@@ -136,7 +137,28 @@ async def get_homework(user_id, date_object, direction='right'):
             db.select(Settings).filter(Settings.user_id == user_id)
         )
         settings: Settings = result.scalar_one_or_none()
-        
+
+    schedule = await api.get_events(
+        person_id=user.person_id,
+        mes_role=user.role,
+        begin_date=date_object,
+        end_date=date_object,
+    )
+
+    if (
+        schedule.response
+        and schedule.response[-1].finish_at < datetime.now(timezone.utc)
+        and direction == "today"
+        and settings.next_day_if_lessons_end_homeworks
+    ):
+        date_object += timedelta(days=1)
+        homework = await api.get_homeworks_short(
+            student_id=user.student_id,
+            profile_id=user.profile_id,
+            from_date=date_object,
+            to_date=date_object,
+        )
+
     if settings.skip_empty_days_homeworks:
         homework_count = 0
         empty_days = 0
@@ -149,31 +171,17 @@ async def get_homework(user_id, date_object, direction='right'):
                 to_date=date_object,
             )
             homework_count = len(homework.payload)
+
             if homework_count <= 0:
                 empty_days += 1
-                if direction == "right":
+                if direction in ["right", "today"]:
                     date_object += timedelta(days=1)  # Переход вправо
                 else:
                     date_object -= timedelta(days=1)  # Переход влево
             else:
                 empty_days = 0
+
     else:
-        homework = await api.get_homeworks_short(
-            student_id=user.student_id,
-            profile_id=user.profile_id,
-            from_date=date_object,
-            to_date=date_object,
-        )
-    
-    schedule = await api.get_events(
-                person_id=user.person_id,
-                mes_role=user.role,
-                begin_date=date_object,
-                end_date=date_object,
-            )
-    
-    if schedule.response and schedule.response[-1].finish_at < datetime.now(timezone.utc) and direction == 'today' and settings.next_day_if_lessons_end_homeworks:
-        date_object += timedelta(days=1)
         homework = await api.get_homeworks_short(
             student_id=user.student_id,
             profile_id=user.profile_id,
@@ -185,7 +193,11 @@ async def get_homework(user_id, date_object, direction='right'):
 
     for task in homework.payload:
         description = task.description.rstrip("\n")
-        materials = f'<i> (Для выполнения: {task.materials_count[0].amount})</i>' if len(task.materials_count) > 0 else ''
+        materials = (
+            f"<i> (Для выполнения: {task.materials_count[0].amount})</i>"
+            if len(task.materials_count) > 0
+            else ""
+        )
         text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    <code>{description}</code>\n\n"
 
     if len(homework.payload) == 0:
@@ -198,9 +210,11 @@ async def get_homework(user_id, date_object, direction='right'):
 async def get_homework_by_subject(user_id, subject_id, date_object):
     api, user = await get_student(user_id)
 
-    if temp_events.get(user_id) is not None and temp_events.get(user_id)['timestamp'] < datetime.now() - timedelta(hours=1):
+    if temp_events.get(user_id) is not None and temp_events.get(user_id)[
+        "timestamp"
+    ] < datetime.now() - timedelta(hours=1):
         events = temp_events[user_id]["data"]
-        
+
     else:
         events = await api.get_events(
             person_id=user.person_id,
@@ -208,13 +222,10 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
             begin_date=date_object,
             end_date=date_object + timedelta(days=7),
         )
-        
-        temp_events[user_id] = {
-            "data": events,
-            "timestamp": datetime.now()
-        }
-    
-    subject_name = ''
+
+        temp_events[user_id] = {"data": events, "timestamp": datetime.now()}
+
+    subject_name = ""
     homeworks = []
 
     for event in events.response:
@@ -223,54 +234,58 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
                 profile_id=user.profile_id,
                 student_id=user.student_id,
                 lesson_id=event.id,
-                type=event.source
+                type=event.source,
             )
 
             subject_name = lesson_info.subject_name
 
             materials = []
-            
+
             for homework in lesson_info.lesson_homeworks:
                 for material in homework.materials:
                     # if material.type in ['test_spec_binding', 'game_app', 'workbook', '']:
                     for item in material.items:
                         for url in item.urls:
-                            if url.url_type == 'launch':
-                                materials.append({
-                                                "url": url.url,
-                                                "title": item.title,
-                                                "material_type_name": material.type_name,
-                                                "material_type": material.type,
-                                                })
-            
-            homeworks.append({
-                "homeworks": lesson_info.lesson_homeworks,
-                "materials": materials,
-                "date": lesson_info.date,
-                "lesson_id": lesson_info.id,
-            })
+                            if url.url_type == "launch":
+                                materials.append(
+                                    {
+                                        "url": url.url,
+                                        "title": item.title,
+                                        "material_type_name": material.type_name,
+                                        "material_type": material.type,
+                                    }
+                                )
+
+            homeworks.append(
+                {
+                    "homeworks": lesson_info.lesson_homeworks,
+                    "materials": materials,
+                    "date": lesson_info.date,
+                    "lesson_id": lesson_info.id,
+                }
+            )
 
     text = f"{await get_emoji_subject(subject_name)} <b>{subject_name}</b>\n\n"
-    
+
     for homework in homeworks:
-        if len(homework['homeworks']) > 0 or len(homework['materials']) > 0:
+        if len(homework["homeworks"]) > 0 or len(homework["materials"]) > 0:
             text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
-            if len(homework['homeworks']) > 0:
+            if len(homework["homeworks"]) > 0:
                 text += f"    📚 <b>Домашние задание:</b>\n"
-                for task in homework['homeworks']:
+                for task in homework["homeworks"]:
                     text += f"        - <i><code>{task.homework}</code></i>\n"
-            
-            if len(homework['materials']) > 0:
+
+            if len(homework["materials"]) > 0:
                 text += f"\n    🔗 <b>Для выполнения:</b>\n"
-                for material in homework['materials']:
+                for material in homework["materials"]:
                     text += f'        - <a href="{material["url"]}">{material["title"]} ({material["material_type_name"]})</a>\n'
-            
+
             text += "\n"
         else:
             text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
             text += f"    ❌ <b>Нет домашних заданий</b>\n"
             text += "\n"
-            
+
     return text
 
 
@@ -415,7 +430,29 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
             db.select(Settings).filter(Settings.user_id == user_id)
         )
         settings: Settings = result.scalar_one_or_none()
-        
+
+    schedule = await api.get_events(
+        person_id=user.person_id,
+        mes_role=user.role,
+        begin_date=date_object,
+        end_date=date_object,
+    )
+
+    if (
+        schedule.response
+        and schedule.response[-1].finish_at < datetime.now(timezone.utc)
+        and direction == "today"
+        and short
+        and settings.next_day_if_lessons_end_schedule
+    ):
+        date_object += timedelta(days=1)
+        schedule = await api.get_events(
+            person_id=user.person_id,
+            mes_role=user.role,
+            begin_date=date_object,
+            end_date=date_object,
+        )
+
     if settings.skip_empty_days_schedule and short:
         lessons_count = 0
         empty_days = 0
@@ -436,23 +473,7 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
                     date_object -= timedelta(days=1)  # Переход влево
             else:
                 empty_days = 0
-    else:
-        schedule = await api.get_events(
-            person_id=user.person_id,
-            mes_role=user.role,
-            begin_date=date_object,
-            end_date=date_object,
-        )
-        
-    if schedule.response and schedule.response[-1].finish_at < datetime.now(timezone.utc) and direction == 'today' and short and settings.next_day_if_lessons_end_schedule:
-        date_object += timedelta(days=1)
-        schedule = await api.get_events(
-            person_id=user.person_id,
-            mes_role=user.role,
-            begin_date=date_object,
-            end_date=date_object,
-        )
-    
+
     text = f'📅 <b>Расписание на</b> {date_object.strftime("%d %B (%a)")}:\n\n'
 
     for num, event in enumerate(schedule.response, 1):
@@ -467,10 +488,10 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
                 type=event.source,
             )
 
-            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i> {"  🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}\n    👤<i>{lesson_info.teacher.first_name[0]}. {lesson_info.teacher.middle_name[0]}. {lesson_info.teacher.last_name}</i> {" - 🔄 замена" if event.replaced else ""}\n\n'
+            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i> {" <code>Н</code>" if event.is_missed_lesson else ""} {"  🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}\n    👤 <i>{lesson_info.teacher.first_name[0]}. {lesson_info.teacher.middle_name[0]}. {lesson_info.teacher.last_name}</i> {" - 🔄 замена" if event.replaced else ""}\n\n'
         else:
             replaced_text = "\n    👤 - 🔄 замена"
-            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i> {"  🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}{replaced_text if event.replaced else ""}\n\n'
+            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i> {" <code>Н</code>" if event.is_missed_lesson else ""} {"  🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}{replaced_text if event.replaced else ""}\n\n'
 
     return text, date_object
 
@@ -512,7 +533,7 @@ async def get_replaced(user_id, date_object):
             for notification in result.scalars().all():
                 await session.delete(notification)
                 await session.commit()
-            
+
             if have_replaced:
                 result: BotNotification = await session.execute(
                     db.select(BotNotification).filter_by(
@@ -691,10 +712,9 @@ async def get_results(user_id, quarter):
 
             subject_data.append(subject_info)
 
-
     today = date.today()
     start_year = today.year if today >= date(today.year, 9, 1) else today.year - 1
-    
+
     # Получение информации о четверти
     periods_schedules = await api.get_periods_schedules(
         student_id=user.student_id,
@@ -722,7 +742,7 @@ async def get_results(user_id, quarter):
 
     if current_start:
         quarters.append((current_start, sorted_schedules[-1].date))
-    
+
     homeworks_short = await api.get_homeworks_short(
         student_id=user.student_id,
         profile_id=user.profile_id,

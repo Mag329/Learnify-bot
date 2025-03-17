@@ -110,7 +110,7 @@ async def cancel_update_notification_handler(
     )
 
 
-@router.message(Command('logs'))
+@router.message(Command("logs"))
 @admin_required
 async def logs_handler(message: Message, state: FSMContext):
     if not os.path.exists(LOG_FILE):

@@ -3,6 +3,7 @@ from aiogram.types import (
     KeyboardButton,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
+    WebAppInfo,
 )
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
@@ -226,6 +227,8 @@ async def main(user_id):
     keyboard.row(
         KeyboardButton(text="📋 Меню"),
     )
+    
+    # keyboard.row(KeyboardButton(text="WebApp", web_app=WebAppInfo(url = 'https://genially-aesthetic-weasel.cloudpub.ru/')))
 
     keyboard.row(KeyboardButton(text="⚙️ Настройки"))
 

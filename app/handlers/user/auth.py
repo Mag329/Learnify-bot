@@ -86,6 +86,7 @@ async def cmd_start(message: Message):
                     text=error_message,
                     reply_markup=kb.start_command,
                 )
+                return
 
             except Exception as e:
                 logger.exception(
@@ -97,6 +98,7 @@ async def cmd_start(message: Message):
                     text="❌ Ошибка авторизации",
                     reply_markup=kb.start_command,
                 )
+                return
 
             await session.commit()
 
@@ -229,6 +231,10 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                     if not user:
                         user = User(user_id=message.from_user.id, token=token)
                         session.add(user)
+                        await session.commit()
+                        
+                    else:
+                        user.token = token
                         await session.commit()
 
                     api, _ = await get_student(message.from_user.id, active=False)

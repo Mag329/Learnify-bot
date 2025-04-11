@@ -9,3 +9,4 @@ alembic.ini
 alembic/versions/*
 logs/
 data/
+.VSCodeCounter/

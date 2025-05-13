@@ -94,3 +94,21 @@ class Settings(Base):
     next_day_if_lessons_end_schedule = db.Column(db.Boolean, default=True)
     next_day_if_lessons_end_homeworks = db.Column(db.Boolean, default=True)
     experimental_features = db.Column(db.Boolean, default=False)
+
+
+class UserData(Base):
+    __tablename__ = "user_data"
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False
+    )
+    first_name = db.Column(db.String, nullable=True)
+    last_name = db.Column(db.String, nullable=True)
+    middle_name = db.Column(db.String, nullable=True)
+    gender = db.Column(db.String, nullable=True)
+    phone = db.Column(db.String, nullable=True)
+    email = db.Column(db.String, nullable=True)
+    birthday = db.Column(db.DateTime, nullable=True)

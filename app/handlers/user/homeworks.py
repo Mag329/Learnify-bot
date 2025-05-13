@@ -44,7 +44,7 @@ async def homework_left_callback_handler(callback: CallbackQuery, state: FSMCont
     else:
         date = datetime.now()
 
-    text, new_date = await get_homework(callback.from_user.id, date, "left")
+    text, new_date = await get_homework(callback.from_user.id, date, direction="left")
 
     await state.update_data(date=new_date)
     if text:
@@ -67,7 +67,7 @@ async def homework_right_callback_handler(callback: CallbackQuery, state: FSMCon
     else:
         date = datetime.now()
 
-    text, new_date = await get_homework(callback.from_user.id, date, "right")
+    text, new_date = await get_homework(callback.from_user.id, date, direction="right")
 
     await state.update_data(date=new_date)
     if text:

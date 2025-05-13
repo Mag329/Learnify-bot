@@ -226,10 +226,19 @@ async def get_homework(user_id, date_object, direction="right"):
 async def get_homework_by_subject(user_id, subject_id, date_object):
     api, user = await get_student(user_id)
 
-    if temp_events.get(user_id) is not None and temp_events.get(user_id)[
-        "timestamp"
-    ] + timedelta(hours=1) > datetime.now():
-        events = temp_events[user_id]["data"]
+    cache = temp_events.get(user_id)
+    
+    now = datetime.now()
+    begin_date = date_object
+    end_date = date_object + timedelta(days=7)
+    
+    if (
+        cache is not None and
+        cache["timestamp"] + timedelta(hours=1) > now and
+        cache["begin_date"] <= begin_date and
+        cache["end_date"] >= end_date
+    ):
+        events = cache["data"]
 
     else:
         events = await api.get_events(
@@ -239,7 +248,12 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
             end_date=date_object + timedelta(days=7),
         )
 
-        temp_events[user_id] = {"data": events, "timestamp": datetime.now()}
+        temp_events[user_id] = {
+            "data": events,
+            "timestamp": now,
+            "begin_date": begin_date,
+            "end_date": end_date,
+        }
 
     subject_name = ""
     homeworks = []

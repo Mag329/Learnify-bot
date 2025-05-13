@@ -21,7 +21,7 @@ from config import (
     AWAIT_RESPONSE_MESSAGE,
 )
 import app.keyboards.user.keyboards as kb
-from app.utils.database import AsyncSessionLocal, db, User, Settings
+from app.utils.database import AsyncSessionLocal, db, User, UserData, Settings
 from app.utils.user.utils import get_student, get_web_api
 from app.states.user.states import AuthState
 
@@ -251,7 +251,6 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                     user.student_id = profile.children[0].id
                     user.contract_id = profiles[0].ispp_account
                     user.active = True
-                    
 
                     await session.commit()
 
@@ -265,6 +264,28 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                         session.add(settings)
 
                     await session.commit()
+                    
+                    result = await session.execute(
+                        db.select(UserData).filter_by(user_id=message.from_user.id)
+                    )
+                    user_data = result.scalar_one_or_none()
+                    
+                    if not user_data:
+                        profile_data = profile.profile
+                        
+                        user_data = UserData(
+                            user_id=message.from_user.id,
+                            first_name=profile_data.first_name,
+                            last_name=profile_data.last_name,
+                            middle_name=profile_data.middle_name,
+                            gender=profile_data.sex,
+                            phone=profile_data.phone,
+                            email=profile_data.email,
+                            birthday=profile_data.birth_date
+                        )
+                        session.add(user_data)
+                        
+                    await session.commit()    
 
                     await message.answer(
                         text=SUCCESSFUL_AUTH.format(

@@ -9,6 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import logging
 from envparse import Env
 import locale
+from pytz import timezone
 
 from config import *
 
@@ -43,6 +44,7 @@ bot = Bot(
 )
 dp = Dispatcher(storage=MemoryStorage())
 scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(timezone=timezone("Europe/Moscow"))
 
 
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
@@ -94,25 +96,22 @@ async def main():
     dp.include_router(panel.router)
 
     dp.include_router(other.router)
-
-    # dp.message.middleware(AllowedUsersMiddleware())
-    # dp.callback_query.middleware(AllowedUsersMiddleware())
-
-    # dp.message.middleware(CheckUserInDbMiddleware())
-
-    # dp.message.middleware(LoggingMiddleware())
-    # dp.callback_query.middleware(LoggingMiddleware())
-
+    
+    
+    # Middlewares
     dp.update.middleware(LoggingMiddleware())
 
     dp.update.middleware(StatsMiddleware())
 
     await bot.delete_webhook(drop_pending_updates=True)
 
-    from app.utils.checkers import new_notifications_checker, replaced_checker
+    from app.utils.checkers import new_notifications_checker, replaced_checker, birthday_checker
 
     await new_notifications_checker(bot)
     scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))
+    
+    await birthday_checker(bot)
+    scheduler.add_job(birthday_checker, trigger="cron", hour=10, minute=0, args=(bot,))
 
     # await replaced_checker(bot)
     # scheduler.add_job(replaced_checker, "interval", minutes=10, args=(bot,))

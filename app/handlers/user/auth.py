@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
 import logging
 
-from octodiary.apis import AsyncMobileAPI
+from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
 from octodiary.urls import Systems
 from octodiary.exceptions import APIError
 
@@ -22,7 +22,7 @@ from config import (
 )
 import app.keyboards.user.keyboards as kb
 from app.utils.database import AsyncSessionLocal, db, User, Settings
-from app.utils.user.utils import get_student
+from app.utils.user.utils import get_student, get_web_api
 from app.states.user.states import AuthState
 
 
@@ -242,12 +242,16 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                     profile_id = (await api.get_users_profile_info())[0].id
 
                     profile = await api.get_family_profile(profile_id=profile_id)
+                    web_api, _ = await get_web_api(message.from_user.id, active=False)
+                    profiles = await web_api.get_student_profiles()
+                    
                     user.profile_id = profile_id
                     user.role = profile.profile.type
                     user.person_id = profile.children[0].contingent_guid
                     user.student_id = profile.children[0].id
-                    user.contract_id = profile.children[0].contract_id
+                    user.contract_id = profiles[0].ispp_account
                     user.active = True
+                    
 
                     await session.commit()
 

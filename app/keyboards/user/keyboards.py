@@ -184,10 +184,12 @@ quarters = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(text="1️⃣", callback_data="choose_quarter_1"),
-            InlineKeyboardButton(text="2️⃣", callback_data="choose_quarter_2"),
+            InlineKeyboardButton(text="2️⃣", callback_data="choose_quarter_2")
         ],
-        [InlineKeyboardButton(text="3️⃣", callback_data="choose_quarter_3")],
-        # [InlineKeyboardButton(text="3️⃣", callback_data="choose_quarter_3"), InlineKeyboardButton(text="4️⃣", callback_data="choose_quarter_4")],
+        [
+            InlineKeyboardButton(text="3️⃣", callback_data="choose_quarter_3"), 
+            InlineKeyboardButton(text="4️⃣", callback_data="choose_quarter_4")
+        ],
         [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
     ]
 )

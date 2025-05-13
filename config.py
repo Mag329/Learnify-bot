@@ -7,7 +7,7 @@ DEVELOPER_SITE = "https://mag329.site"
 
 
 # Other
-BASE_QUARTER = 3
+BASE_QUARTER = 4
 LOG_FILE = "logs/bot.log"
 
 

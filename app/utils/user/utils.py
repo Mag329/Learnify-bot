@@ -4,12 +4,12 @@ from statistics import mode, median
 from datetime import datetime, date, timedelta, timezone
 from collections import Counter, defaultdict
 
-from octodiary.apis import AsyncMobileAPI
+from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
 from octodiary.urls import Systems
 from octodiary.exceptions import APIError
 
 from app.utils.user.decorators import handle_api_error
-from config import ERROR_MESSAGE, ERROR_403_MESSAGE
+from config import ERROR_MESSAGE, ERROR_403_MESSAGE, BASE_QUARTER
 from app.utils.database import (
     AsyncSessionLocal,
     db,
@@ -93,7 +93,23 @@ async def get_student(user_id, active=True):
         user = result.scalar_one_or_none()
 
         if user:
-            api = AsyncMobileAPI(system=Systems.MES)
+            api:AsyncMobileAPI = AsyncMobileAPI(system=Systems.MES)
+            api.token = user.token
+            return api, user
+        else:
+            return None, None
+        
+        
+@handle_api_error()
+async def get_web_api(user_id, active=True):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(User).filter_by(user_id=user_id, active=active)
+        )
+        user = result.scalar_one_or_none()
+
+        if user:
+            api:AsyncWebAPI = AsyncWebAPI(system=Systems.MES)
             api.token = user.token
             return api, user
         else:
@@ -661,7 +677,11 @@ async def minutes_to_time(duration_minutes):
 
 @handle_api_error()
 async def get_results(user_id, quarter):
-    quarter = int(quarter) - 1
+    quarter = int(quarter)
+
+    target_title = f"{quarter} четверть"
+
+    quarter -= 1
 
     api, user = await get_student(user_id)
 
@@ -689,10 +709,17 @@ async def get_results(user_id, quarter):
             "marks_count": {},
         }
 
-        if len(subject_marks_info.periods) >= 2:
-            marks = [
-                int(mark.value) for mark in subject_marks_info.periods[quarter].marks
-            ]
+        # if len(subject_marks_info.periods) >= 2:
+        target_period = next(
+            (p for p in subject_marks_info.periods if p.title == target_title), None
+        )
+
+        if target_period is not None:
+            # print(f"{subject.subject_name}: {len(subject_marks_info.periods)}")
+            # marks = [
+            #     int(mark.value) for mark in subject_marks_info.periods[quarter].marks
+            # ]
+            marks = [int(mark.value) for mark in target_period.marks]
             subject_info["total_marks"] = len(marks)
             subject_info["frequent_grade"] = mode(marks)
 
@@ -700,7 +727,8 @@ async def get_results(user_id, quarter):
             subject_info["marks_count"] = dict(Counter(marks))
             marks_by_grade.update(marks)
 
-            subject_info["mark"] = subject_marks_info.periods[quarter].value
+            # subject_info["mark"] = subject_marks_info.periods[quarter].value
+            subject_info["mark"] = target_period.value
 
             for mark in marks:
                 global_marks.append(mark)

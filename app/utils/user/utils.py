@@ -228,7 +228,7 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
 
     if temp_events.get(user_id) is not None and temp_events.get(user_id)[
         "timestamp"
-    ] < datetime.now() - timedelta(hours=1):
+    ] + timedelta(hours=1) > datetime.now():
         events = temp_events[user_id]["data"]
 
     else:
@@ -602,50 +602,47 @@ async def get_visits(user_id, date_object):
 async def get_profile(user_id):
     api, user = await get_student(user_id)
 
-    data = await api.get_person_data(
-        person_id=user.person_id, profile_id=user.profile_id
-    )
-
     profile = await api.get_family_profile(profile_id=user.profile_id)
+    data = profile.profile
 
     balance = await api.get_status(
         profile_id=user.profile_id, contract_ids=user.contract_id
     )
     balance = balance.students[0].balance / 100
 
-    phone = phonenumbers.parse(f"+7{profile.profile.phone}")
+    phone = phonenumbers.parse(f"+7{data.phone}")
 
     current_date = datetime.today()
-    age = current_date.year - data.birthdate.year
+    age = current_date.year - data.birth_date.year
     if (current_date.month, current_date.day) < (
-        data.birthdate.month,
-        data.birthdate.day,
+        data.birth_date.month,
+        data.birth_date.day,
     ):
         age -= 1
 
     for children in profile.children:
         if (
-            children.last_name == data.lastname
-            and children.first_name == data.firstname
-            and children.middle_name == data.patronymic
+            children.last_name == data.last_name
+            and children.first_name == data.first_name
+            and children.middle_name == data.middle_name
         ):
             school = children.school
             class_name = children.class_name
-
+    
     text = "👤 <b>Профиль</b>\n\n"
     text += f"🆔 <b>ID:</b> <code>{data.id}</code>\n"
-    text += f"📝 <b>Имя:</b> <code>{data.firstname}</code>\n"
-    text += f"📜 <b>Фамилия:</b> <code>{data.lastname}</code>\n"
-    text += f"🧬 <b>Отчество:</b> <code>{data.patronymic}</code>\n\n"
+    text += f"📝 <b>Имя:</b> <code>{data.first_name}</code>\n"
+    text += f"📜 <b>Фамилия:</b> <code>{data.last_name}</code>\n"
+    text += f"🧬 <b>Отчество:</b> <code>{data.middle_name}</code>\n\n"
 
-    text += f"✉️ <b>Почта:</b> <code>{profile.profile.email}</code>\n"
+    text += f"✉️ <b>Почта:</b> <code>{data.email}</code>\n"
     text += f"📱 <b>Телефон:</b> <code>{phonenumbers.format_number(phone, phonenumbers.PhoneNumberFormat.INTERNATIONAL)}</code>\n"
     text += f"🪪 <b>СНИЛС:</b> <code>{data.snils[:3]}-{data.snils[3:6]}-{data.snils[6:9]}-{data.snils[9:]}</code>\n\n"
 
     text += f"💰 <b>Баланс:</b> <code>{balance} ₽</code>\n\n"
 
     text += (
-        f"🎂 <b>Дата рождения:</b> <code>{data.birthdate.strftime('%d %B %Y')}</code>\n"
+        f"🎂 <b>Дата рождения:</b> <code>{data.birth_date.strftime('%d %B %Y')}</code>\n"
     )
     text += f"🔢 <b>Возраст:</b> <code>{age}</code>\n\n"
 

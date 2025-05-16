@@ -1,7 +1,7 @@
 import random
 import phonenumbers
 from statistics import mode, median
-from datetime import datetime, date, timedelta, timezone
+from datetime import datetime, date, timedelta, timezone, time
 from collections import Counter, defaultdict
 
 from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
@@ -622,8 +622,11 @@ async def get_profile(user_id):
     balance = await api.get_status(
         profile_id=user.profile_id, contract_ids=user.contract_id
     )
-    balance = balance.students[0].balance / 100
 
+    if balance.students is not None:
+        balance = balance.students[0].balance / 100
+    else:
+        balance = 'Н/Д'
     phone = phonenumbers.parse(f"+7{data.phone}")
 
     current_date = datetime.today()
@@ -802,14 +805,17 @@ async def get_results(user_id, quarter):
 
     avg_homework_count = int(median(list(date_counts.values())))
 
-    # Получаем информацию о посещениях
-    visits = await api.get_visits(
-        profile_id=user.profile_id,
-        student_id=user.student_id,
-        contract_id=user.contract_id,
-        from_date=quarters[quarter][0],
-        to_date=quarters[quarter][1],
-    )
+    try:
+        # Получаем информацию о посещениях
+        visits = await api.get_visits(
+            profile_id=user.profile_id,
+            student_id=user.student_id,
+            contract_id=user.contract_id,
+            from_date=quarters[quarter][0],
+            to_date=quarters[quarter][1],
+        )
+    except APIError as e:
+        visits = None
 
     # Хранение данных о суммарных длительностях за день
     daily_durations = defaultdict(int)
@@ -817,33 +823,39 @@ async def get_results(user_id, quarter):
     shortest_day = None
     earliest_in = None
     latest_out = None
-
+    
     # Обрабатываем посещения
-    for entry in visits.payload:
-        date_ = entry.date
-        for visit in entry.visits:
-            # Игнорируем некорректные длительности
-            if "-" in visit.duration:
-                continue
-            # Длительность текущего визита
-            duration_minutes = await time_to_minutes(
-                visit.duration.replace(" мин.", "")
-            )
-            daily_durations[date_] += duration_minutes
+    if visits is not None:
+        for entry in visits.payload:
+            date_ = entry.date
+            for visit in entry.visits:
+                # Игнорируем некорректные длительности
+                if "-" in visit.duration:
+                    continue
+                # Длительность текущего визита
+                duration_minutes = await time_to_minutes(
+                    visit.duration.replace(" мин.", "")
+                )
+                daily_durations[date_] += duration_minutes
 
-            # Время прихода и ухода
-            in_time = await str_to_time(visit.in_)
-            out_time = await str_to_time(visit.out)
+                # Время прихода и ухода
+                in_time = await str_to_time(visit.in_)
+                out_time = await str_to_time(visit.out)
 
-            # Обновляем данные о приходах и уходах
-            if not earliest_in or in_time < earliest_in["time"]:
-                earliest_in = {"date": date_, "time": in_time}
-            if not latest_out or out_time > latest_out["time"]:
-                latest_out = {"date": date_, "time": out_time}
+                # Обновляем данные о приходах и уходах
+                if not earliest_in or in_time < earliest_in["time"]:
+                    earliest_in = {"date": date_, "time": in_time}
+                if not latest_out or out_time > latest_out["time"]:
+                    latest_out = {"date": date_, "time": out_time}
 
-    # Поиск самого долгого и короткого дня
-    longest_day = max(daily_durations.items(), key=lambda x: x[1])
-    shortest_day = min(daily_durations.items(), key=lambda x: x[1])
+        # Поиск самого долгого и короткого дня
+        longest_day = max(daily_durations.items(), key=lambda x: x[1])
+        shortest_day = min(daily_durations.items(), key=lambda x: x[1])
+    else:
+        longest_day = ('Н/Д', 0)
+        shortest_day = ('Н/Д', 0)
+        earliest_in = {"date": "Н/Д", "time": time(0, 0)}
+        latest_out = {"date": "Н/Д", "time": time(0, 0)}   
 
     # Формирование словаря с итоговыми данными
     result = {
@@ -907,10 +919,10 @@ async def results_format(data, state, subject=None, quarter=None):
         text += f'    📉 <i>Меньше всего домашнего задания:</i> <span class="tg-spoiler">{data["least_homework_date"].strftime("%d %B")} ({data["least_homework_count"]})</span>\n'
         text += f'    📊 <i>Среднее количество домашнего задания:</i> <span class="tg-spoiler">{data["avg_homework_count"]}</span>\n\n'
 
-        text += f'    🕒 <i>Самый долгий день:</i> <span class="tg-spoiler">{data["longest_day"]["date"].strftime("%d %B")} - {await minutes_to_time(data["longest_day"]["duration"])}</span>\n'
-        text += f'    📅 <i>Самый короткий день:</i> <span class="tg-spoiler">{data["shortest_day"]["date"].strftime("%d %B")} - {await minutes_to_time(data["shortest_day"]["duration"])}</span>\n'
-        text += f'    ⏰ <i>Самый ранний заход:</i> <span class="tg-spoiler">{data["earliest_in"]["date"].strftime("%d %B")} - {data["earliest_in"]["time"]}</span>\n'
-        text += f'    ⏳ <i>Самый поздний уход:</i> <span class="tg-spoiler">{data["latest_out"]["date"].strftime("%d %B")} - {data["latest_out"]["time"]}</span>\n'
+        text += f'    🕒 <i>Самый долгий день:</i> <span class="tg-spoiler">{data["longest_day"]["date"].strftime("%d %B") if type(data["longest_day"]["date"]) != str else data["longest_day"]["date"]} - {await minutes_to_time(data["longest_day"]["duration"])}</span>\n'
+        text += f'    📅 <i>Самый короткий день:</i> <span class="tg-spoiler">{data["shortest_day"]["date"].strftime("%d %B") if type(data["shortest_day"]["date"]) != str else data["shortest_day"]["date"]} - {await minutes_to_time(data["shortest_day"]["duration"])}</span>\n'
+        text += f'    ⏰ <i>Самый ранний заход:</i> <span class="tg-spoiler">{data["earliest_in"]["date"].strftime("%d %B") if type(data["earliest_in"]["date"]) != str else data["earliest_in"]["date"]} - {data["earliest_in"]["time"]}</span>\n'
+        text += f'    ⏳ <i>Самый поздний уход:</i> <span class="tg-spoiler">{data["latest_out"]["date"].strftime("%d %B") if type(data["latest_out"]["date"]) != str else data["latest_out"]["date"]} - {data["latest_out"]["time"]}</span>\n'
 
     return text
 

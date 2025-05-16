@@ -919,10 +919,10 @@ async def results_format(data, state, subject=None, quarter=None):
         text += f'    📉 <i>Меньше всего домашнего задания:</i> <span class="tg-spoiler">{data["least_homework_date"].strftime("%d %B")} ({data["least_homework_count"]})</span>\n'
         text += f'    📊 <i>Среднее количество домашнего задания:</i> <span class="tg-spoiler">{data["avg_homework_count"]}</span>\n\n'
 
-        text += f'    🕒 <i>Самый долгий день:</i> <span class="tg-spoiler">{data["longest_day"]["date"].strftime("%d %B") if type(data["longest_day"]["date"]) != str else data["longest_day"]["date"]} - {await minutes_to_time(data["longest_day"]["duration"])}</span>\n'
-        text += f'    📅 <i>Самый короткий день:</i> <span class="tg-spoiler">{data["shortest_day"]["date"].strftime("%d %B") if type(data["shortest_day"]["date"]) != str else data["shortest_day"]["date"]} - {await minutes_to_time(data["shortest_day"]["duration"])}</span>\n'
-        text += f'    ⏰ <i>Самый ранний заход:</i> <span class="tg-spoiler">{data["earliest_in"]["date"].strftime("%d %B") if type(data["earliest_in"]["date"]) != str else data["earliest_in"]["date"]} - {data["earliest_in"]["time"]}</span>\n'
-        text += f'    ⏳ <i>Самый поздний уход:</i> <span class="tg-spoiler">{data["latest_out"]["date"].strftime("%d %B") if type(data["latest_out"]["date"]) != str else data["latest_out"]["date"]} - {data["latest_out"]["time"]}</span>\n'
+        text += f'    🕒 <i>Самый долгий день:</i> <span class="tg-spoiler">{data["longest_day"]["date"].strftime("%d %B") if data["longest_day"]["date"] != "Н/Д" else data["longest_day"]["date"]} - {await minutes_to_time(data["longest_day"]["duration"])}</span>\n'
+        text += f'    📅 <i>Самый короткий день:</i> <span class="tg-spoiler">{data["shortest_day"]["date"].strftime("%d %B") if data["shortest_day"]["date"] != "Н/Д" else data["shortest_day"]["date"]} - {await minutes_to_time(data["shortest_day"]["duration"])}</span>\n'
+        text += f'    ⏰ <i>Самый ранний заход:</i> <span class="tg-spoiler">{data["earliest_in"]["date"].strftime("%d %B") if data["earliest_in"]["date"] != "Н/Д" else data["earliest_in"]["date"]} - {data["earliest_in"]["time"]}</span>\n'
+        text += f'    ⏳ <i>Самый поздний уход:</i> <span class="tg-spoiler">{data["latest_out"]["date"].strftime("%d %B") if data["latest_out"]["date"] != "Н/Д" else data["latest_out"]["date"]} - {data["latest_out"]["time"]}</span>\n'
 
     return text
 

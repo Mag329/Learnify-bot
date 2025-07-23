@@ -1,17 +1,9 @@
-from aiogram.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    WebAppInfo,
-)
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
+                           KeyboardButton)
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
-from datetime import datetime
-
-from app.utils.database import AsyncSessionLocal, db, Settings
-from app.utils.user.utils import get_student, get_emoji_subject
-
+from app.utils.database import AsyncSessionLocal, Settings, db
+from app.utils.user.utils import get_emoji_subject, get_student
 
 start_command = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -116,7 +108,7 @@ menu = InlineKeyboardMarkup(
         [InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits")],
         [InlineKeyboardButton(text="👤 Профиль", callback_data="profile")],
         [InlineKeyboardButton(text="📈 Рейтинг", callback_data="rating_rank_class")],
-        [InlineKeyboardButton(text="🏆 Итоги", callback_data="results")],
+        # [InlineKeyboardButton(text="🏆 Итоги", callback_data="results")],
     ]
 )
 
@@ -184,11 +176,11 @@ quarters = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(text="1️⃣", callback_data="choose_quarter_1"),
-            InlineKeyboardButton(text="2️⃣", callback_data="choose_quarter_2")
+            InlineKeyboardButton(text="2️⃣", callback_data="choose_quarter_2"),
         ],
         [
-            InlineKeyboardButton(text="3️⃣", callback_data="choose_quarter_3"), 
-            InlineKeyboardButton(text="4️⃣", callback_data="choose_quarter_4")
+            InlineKeyboardButton(text="3️⃣", callback_data="choose_quarter_3"),
+            InlineKeyboardButton(text="4️⃣", callback_data="choose_quarter_4"),
         ],
         [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")],
     ]
@@ -229,8 +221,6 @@ async def main(user_id):
     keyboard.row(
         KeyboardButton(text="📋 Меню"),
     )
-    
-    # keyboard.row(KeyboardButton(text="WebApp", web_app=WebAppInfo(url = 'https://genially-aesthetic-weasel.cloudpub.ru/')))
 
     keyboard.row(KeyboardButton(text="⚙️ Настройки"))
 
@@ -325,5 +315,28 @@ async def choice_subject(user_id, for_):
     keyboard = keyboard.adjust(2)
 
     keyboard.row(InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_{for_}"))
+
+    return keyboard.as_markup()
+
+
+async def build_settings_nav_keyboard(definitions, selected_index):
+    selected_key = definitions[selected_index].key
+
+    keyboard = InlineKeyboardBuilder()
+
+    keyboard.row(
+        InlineKeyboardButton(
+            text="🔼", callback_data=f"nav_up_settings:{selected_index}"
+        ),
+        InlineKeyboardButton(
+            text="🔽", callback_data=f"nav_down_settings:{selected_index}"
+        ),
+    )
+    keyboard.row(
+        InlineKeyboardButton(
+            text="✏️ Изменить",
+            callback_data=f"edit_settings:{selected_index}:{selected_key}",
+        )
+    )
 
     return keyboard.as_markup()

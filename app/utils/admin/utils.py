@@ -1,10 +1,10 @@
-from aiogram import types
 from functools import wraps
 
-from app.utils.database import AsyncSessionLocal, db, User
-from config import ERROR_MESSAGE
+from aiogram import types
 from envparse import Env
 
+from app.config.config import ERROR_MESSAGE
+from app.utils.database import AsyncSessionLocal, User, db
 
 env = Env()
 env.read_envfile()

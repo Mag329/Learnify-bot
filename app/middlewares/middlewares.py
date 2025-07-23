@@ -1,15 +1,15 @@
-from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Message, CallbackQuery, Update
-from typing import Callable, Dict, Any, Awaitable
 import logging
 import os
+from typing import Any, Awaitable, Callable, Dict
 
-from config import START_MESSAGE, LOG_FILE
-import app.keyboards.user.keyboards as kb
-from app.utils.database import AsyncSessionLocal, db, User
-from app.states.user.states import AuthState
+from aiogram import BaseMiddleware
+from aiogram.types import CallbackQuery, Message, TelegramObject, Update
 from envparse import env
 
+import app.keyboards.user.keyboards as kb
+from app.config.config import LOG_FILE, START_MESSAGE
+from app.states.user.states import AuthState
+from app.utils.database import AsyncSessionLocal, User, db
 
 env.read_envfile()
 

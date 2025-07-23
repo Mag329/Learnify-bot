@@ -1,14 +1,10 @@
 import logging
+
 from octodiary.exceptions import APIError
 
-from config import (
-    ERROR_403_MESSAGE,
-    ERROR_408_MESSAGE,
-    ERROR_MESSAGE,
-    ERROR_500_MESSAGE,
-)
 import app.keyboards.user.keyboards as kb
-
+from app.config.config import (ERROR_403_MESSAGE, ERROR_408_MESSAGE,
+                               ERROR_500_MESSAGE, ERROR_MESSAGE)
 
 logger = logging.getLogger(__name__)
 

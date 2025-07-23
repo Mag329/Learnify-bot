@@ -1,39 +1,27 @@
+import asyncio
+import locale
+import logging
+from datetime import datetime
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
-
-import asyncio
-from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import logging
 from envparse import Env
-import locale
 from pytz import timezone
 
-from config import *
-
-from app.handlers.user import (
-    auth,
-    marks,
-    homeworks,
-    notifications,
-    settings,
-    schedule,
-    menu,
-    results,
-    other,
-)
+import app.keyboards.user.keyboards as kb
+from app.config.config import *
 from app.handlers.admin import panel
-from app.middlewares.middlewares import (
-    AllowedUsersMiddleware,
-    CheckUserInDbMiddleware,
-    LoggingMiddleware,
-)
+from app.handlers.user import (auth, homeworks, marks, menu, notifications,
+                               other, results, schedule, settings)
+from app.middlewares.middlewares import (AllowedUsersMiddleware,
+                                         CheckUserInDbMiddleware,
+                                         LoggingMiddleware)
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
-import app.keyboards.user.keyboards as kb
-
+from app.utils.misc import create_settings_definitions_if_not_exists
 
 env = Env()
 env.read_envfile()
@@ -96,8 +84,7 @@ async def main():
     dp.include_router(panel.router)
 
     dp.include_router(other.router)
-    
-    
+
     # Middlewares
     dp.update.middleware(LoggingMiddleware())
 
@@ -105,11 +92,15 @@ async def main():
 
     await bot.delete_webhook(drop_pending_updates=True)
 
-    from app.utils.checkers import new_notifications_checker, replaced_checker, birthday_checker
+    from app.utils.checkers import (birthday_checker,
+                                    new_notifications_checker,
+                                    replaced_checker)
+
+    await create_settings_definitions_if_not_exists()
 
     await new_notifications_checker(bot)
     scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))
-    
+
     await birthday_checker(bot)
     scheduler.add_job(birthday_checker, trigger="cron", hour=10, minute=0, args=(bot,))
 

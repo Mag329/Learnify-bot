@@ -1,12 +1,12 @@
 import asyncio
 import logging
-import coloredlogs
 import os
 
-from app import main
-from app.utils.database import run_migrations
-from config import LOG_FILE
+import coloredlogs
 
+from app import main
+from app.config.config import LOG_FILE
+from app.utils.database import run_migrations
 
 # Проверяем наличие директории для логов
 log_dir = os.path.dirname(LOG_FILE)  # Получаем путь к папке
@@ -30,10 +30,6 @@ if __name__ == "__main__":
     logger.addHandler(file_handler)
 
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.create_task(main())  # Создаем задачу в текущем цикле
-        else:
-            asyncio.run(main())  #
+        asyncio.run(main())  #
     except KeyboardInterrupt:
         print("Exit")

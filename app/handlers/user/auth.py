@@ -1,30 +1,21 @@
-from aiogram import F, Router, Bot
-from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, InputMediaPhoto
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.fsm.context import FSMContext
-
-from datetime import datetime, timedelta
 import logging
 
-from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
-from octodiary.urls import Systems
+from aiogram import Bot, F, Router
+from aiogram.filters import CommandStart
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
+from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
+from octodiary.urls import Systems
 
-from config import (
-    START_MESSAGE,
-    SUCCESSFUL_AUTH,
-    ERROR_MESSAGE,
-    ERROR_403_MESSAGE,
-    ERROR_500_MESSAGE,
-    ERROR_408_MESSAGE,
-    AWAIT_RESPONSE_MESSAGE,
-)
 import app.keyboards.user.keyboards as kb
-from app.utils.database import AsyncSessionLocal, db, User, UserData, Settings
-from app.utils.user.utils import get_student, get_web_api
+from app.config.config import (AWAIT_RESPONSE_MESSAGE, START_MESSAGE,
+                               SUCCESSFUL_AUTH)
 from app.states.user.states import AuthState
-
+from app.utils.database import AsyncSessionLocal, User, db
+from app.utils.user.utils import (ensure_user_settings,
+                                  get_error_message_by_status, get_student,
+                                  get_web_api, save_profile_data)
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -41,49 +32,33 @@ async def cmd_start(message: Message):
         if user:
             await_message = await message.answer(AWAIT_RESPONSE_MESSAGE)
 
-            result = await session.execute(
-                db.select(Settings).filter_by(user_id=user.user_id)
-            )
-            settings = result.scalar_one_or_none()
+            await ensure_user_settings(session, message.from_user.id)
 
-            if not settings:
-                settings = Settings(user_id=user.user_id)
-                session.add(settings)
+            api, _ = await get_student(message.from_user.id)
 
-            await session.commit()
-
-            api, student = await get_student(message.from_user.id)
-
-            # new_token = await api.refresh_token(student.token)
-
-            # user.token = new_token
-            # await session.commit()
             profile = None
             try:
                 profile_id = (await api.get_users_profile_info())[0].id
 
                 profile = await api.get_family_profile(profile_id=profile_id)
+                web_api, _ = await get_web_api(message.from_user.id, active=False)
+                profiles = await web_api.get_student_profiles()
 
                 user.profile_id = profile_id
                 user.role = profile.profile.type
                 user.person_id = profile.children[0].contingent_guid
                 user.student_id = profile.children[0].id
-                user.contract_id = profile.children[0].contract_id
+                user.contract_id = profiles[0].ispp_account
+
+                await session.commit()
+
             except APIError as e:
                 logger.error(
                     f"APIError ({e.status_code}) for user {message.from_user.id}: {e}"
                 )
 
-                # Определение сообщения об ошибке в зависимости от статус-кода
-                error_message = ERROR_MESSAGE  # По умолчанию
-                if e.status_code == 408:
-                    error_message = ERROR_408_MESSAGE
-                elif e.status_code in [500, 501, 502]:
-                    error_message = ERROR_500_MESSAGE
-
-                # Редактирование сообщения с учетом ошибки
-                await await_message.edit_text(
-                    text=error_message,
+                await message.edit_text(
+                    text=get_error_message_by_status(e.status_code),
                     reply_markup=kb.start_command,
                 )
                 return
@@ -121,7 +96,7 @@ async def cmd_start(message: Message):
 
 
 @router.callback_query(F.data == "login")
-async def login_handler(callback: CallbackQuery, state: FSMContext):
+async def login_callback_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await callback.message.edit_text(
         text="⚡ Для доступа к информации <b>Московской электронной школы (МЭШ)</b> необходим логин от <b>mos.ru</b>.\n\nВы можете ввести:\n  - 👤 Логин\n  - ✉️ Email\n  - 📱 Номер телефон (в формате +7 без пробелов)\n\n⚠️ <b>Важно:</b> Для авторизации у Вас должен быть привязан номер телефона к аккаунту mos.ru\n\n⚠️ <b>Важно:</b> Мы не сохраняем данные вашей авторизации. Вся информация используется только для подключения к системе и предоставления данных.",
@@ -136,6 +111,17 @@ async def login_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.message(F.text, AuthState.login)
 async def login_handler(message: Message, state: FSMContext, bot: Bot):
+    """
+    ### Обрабатывает ввод логина пользователя.
+
+    Сохраняет логин и запрашивает ввод пароля
+
+    Args:
+        message (Message): Объект сообщения
+        state (FSMContext): Контекст состояния FSM
+        bot (Bot): Экземпляр Telegram-бота
+    """
+
     await state.update_data(login=message.text)
 
     data = await state.get_data()
@@ -181,18 +167,8 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
             )
             await state.clear()
 
-            # Определение сообщения об ошибке в зависимости от статус-кода
-            error_message = ERROR_MESSAGE  # По умолчанию
-            if e.status_code == 408:
-                error_message = ERROR_408_MESSAGE
-            elif e.status_code in [500, 501, 502]:
-                error_message = ERROR_500_MESSAGE
-
-            # Редактирование сообщения с учетом ошибки
-            await bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=data["main_message"],
-                text=error_message,
+            await message.edit_text(
+                text=get_error_message_by_status(e.status_code),
                 reply_markup=kb.start_command,
             )
 
@@ -202,7 +178,6 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
             )
             await state.clear()
 
-            # Редактирование сообщения для необработанных исключений
             await bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=data["main_message"],
@@ -212,7 +187,7 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
 
 
 @router.message(F.text, AuthState.sms_code_class)
-async def password_handler(message: Message, state: FSMContext, bot: Bot):
+async def sms_handler(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
 
     if data["sms_code_class"]:
@@ -232,19 +207,21 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                         user = User(user_id=message.from_user.id, token=token)
                         session.add(user)
                         await session.commit()
-                        
+
                     else:
                         user.token = token
                         await session.commit()
 
                     api, _ = await get_student(message.from_user.id, active=False)
 
-                    profile_id = (await api.get_users_profile_info())[0].id
+                    profile_info = await api.get_users_profile_info()
+
+                    profile_id = profile_info[0].id
 
                     profile = await api.get_family_profile(profile_id=profile_id)
                     web_api, _ = await get_web_api(message.from_user.id, active=False)
                     profiles = await web_api.get_student_profiles()
-                    
+
                     user.profile_id = profile_id
                     user.role = profile.profile.type
                     user.person_id = profile.children[0].contingent_guid
@@ -254,38 +231,11 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
 
                     await session.commit()
 
-                    result = await session.execute(
-                        db.select(Settings).filter_by(user_id=user.user_id)
-                    )
-                    settings = result.scalar_one_or_none()
+                    await ensure_user_settings(session, message.from_user.id)
 
-                    if not settings:
-                        settings = Settings(user_id=message.from_user.id)
-                        session.add(settings)
-
-                    await session.commit()
-                    
-                    result = await session.execute(
-                        db.select(UserData).filter_by(user_id=message.from_user.id)
+                    await save_profile_data(
+                        session, message.from_user.id, profile.profile
                     )
-                    user_data = result.scalar_one_or_none()
-                    
-                    if not user_data:
-                        profile_data = profile.profile
-                        
-                        user_data = UserData(
-                            user_id=message.from_user.id,
-                            first_name=profile_data.first_name,
-                            last_name=profile_data.last_name,
-                            middle_name=profile_data.middle_name,
-                            gender=profile_data.sex,
-                            phone=profile_data.phone,
-                            email=profile_data.email,
-                            birthday=profile_data.birth_date
-                        )
-                        session.add(user_data)
-                        
-                    await session.commit()    
 
                     await message.answer(
                         text=SUCCESSFUL_AUTH.format(
@@ -297,7 +247,12 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                     )
 
                 else:
-                    raise Exception("Invalid SMS code")
+                    await state.clear()
+                    await message.answer(
+                        "❌ Неверный код подтверждения. Попробуйте авторизоваться снова.",
+                        reply_markup=kb.start_command,
+                    )
+                    return
 
             except APIError as e:
                 logger.error(
@@ -305,18 +260,8 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                 )
                 await state.clear()
 
-                # Определение сообщения об ошибке в зависимости от статус-кода
-                error_message = ERROR_MESSAGE  # По умолчанию
-                if e.status_code == 408:
-                    error_message = ERROR_408_MESSAGE
-                elif e.status_code in [500, 501, 502]:
-                    error_message = ERROR_500_MESSAGE
-
-                # Редактирование сообщения с учетом ошибки
-                await bot.edit_message_text(
-                    chat_id=message.chat.id,
-                    message_id=data["main_message"],
-                    text=error_message,
+                await message.edit_text(
+                    text=get_error_message_by_status(e.status_code),
                     reply_markup=kb.start_command,
                 )
 
@@ -336,22 +281,22 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
 
 
 @router.callback_query(F.data == "exit_from_account")
-async def exit_from_account(callback_query: CallbackQuery):
+async def exit_from_account(callback: CallbackQuery):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            db.select(User).filter_by(user_id=callback_query.from_user.id)
+            db.select(User).filter_by(user_id=callback.from_user.id)
         )
         user = result.scalar_one_or_none()
         if user:
             user.active = False
             await session.commit()
 
-            await callback_query.answer()
-            await callback_query.message.edit_text(
+            await callback.answer()
+            await callback.message.edit_text(
                 "🚪 Вы вышли из аккаунта", reply_markup=kb.start_command
             )
         else:
-            await callback_query.answer()
-            await callback_query.message.edit_text(
+            await callback.answer()
+            await callback.message.edit_text(
                 "❌ Ошибка выхода из аккаунта", reply_markup=kb.start_command
             )

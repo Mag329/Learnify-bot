@@ -1,0 +1,41 @@
+- key: enable_new_mark_notification
+  label: Показывать уведомления о новых оценках
+  type: bool
+  ordering: 1
+  visible: true
+
+- key: enable_homework_notification
+  label: Показывать уведомления о новых домашних заданиях
+  type: bool
+  ordering: 2
+  visible: true
+
+- key: experimental_features
+  label: Включить экспериментальные функции приложения
+  type: bool
+  ordering: 3
+  visible: false
+
+- key: skip_empty_days_schedule
+  label: Не отображать в расписании дни без уроков
+  type: bool
+  ordering: 4
+  visible: true
+
+- key: skip_empty_days_homeworks
+  label: Пропускать в списке домашних заданий дни без заданий
+  type: bool
+  ordering: 5
+  visible: true
+
+- key: next_day_if_lessons_end_schedule
+  label: Автоматически показывать расписание на следующий день, если сегодня уроки уже закончились
+  type: bool
+  ordering: 6
+  visible: true
+
+- key: next_day_if_lessons_end_homeworks
+  label: Автоматически показывать домашние задания на следующий день, если сегодня уроки уже закончились
+  type: bool
+  ordering: 7
+  visible: true

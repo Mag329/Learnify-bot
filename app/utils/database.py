@@ -1,16 +1,16 @@
-import sqlalchemy as db
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-
-import pytz
-from datetime import datetime
-from alembic import command
-from alembic.config import Config
 import logging
 import subprocess
-from envparse import Env
+from datetime import datetime
 
+import pytz
+import sqlalchemy as db
+from envparse import Env
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, sessionmaker
+
+from alembic import command
+from alembic.config import Config
 
 env = Env()
 env.read_envfile()
@@ -96,14 +96,24 @@ class Settings(Base):
     experimental_features = db.Column(db.Boolean, default=False)
 
 
+class SettingDefinition(Base):
+    __tablename__ = "setting_definitions"
+
+    key = db.Column(db.String(64), primary_key=True)
+    label = db.Column(db.String(256), nullable=False)
+    type = db.Column(db.String(32), default="bool")
+    ordering = db.Column(db.Integer, default=0)
+    visible = db.Column(db.Boolean, default=True)
+
+
 class UserData(Base):
     __tablename__ = "user_data"
-    
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(
         db.BigInteger,
         db.ForeignKey("users.user_id", ondelete="CASCADE"),
-        nullable=False
+        nullable=False,
     )
     first_name = db.Column(db.String, nullable=True)
     last_name = db.Column(db.String, nullable=True)

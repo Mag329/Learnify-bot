@@ -1,36 +1,18 @@
-from aiogram import F, Router, Bot
-from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, InputMediaPhoto
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.fsm.context import FSMContext
-
 import asyncio
 from datetime import datetime, timedelta
 
-from config import ERROR_MESSAGE
+from aiogram import F, Router
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery, Message
+
 import app.keyboards.user.keyboards as kb
-from app.utils.database import AsyncSessionLocal, db, User, Settings
-from app.utils.user.utils import get_schedule
 from app.states.user.states import ScheduleState
+from app.utils.user.api.mes.schedule import (cancel_previous_task,
+                                             get_schedule,
+                                             update_detailed_schedule,
+                                             user_tasks)
 
 router = Router()
-
-# Словарь для хранения задач пользователей
-user_tasks = {}
-
-
-async def update_detailed_schedule(message: Message, user_id: int, date: datetime):
-    detailed_schedule, new_date = await get_schedule(user_id, date, False)
-    if detailed_schedule:
-        if message.html_text != detailed_schedule:
-            await message.edit_text(detailed_schedule, reply_markup=kb.schedule)
-
-
-async def cancel_previous_task(user_id: int):
-    if user_id in user_tasks:
-        task = user_tasks[user_id]
-        if not task.done():
-            task.cancel()
 
 
 @router.message(F.text == "📅 Расписание")

@@ -10,3 +10,4 @@ alembic/versions/*
 logs/
 data/
 .VSCodeCounter/
+.pre-commit-config.yaml

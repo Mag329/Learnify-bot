@@ -1,14 +1,15 @@
-import logging
 import json
+import logging
 import socket
-from envparse import Env
 from datetime import datetime
-from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject, Message, CallbackQuery, Update
-from typing import Callable, Dict, Any, Awaitable
-from config import BOT_VERSION, LOGSTASH_HOST, LOGSTASH_PORT
-from app.states.user.states import AuthState
+from typing import Any, Awaitable, Callable, Dict
 
+from aiogram import BaseMiddleware
+from aiogram.types import CallbackQuery, Message, TelegramObject, Update
+from envparse import Env
+
+from app.config.config import BOT_VERSION, LOGSTASH_HOST, LOGSTASH_PORT
+from app.states.user.states import AuthState
 
 env = Env()
 env.read_envfile()

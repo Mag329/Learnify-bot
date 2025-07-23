@@ -1,15 +1,10 @@
-from aiogram.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-)
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
-
 from datetime import datetime
 
-from app.utils.database import AsyncSessionLocal, db, Settings
+from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
+                           KeyboardButton, ReplyKeyboardMarkup)
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
+from app.utils.database import AsyncSessionLocal, Settings, db
 
 panel = InlineKeyboardMarkup(
     inline_keyboard=[

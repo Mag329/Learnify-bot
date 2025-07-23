@@ -1,16 +1,8 @@
-from aiogram import F, Router, Bot
-from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, InputMediaPhoto
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.fsm.context import FSMContext
+from aiogram import F, Router
+from aiogram.types import CallbackQuery, Message
 
-from datetime import datetime, timedelta
-
-from config import ERROR_MESSAGE
 import app.keyboards.user.keyboards as kb
-from app.utils.database import AsyncSessionLocal, db, User, Settings
-from app.utils.user.utils import get_notifications
-
+from app.utils.user.api.mes.notifications import get_notifications
 
 router = Router()
 

@@ -1,16 +1,11 @@
-from aiogram import F, Router, Bot
-from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, InputMediaPhoto
-from aiogram.fsm.state import StatesGroup, State
+from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery
 
-from datetime import datetime, timedelta
-
-from config import ERROR_MESSAGE, BASE_QUARTER
 import app.keyboards.user.keyboards as kb
-from app.utils.database import AsyncSessionLocal, db, User, Settings
+from app.config.config import BASE_QUARTER
 from app.states.user.states import ResultsState
-from app.utils.user.utils import get_results, results_format
+from app.utils.user.api.mes.results import get_results, results_format
 
 router = Router()
 
@@ -43,50 +38,36 @@ async def results_handler(callback: CallbackQuery, state: FSMContext):
             )
 
 
-@router.callback_query(F.data == "results_right")
-async def results_right_handler(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data.in_({"results_left", "results_right"}))
+async def results_navigation_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
     data = await state.get_data()
-    subject = data.get("subject")
+    subject_index = data.get("subject")
+    subjects = data.get("subjects", [])
 
-    if subject is not None:
-        subject += 1
-        if subject >= len(data["subjects"]):
-            subject = 0
+    if subject_index is None or not subjects:
+        return await callback.message.edit_text("❌ Ошибка: нет доступных предметов.")
 
-        await state.set_state(ResultsState.subject)
-        await state.update_data(subject=subject)
+    direction = callback.data.split("_")[-1]  # "left" or "right"
 
-        text = await results_format(data, "subjects", subject, quarter=data["quarter"])
-        if text:
-            await callback.message.edit_text(
-                text=text,
-                reply_markup=kb.results,
-            )
+    if direction == "right":
+        subject_index = (subject_index + 1) % len(subjects)
+    elif direction == "left":
+        subject_index = (subject_index - 1) % len(subjects)
 
+    await state.set_state(ResultsState.subject)
+    await state.update_data(subject=subject_index)
 
-@router.callback_query(F.data == "results_left")
-async def results_left_handler(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-
-    data = await state.get_data()
-    subject = data.get("subject")
-
-    if subject is not None:
-        subject -= 1
-        if subject < 0:
-            subject = len(data["subjects"]) - 1
-
-        await state.set_state(ResultsState.subject)
-        await state.update_data(subject=subject)
-
-        text = await results_format(data, "subjects", subject, quarter=data["quarter"])
-        if text:
-            await callback.message.edit_text(
-                text=text,
-                reply_markup=kb.results,
-            )
+    text = await results_format(
+        data, "subjects", subject_index, quarter=data["quarter"]
+    )
+    if text:
+        await callback.message.edit_text(text=text, reply_markup=kb.results)
+    else:
+        await callback.message.edit_text(
+            "📭 Нет данных по предмету.", reply_markup=kb.results
+        )
 
 
 @router.callback_query(F.data == "subjects_results")

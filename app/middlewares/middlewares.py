@@ -3,13 +3,10 @@ import os
 from typing import Any, Awaitable, Callable, Dict
 
 from aiogram import BaseMiddleware
-from aiogram.types import CallbackQuery, Message, TelegramObject, Update
+from aiogram.types import TelegramObject
 from envparse import env
 
-import app.keyboards.user.keyboards as kb
-from app.config.config import LOG_FILE, START_MESSAGE
-from app.states.user.states import AuthState
-from app.utils.database import AsyncSessionLocal, User, db
+from app.config.config import LOG_FILE
 
 env.read_envfile()
 
@@ -18,13 +15,11 @@ env.read_envfile()
 middleware_logger = logging.getLogger("middleware_logger")
 middleware_logger.setLevel(logging.INFO)
 
-# Проверяем наличие директории для логов
-log_dir = os.path.dirname(LOG_FILE)  # Получаем путь к папке
+log_dir = os.path.dirname(LOG_FILE)
 
-if log_dir and not os.path.exists(log_dir):  # Если путь не пустой и папки нет
-    os.makedirs(log_dir, exist_ok=True)  # Создаем папку
+if log_dir and not os.path.exists(log_dir):
+    os.makedirs(log_dir, exist_ok=True)
 
-# Добавляем только файловый обработчик (без консоли)
 file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(
@@ -35,54 +30,6 @@ middleware_logger.addHandler(file_handler)
 middleware_logger.propagate = (
     False  # Отключаем передачу логов в root-логгер (чтобы не дублировались)
 )
-
-
-class AllowedUsersMiddleware(BaseMiddleware):
-    async def __call__(
-        self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
-        event: TelegramObject,
-        data: Dict[str, Any],
-    ):
-        if event.from_user.id in list(map(int, env.str("ALLOWED_USERS").split(","))):
-            return await handler(event, data)
-
-
-class CheckUserInDbMiddleware(BaseMiddleware):
-    async def __call__(
-        self,
-        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
-        event: TelegramObject,
-        data: Dict[str, Any],
-    ):
-
-        state = data.get("state")
-
-        if (
-            await state.get_state() != AuthState.login
-            and await state.get_state() != AuthState.password
-        ):
-            bot = event.bot
-
-            message = event
-
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(
-                    db.select(User).filter_by(user_id=message.from_user.id)
-                )
-                user = result.scalar_one_or_none()
-
-                if user:
-                    return await handler(event, data)
-                else:
-                    await bot.send_message(
-                        message.chat.id,
-                        START_MESSAGE,
-                        reply_markup=kb.start_command,
-                    )
-                    return
-        else:
-            return await handler(event, data)
 
 
 class LoggingMiddleware(BaseMiddleware):
@@ -104,8 +51,5 @@ class LoggingMiddleware(BaseMiddleware):
             middleware_logger.info(
                 f"CallbackQuery from {user_info}: {event.callback_query.data}"
             )
-
-        # Логируем вызов хэндлера
-        # middleware_logger.info(f"Calling handler: {handler.__name__} with data: {data}")
 
         return await handler(event, data)

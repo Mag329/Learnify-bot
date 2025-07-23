@@ -16,9 +16,7 @@ from app.config.config import *
 from app.handlers.admin import panel
 from app.handlers.user import (auth, homeworks, marks, menu, notifications,
                                other, results, schedule, settings)
-from app.middlewares.middlewares import (AllowedUsersMiddleware,
-                                         CheckUserInDbMiddleware,
-                                         LoggingMiddleware)
+from app.middlewares.middlewares import LoggingMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
 from app.utils.misc import create_settings_definitions_if_not_exists
@@ -101,8 +99,11 @@ async def main():
     await new_notifications_checker(bot)
     scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))
 
-    await birthday_checker(bot)
-    scheduler.add_job(birthday_checker, trigger="cron", hour=10, minute=0, args=(bot,))
+    if env.bool("USE_GIGACHAT", default=False):
+        await birthday_checker(bot)
+        scheduler.add_job(
+            birthday_checker, trigger="cron", hour=10, minute=0, args=(bot,)
+        )
 
     # await replaced_checker(bot)
     # scheduler.add_job(replaced_checker, "interval", minutes=10, args=(bot,))

@@ -1,5 +1,4 @@
-from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
-                           KeyboardButton)
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from app.utils.database import AsyncSessionLocal, Settings, db
@@ -272,15 +271,9 @@ async def build_settings_nav_keyboard(definitions, selected_index):
     )
     keyboard.row(
         InlineKeyboardButton(
-            text='🚪 Выйти из аккаунта',
-            callback_data="exit_from_account"
+            text="🚪 Выйти из аккаунта", callback_data="exit_from_account"
         )
     )
-    keyboard.row(
-        InlineKeyboardButton(
-            text='🤖 О боте',
-            callback_data="about_bot"
-        )
-    )
+    keyboard.row(InlineKeyboardButton(text="🤖 О боте", callback_data="about_bot"))
 
     return keyboard.as_markup()

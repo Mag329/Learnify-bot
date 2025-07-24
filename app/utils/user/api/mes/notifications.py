@@ -3,8 +3,12 @@ from octodiary.exceptions import APIError
 import app.keyboards.user.keyboards as kb
 from app.config.config import ERROR_403_MESSAGE, ERROR_MESSAGE
 from app.utils.database import AsyncSessionLocal, Event, Settings, db
-from app.utils.user.utils import (get_emoji_subject, get_mark_with_weight,
-                                  get_student, user_send_message)
+from app.utils.user.utils import (
+    get_emoji_subject,
+    get_mark_with_weight,
+    get_student,
+    user_send_message,
+)
 
 
 async def get_notifications(user_id, all=False, is_checker=False):

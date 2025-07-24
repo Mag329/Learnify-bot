@@ -3,8 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from app.states.user.states import SettingsEditStates
-from app.utils.database import (AsyncSessionLocal, SettingDefinition, Settings,
-                                db)
+from app.utils.database import AsyncSessionLocal, SettingDefinition, Settings, db
 from app.utils.user.utils import send_settings_editor
 
 router = Router()

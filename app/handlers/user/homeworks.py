@@ -6,9 +6,11 @@ from aiogram.types import CallbackQuery, Message
 
 import app.keyboards.user.keyboards as kb
 from app.states.user.states import HomeworkState
-from app.utils.user.api.mes.homeworks import (get_homework,
-                                              get_homework_by_subject,
-                                              handle_homework_navigation)
+from app.utils.user.api.mes.homeworks import (
+    get_homework,
+    get_homework_by_subject,
+    handle_homework_navigation,
+)
 
 router = Router()
 

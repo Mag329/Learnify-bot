@@ -1,8 +1,7 @@
 from datetime import datetime
 
 from app.utils.user.decorators import handle_api_error
-from app.utils.user.utils import (get_student, get_web_api,
-                                  parse_and_format_phone)
+from app.utils.user.utils import get_student, get_web_api, parse_and_format_phone
 
 
 @handle_api_error()

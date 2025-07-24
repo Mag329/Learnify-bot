@@ -8,10 +8,21 @@ from octodiary.exceptions import APIError
 from octodiary.urls import Systems
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import (ERROR_403_MESSAGE, ERROR_408_MESSAGE,
-                               ERROR_500_MESSAGE, ERROR_MESSAGE)
-from app.utils.database import (AsyncSessionLocal, Event, SettingDefinition,
-                                Settings, User, UserData, db)
+from app.config.config import (
+    ERROR_403_MESSAGE,
+    ERROR_408_MESSAGE,
+    ERROR_500_MESSAGE,
+    ERROR_MESSAGE,
+)
+from app.utils.database import (
+    AsyncSessionLocal,
+    Event,
+    SettingDefinition,
+    Settings,
+    User,
+    UserData,
+    db,
+)
 from app.utils.user.decorators import handle_api_error
 
 EMOJI_SUBJECTS = {

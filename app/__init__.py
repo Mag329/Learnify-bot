@@ -14,8 +14,17 @@ from pytz import timezone
 import app.keyboards.user.keyboards as kb
 from app.config.config import *
 from app.handlers.admin import panel
-from app.handlers.user import (auth, homeworks, marks, menu, notifications,
-                               other, results, schedule, settings)
+from app.handlers.user import (
+    auth,
+    homeworks,
+    marks,
+    menu,
+    notifications,
+    other,
+    results,
+    schedule,
+    settings,
+)
 from app.middlewares.middlewares import LoggingMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
@@ -90,9 +99,11 @@ async def main():
 
     await bot.delete_webhook(drop_pending_updates=True)
 
-    from app.utils.checkers import (birthday_checker,
-                                    new_notifications_checker,
-                                    replaced_checker)
+    from app.utils.checkers import (
+        birthday_checker,
+        new_notifications_checker,
+        replaced_checker,
+    )
 
     await create_settings_definitions_if_not_exists()
 

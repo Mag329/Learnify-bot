@@ -4,8 +4,7 @@ from aiogram.fsm.context import FSMContext
 
 import app.keyboards.user.keyboards as kb
 from app.utils.user.decorators import handle_api_error
-from app.utils.user.utils import (get_emoji_subject, get_mark_with_weight,
-                                  get_student)
+from app.utils.user.utils import get_emoji_subject, get_mark_with_weight, get_student
 
 
 @handle_api_error()

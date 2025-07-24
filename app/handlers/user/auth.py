@@ -9,13 +9,16 @@ from octodiary.exceptions import APIError
 from octodiary.urls import Systems
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import (AWAIT_RESPONSE_MESSAGE, START_MESSAGE,
-                               SUCCESSFUL_AUTH)
+from app.config.config import AWAIT_RESPONSE_MESSAGE, START_MESSAGE, SUCCESSFUL_AUTH
 from app.states.user.states import AuthState
 from app.utils.database import AsyncSessionLocal, User, db
-from app.utils.user.utils import (ensure_user_settings,
-                                  get_error_message_by_status, get_student,
-                                  get_web_api, save_profile_data)
+from app.utils.user.utils import (
+    ensure_user_settings,
+    get_error_message_by_status,
+    get_student,
+    get_web_api,
+    save_profile_data,
+)
 
 router = Router()
 logger = logging.getLogger(__name__)

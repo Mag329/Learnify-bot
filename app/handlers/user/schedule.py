@@ -7,10 +7,12 @@ from aiogram.types import CallbackQuery, Message
 
 import app.keyboards.user.keyboards as kb
 from app.states.user.states import ScheduleState
-from app.utils.user.api.mes.schedule import (cancel_previous_task,
-                                             get_schedule,
-                                             update_detailed_schedule,
-                                             user_tasks)
+from app.utils.user.api.mes.schedule import (
+    cancel_previous_task,
+    get_schedule,
+    update_detailed_schedule,
+    user_tasks,
+)
 
 router = Router()
 

@@ -227,74 +227,6 @@ async def main(user_id):
     return keyboard.as_markup(resize_keyboard=True)
 
 
-async def user_settings(user_id):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
-        settings = result.scalar_one_or_none()
-
-        keyboard = InlineKeyboardBuilder()
-
-        keyboard.row(
-            InlineKeyboardButton(
-                text=f'Уведомления о новых оценках {"✅" if settings.enable_new_mark_notification else "❌"}',
-                callback_data="enable_new_mark_notification_settings",
-            )
-        )
-
-        keyboard.row(
-            InlineKeyboardButton(
-                text=f'Уведомления о новых ДЗ {"✅" if settings.enable_homework_notification else "❌"}',
-                callback_data="enable_homework_notification_settings",
-            )
-        )
-
-        keyboard.row(
-            InlineKeyboardButton(
-                text=f'Пропускать пустые дни (расписание) {"✅" if settings.skip_empty_days_schedule else "❌"}',
-                callback_data="skip_empty_days_schedule_settings",
-            )
-        )
-
-        keyboard.row(
-            InlineKeyboardButton(
-                text=f'Пропускать пустые дни (ДЗ) {"✅" if settings.skip_empty_days_homeworks else "❌"}',
-                callback_data="skip_empty_days_homeworks_settings",
-            )
-        )
-
-        keyboard.row(
-            InlineKeyboardButton(
-                text=f'Расписание на завтра{"✅" if settings.next_day_if_lessons_end_schedule else "❌"}',
-                callback_data="next_day_if_lessons_end_schedule_settings",
-            )
-        )
-
-        keyboard.row(
-            InlineKeyboardButton(
-                text=f'ДЗ на завтра после уроков {"✅" if settings.next_day_if_lessons_end_homeworks else "❌"}',
-                callback_data="next_day_if_lessons_end_homeworks_settings",
-            )
-        )
-
-        # keyboard.row(
-        #     InlineKeyboardButton(
-        #         text=f'Экспериментальные функции {"✅" if settings.experimental_features else "❌"}',
-        #         callback_data="experimental_features_settings",
-        #     )
-        # )
-
-        keyboard.row(
-            InlineKeyboardButton(
-                text="🚪 Выйти из аккаунта", callback_data="exit_from_account"
-            )
-        )
-        keyboard.row(
-            InlineKeyboardButton(text="Закрыть", callback_data="delete_message")
-        )
-
-        return keyboard.as_markup()
-
-
 async def choice_subject(user_id, for_):
     api, user = await get_student(user_id)
 
@@ -336,6 +268,18 @@ async def build_settings_nav_keyboard(definitions, selected_index):
         InlineKeyboardButton(
             text="✏️ Изменить",
             callback_data=f"edit_settings:{selected_index}:{selected_key}",
+        )
+    )
+    keyboard.row(
+        InlineKeyboardButton(
+            text='🚪 Выйти из аккаунта',
+            callback_data="exit_from_account"
+        )
+    )
+    keyboard.row(
+        InlineKeyboardButton(
+            text='🤖 О боте',
+            callback_data="about_bot"
         )
     )
 

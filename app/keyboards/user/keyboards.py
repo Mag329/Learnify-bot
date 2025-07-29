@@ -4,9 +4,25 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from app.utils.database import AsyncSessionLocal, Settings, db
 from app.utils.user.utils import get_emoji_subject, get_student
 
+from app.config.config import LEARNIFY_WEB
+
 start_command = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="🚪 Войти", callback_data="login")],
+        [InlineKeyboardButton(text="🚪 Войти", callback_data="choose_login")],
+    ]
+)
+
+choice_auth_variant = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🧑‍💻 Войти по логину", callback_data="auth_with_login")],
+        [InlineKeyboardButton(text="🔐 Войти по токену", callback_data="auth_with_token")],
+        [InlineKeyboardButton(text="📷 Войти по QR-коду", callback_data="auth_with_qr")],
+    ]
+)
+
+token_auth = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text='🔑 Получить токен', url=f'{LEARNIFY_WEB}/auth/method/token')]
     ]
 )
 

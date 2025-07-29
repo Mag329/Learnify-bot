@@ -33,3 +33,4 @@ env.read_envfile()
 
 LOGSTASH_HOST = env.str("LOGSTASH_HOST")
 LOGSTASH_PORT = env.int("LOGSTASH_PORT")
+LEARNIFY_WEB = env.str('LEARNIFY_WEB')

@@ -7,11 +7,13 @@ from aiogram.types import CallbackQuery, Message
 from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
 from octodiary.urls import Systems
+from datetime import datetime, timedelta
+import aiohttp
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import AWAIT_RESPONSE_MESSAGE, START_MESSAGE, SUCCESSFUL_AUTH
 from app.states.user.states import AuthState
-from app.utils.database import AsyncSessionLocal, User, db
+from app.utils.database import AsyncSessionLocal, User, db, AuthData
 from app.utils.user.utils import (
     ensure_user_settings,
     get_error_message_by_status,
@@ -19,6 +21,7 @@ from app.utils.user.utils import (
     get_web_api,
     save_profile_data,
 )
+from app.utils.user.api.mes.auth import get_token_expire_date, get_login_qr_code, check_qr_login
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -44,16 +47,30 @@ async def cmd_start(message: Message):
                 profile_id = (await api.get_users_profile_info())[0].id
 
                 profile = await api.get_family_profile(profile_id=profile_id)
-                web_api, _ = await get_web_api(message.from_user.id, active=False)
-                profiles = await web_api.get_student_profiles()
 
                 user.profile_id = profile_id
                 user.role = profile.profile.type
                 user.person_id = profile.children[0].contingent_guid
                 user.student_id = profile.children[0].id
-                user.contract_id = profiles[0].ispp_account
+                
+                clients = await api.get_clients(user.person_id)
+                
+                user.contract_id = clients.client_id.contract_id
 
                 await session.commit()
+                
+                result = await session.execute(db.select(AuthData).filter_by(user_id=message.from_user.id, auth_method='password'))
+                auth_data = result.scalar_one_or_none()
+                
+                if auth_data:
+                    token = await api.refresh_token(auth_data.token_for_refresh, auth_data.client_id, auth_data.client_secret)
+                    if token:
+                        user.token = token
+                        auth_data.token_for_refresh = api.token_for_refresh
+                        need_update_date = await get_token_expire_date(api.token)
+                        auth_data.token_expired_at = need_update_date
+                        
+                        await session.commit()
 
             except APIError as e:
                 logger.error(
@@ -98,7 +115,27 @@ async def cmd_start(message: Message):
             )
 
 
-@router.callback_query(F.data == "login")
+@router.callback_query(F.data == 'choose_login')
+async def choose_login_handler(callback: CallbackQuery):
+    text = (
+        "Выберите способ авторизации:\n\n"
+        "👤 <b>1. По логину и паролю</b> (рекомендуется)\n"
+        "  — Используйте логин и пароль от <a href='https://mos.ru'>mos.ru</a>\n"
+        "  — 🔒 Сессия будет активна максимально долго\n\n"
+        "🧾 <b>2. Через токен</b>\n"
+        "  — Бот отправит ссылку для получения токена, скопируйте её и отправьте ему\n"
+        "  — ⏳ Сессия будет активна до 10 дней\n\n"
+        "📷 <b>3. Через QR-код</b>\n"
+        "  — Отсканируйте QR-код в приложении <b>МЭШ</b>\n"
+        "  — ⏳ Сессия ограничена сроком в 10 дней\n\n"
+        "<i>⚠️ Рекомендуется использовать авторизацию через логин и пароль, чтобы не входить в аккаунт каждые 10 дней </i>"
+    )
+    
+    await callback.answer()
+    await callback.message.answer(text, reply_markup=kb.choice_auth_variant, disable_web_page_preview=True)
+
+
+@router.callback_query(F.data == "auth_with_login")
 async def login_callback_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await callback.message.edit_text(
@@ -106,7 +143,6 @@ async def login_callback_handler(callback: CallbackQuery, state: FSMContext):
         reply_markup=None,
     )
 
-    await state.set_state(AuthState.main_message)
     await state.update_data(main_message=callback.message.message_id)
 
     await state.set_state(AuthState.login)
@@ -114,17 +150,6 @@ async def login_callback_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.message(F.text, AuthState.login)
 async def login_handler(message: Message, state: FSMContext, bot: Bot):
-    """
-    ### Обрабатывает ввод логина пользователя.
-
-    Сохраняет логин и запрашивает ввод пароля
-
-    Args:
-        message (Message): Объект сообщения
-        state (FSMContext): Контекст состояния FSM
-        bot (Bot): Экземпляр Telegram-бота
-    """
-
     await state.update_data(login=message.text)
 
     data = await state.get_data()
@@ -156,6 +181,8 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
             )
             await state.set_state(AuthState.sms_code_class)
             await state.update_data(sms_code_class=sms_code)
+            await state.update_data(api_class=api)
+            
 
             await bot.edit_message_text(
                 chat_id=message.chat.id,
@@ -198,6 +225,7 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
         await state.clear()
 
         sms_code_class = data["sms_code_class"]
+        api = data["api_class"]
         async with AsyncSessionLocal() as session:
             try:
                 token = await sms_code_class.async_enter_code(message.text)
@@ -215,22 +243,40 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
                         user.token = token
                         await session.commit()
 
-                    api, _ = await get_student(message.from_user.id, active=False)
-
                     profile_info = await api.get_users_profile_info()
 
                     profile_id = profile_info[0].id
 
                     profile = await api.get_family_profile(profile_id=profile_id)
-                    web_api, _ = await get_web_api(message.from_user.id, active=False)
-                    profiles = await web_api.get_student_profiles()
 
                     user.profile_id = profile_id
                     user.role = profile.profile.type
                     user.person_id = profile.children[0].contingent_guid
                     user.student_id = profile.children[0].id
-                    user.contract_id = profiles[0].ispp_account
+                    
+                    clients = await api.get_clients(user.person_id)
+                    
+                    user.contract_id = clients.client_id.contract_id
                     user.active = True
+                    
+                    await session.commit()
+                    
+                    result = await session.execute(
+                        db.select(AuthData).filter_by(user_id=message.from_user.id)
+                    )
+                    auth_data = result.scalar_one_or_none()
+                    if not auth_data:
+                        auth_data = AuthData(user_id=message.from_user.id)
+                        session.add(auth_data)
+                        await session.commit()     
+                    
+                    need_update_date = await get_token_expire_date(api.token)
+                    
+                    auth_data.auth_method = "password"
+                    auth_data.token_expired_at = need_update_date
+                    auth_data.token_for_refresh = api.token_for_refresh
+                    auth_data.client_id = api.client_id
+                    auth_data.client_secret = api.client_secret
 
                     await session.commit()
 
@@ -302,4 +348,179 @@ async def exit_from_account(callback: CallbackQuery):
             await callback.answer()
             await callback.message.edit_text(
                 "❌ Ошибка выхода из аккаунта", reply_markup=kb.start_command
+            )
+
+
+@router.callback_query(F.data == "auth_with_token")
+async def auth_by_token_callback_handler(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(AuthState.token)
+    await state.update_data(main_message=callback.message.message_id)
+    
+    await callback.answer()
+    text=(
+        "🔐 <b>Авторизация по токену</b>\n\n"
+        "1️⃣ Перейдите на страницу авторизации по кнопке ниже\n"
+        "2️⃣ Войдите в аккаунт\n"
+        "3️⃣ Вы будете перенаправлены на страницу с токеном\n"
+        "4️⃣ Скопируйте токен, начинающийся с <code>eyJhb...</code>\n"
+        "5️⃣ Скопируйте и отправьте этот токен боту\n\n"
+        "<i>⏳ Обратите внимание: срок действия токена ограничен 10 днями. "
+        "Для постоянной работы лучше использовать авторизацию по логину и паролю</i>"
+    )
+    
+    await callback.message.answer(text, reply_markup=kb.token_auth)
+    
+
+@router.message(AuthState.token)
+async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
+    token = message.text
+    
+    data = await state.get_data()
+    if not data['main_message']:
+        await message.answer(
+            "❌ Ошибка авторизации",
+            reply_markup=kb.start_command,
+        )
+    
+    if not token.startswith('eyJhb'):
+        return await bot.edit_message_text(
+                    chat_id=message.chat.id,
+                    message_id=data["main_message"],
+                    text="❌ Токен должен начинаться с <code>eyJhb...</code>",
+                    reply_markup=kb.token_auth,
+                )
+    
+    await state.clear()
+    
+    token_expire_timestamp = await get_token_expire_date(token, 0)
+    if token_expire_timestamp - datetime.now() < timedelta(hours=1):
+        await message.answer(
+            "❌ Токен истечёт меньше, чем через час\nПопробуйте авторизоваться заново через сайт <a href='https://mos.ru'>mos.ru</a>, или выберите другой способ авторизации",
+            reply_markup=kb.start_command,
+        )
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(db.select(User).filter_by(user_id=message.from_user.id))
+        user = result.scalar_one_or_none()
+        
+        result = await session.execute(
+            db.select(AuthData).filter_by(user_id=message.from_user.id)
+        )
+        auth_data = result.scalar_one_or_none()
+        if not auth_data:
+            auth_data = AuthData(user_id=message.from_user.id)
+            session.add(auth_data)
+            await session.commit()
+            
+        user.token = token
+        auth_data.auth_method = "token"
+        auth_data.token_expired_at = await get_token_expire_date(token)
+        auth_data.token_for_refresh = None
+        auth_data.client_id = None
+        auth_data.client_secret = None
+        
+        await session.commit()
+    
+        api, _ = await get_student(message.from_user.id, active=False)
+        
+        profile_info = await api.get_users_profile_info()
+
+        profile_id = profile_info[0].id
+
+        profile = await api.get_family_profile(profile_id=profile_id)
+
+        user.profile_id = profile_id
+        user.role = profile.profile.type
+        user.person_id = profile.children[0].contingent_guid
+        user.student_id = profile.children[0].id
+        
+        clients = await api.get_clients(user.person_id)
+        
+        user.contract_id = clients.client_id.contract_id
+        user.active = True
+        
+        await session.commit()
+        
+        await message.answer(
+            text=SUCCESSFUL_AUTH.format(
+                profile.profile.last_name,
+                profile.profile.first_name,
+                profile.profile.middle_name,
+            ),
+            reply_markup=await kb.main(message.from_user.id),
+        )
+        
+@router.callback_query(F.data == "auth_with_qr")
+async def auth_by_qr_callback_handler(callback: CallbackQuery, state: FSMContext):
+    async with aiohttp.ClientSession() as http_session:
+        status, qr_code = await get_login_qr_code(http_session)
+        if not status:
+            await callback.answer()
+            return await callback.message.answer("❌ Ошибка генерации QR-кода. Пожалуйста, воспользуйтесь другим способом авторизации", reply_markup=kb.delete_message)
+            
+        await callback.answer()
+        text = (
+                "📲 Отсканируйте этот QR-код в мобильном приложении <b>МЭШ</b> для входа\n\n"
+                "<i>⏳ Время ожидания: до 5 минут\n"
+                "⏳ Обратите внимание: срок действия сессии ограничен 10 днями"
+                "Для постоянной работы лучше использовать авторизацию по логину и паролю</i>"
+            )
+        
+        qr_code_message = await callback.message.answer_photo(qr_code, caption=text, reply_markup=kb.start_command)
+        token = await check_qr_login(http_session)
+        if not token:
+            await qr_code_message.delete()
+            await callback.message.answer("⏳ Время ожидания истекло. Попробуйте снова")
+        
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(db.select(User).filter_by(user_id=callback.from_user.id))
+            user = result.scalar_one_or_none()
+            
+            result = await session.execute(
+                db.select(AuthData).filter_by(user_id=callback.from_user.id)
+            )
+            auth_data = result.scalar_one_or_none()
+            if not auth_data:
+                auth_data = AuthData(user_id=callback.from_user.id)
+                session.add(auth_data)
+                await session.commit()
+                
+            user.token = token
+            auth_data.auth_method = "qr"
+            auth_data.token_expired_at = await get_token_expire_date(token)
+            auth_data.token_for_refresh = None
+            auth_data.client_id = None
+            auth_data.client_secret = None
+            
+            await session.commit()
+            
+            api, _ = await get_student(callback.from_user.id, active=False)
+        
+            profile_info = await api.get_users_profile_info()
+
+            profile_id = profile_info[0].id
+
+            profile = await api.get_family_profile(profile_id=profile_id)
+
+            user.profile_id = profile_id
+            user.role = profile.profile.type
+            user.person_id = profile.children[0].contingent_guid
+            user.student_id = profile.children[0].id
+            
+            clients = await api.get_clients(user.person_id)
+            
+            user.contract_id = clients.client_id.contract_id
+            user.active = True
+            
+            await session.commit()
+            
+            await qr_code_message.delete()
+            
+            await callback.message.answer(
+                text=SUCCESSFUL_AUTH.format(
+                    profile.profile.last_name,
+                    profile.profile.first_name,
+                    profile.profile.middle_name,
+                ),
+                reply_markup=await kb.main(callback.from_user.id),
             )

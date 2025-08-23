@@ -7,6 +7,7 @@ class AuthState(StatesGroup):
     login = State()
     password = State()
     sms_code_class = State()
+    token = State()
 
 
 class ScheduleState(StatesGroup):

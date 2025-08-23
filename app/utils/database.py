@@ -52,6 +52,22 @@ class User(Base):
     active = db.Column(db.Boolean, default=True)
 
 
+class AuthData(Base):
+    __tablename__ = "auth_data"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    auth_method = db.Column(db.String, nullable=True)
+    token_expired_at = db.Column(db.DateTime, nullable=True)
+    token_for_refresh = db.Column(db.String, nullable=True)
+    client_id = db.Column(db.String, nullable=True)
+    client_secret = db.Column(db.String, nullable=True)
+    
+
 class Event(Base):
     __tablename__ = "events"
 

@@ -42,7 +42,7 @@ MarkupSafe==3.0.2
 multidict==6.1.0
 mypy-extensions==1.0.0
 nodeenv==1.9.1
-octodiary==0.3.0
+https://github.com/Mag329/OctoDiary-py/archive/get_clients.zip
 packaging==24.2
 pathspec==0.12.1
 phonenumbers==8.13.52

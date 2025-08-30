@@ -16,13 +16,20 @@ choice_auth_variant = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="🧑‍💻 Войти по логину", callback_data="auth_with_login")],
         [InlineKeyboardButton(text="🔐 Войти по токену", callback_data="auth_with_token")],
-        [InlineKeyboardButton(text="📷 Войти по QR-коду", callback_data="auth_with_qr")],
+        [InlineKeyboardButton(text="📷 Войти по QR-коду", callback_data="auth_with_qr")]
     ]
 )
 
 token_auth = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text='🔑 Получить токен', url=f'{LEARNIFY_WEB}/auth/method/token')]
+        [InlineKeyboardButton(text='🔑 Получить токен', url=f'{LEARNIFY_WEB}/auth/method/token')],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="choose_login")]
+    ]
+)
+
+back_to_choose_auth = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="choose_login")]
     ]
 )
 

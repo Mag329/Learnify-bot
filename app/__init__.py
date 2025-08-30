@@ -24,11 +24,13 @@ from app.handlers.user import (
     results,
     schedule,
     settings,
+    inline_mode
 )
 from app.middlewares.middlewares import LoggingMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
 from app.utils.misc import create_settings_definitions_if_not_exists
+from app.utils.scheduler import scheduler
 
 env = Env()
 env.read_envfile()
@@ -38,9 +40,6 @@ bot = Bot(
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
 )
 dp = Dispatcher(storage=MemoryStorage())
-scheduler = AsyncIOScheduler()
-scheduler = AsyncIOScheduler(timezone=timezone("Europe/Moscow"))
-
 
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
@@ -86,6 +85,7 @@ async def main():
     dp.include_router(schedule.router)
     dp.include_router(menu.router)
     dp.include_router(results.router)
+    # dp.include_router(inline_mode.router)
 
     # Admin
     dp.include_router(panel.router)
@@ -104,11 +104,14 @@ async def main():
         new_notifications_checker,
         replaced_checker,
     )
+    from app.utils.user.api.mes.auth import restore_refresh_tokens_jobs
 
     await create_settings_definitions_if_not_exists()
 
     await new_notifications_checker(bot)
     scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))
+    
+    await restore_refresh_tokens_jobs()
 
     if env.bool("USE_GIGACHAT", default=False):
         await birthday_checker(bot)

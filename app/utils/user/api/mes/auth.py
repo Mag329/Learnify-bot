@@ -4,9 +4,13 @@ from aiogram.types import BufferedInputFile
 import uuid
 import jwt
 from datetime import datetime, timedelta
+import pytz
 import asyncio
 
 from app.config.config import LEARNIFY_WEB
+from app.utils.database import AsyncSessionLocal, db, User, AuthData
+from app.utils.user.utils import get_student
+from app.utils.scheduler import scheduler
 
 
 async def decode_token(token):
@@ -76,3 +80,51 @@ async def check_qr_login(session):
             
         return None
         
+        
+async def refresh_token(user_id):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(User).filter_by(user_id=user_id, active=True)
+        )
+        user = result.scalar_one_or_none()
+        
+        api, _ = await get_student(user_id)
+        
+        result = await session.execute(db.select(AuthData).filter_by(user_id=user_id, auth_method='password'))
+        auth_data: AuthData = result.scalar_one_or_none()
+        
+        if auth_data:
+            token = await api.refresh_token(auth_data.token_for_refresh, auth_data.client_id, auth_data.client_secret)
+            if token:
+                user.token = token
+                auth_data.token_for_refresh = api.token_for_refresh
+                need_update_date = await get_token_expire_date(api.token)
+                auth_data.token_expired_at = need_update_date
+                await session.commit()
+                
+                schedule_refresh(user.user_id, need_update_date)
+        
+        
+
+def schedule_refresh(user_id: int, expires_at: datetime):
+    job_id = f"refresh_token_{user_id}"
+    
+    if expires_at < datetime.now():
+        refresh_token(user_id)
+    else:
+        scheduler.add_job(
+            refresh_token,
+            'date',
+            run_date=expires_at,
+            args=[user_id],
+            id=job_id,
+            replace_existing=True
+        )
+
+
+async def restore_refresh_tokens_jobs():
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(db.select(AuthData).filter_by(auth_method='password'))
+        tokens = result.scalars().all()
+        for token in tokens:
+            schedule_refresh(token.user_id, token.token_expired_at)

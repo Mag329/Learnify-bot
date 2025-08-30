@@ -60,7 +60,7 @@ async def update_notification_text_handler(message: Message, state: FSMContext):
     await state.update_data(text=message.text)
 
     await message.answer(
-        f"<b>Предпросмотр:</b>\n\n{UPDATE_NOTIFICATION_HEADER}{message.text}{UPDATE_NOTIFICATION_FOOTER}",
+        f"<b>Предпросмотр:</b>\n\n{message.text}",
         reply_markup=kb.confirm_update_notification,
     )
 
@@ -86,7 +86,7 @@ async def send_update_notification_handler(
                 chat = await bot.get_chat(user.user_id)
                 await bot.send_message(
                     chat_id=chat.id,
-                    text=f"{UPDATE_NOTIFICATION_HEADER}{data['text']}{UPDATE_NOTIFICATION_FOOTER}",
+                    text=f"{data['text']}",
                     reply_markup=await user_kb.main(user.user_id),
                 )
             except Exception as e:

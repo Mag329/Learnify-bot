@@ -14,7 +14,7 @@ panel = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="Уведомление об обновление", callback_data="update_notification"
+                text="Уведомление", callback_data="update_notification"
             )
         ],
         [InlineKeyboardButton(text="Закрыть", callback_data="delete_message")],

@@ -21,7 +21,7 @@ from app.utils.user.utils import (
     get_web_api,
     save_profile_data,
 )
-from app.utils.user.api.mes.auth import get_token_expire_date, get_login_qr_code, check_qr_login
+from app.utils.user.api.mes.auth import get_token_expire_date, get_login_qr_code, check_qr_login, schedule_refresh
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -40,10 +40,11 @@ async def cmd_start(message: Message):
 
             await ensure_user_settings(session, message.from_user.id)
 
-            api, _ = await get_student(message.from_user.id)
-
-            profile = None
             try:
+                api, _ = await get_student(message.from_user.id)
+
+                profile = None
+                
                 profile_id = (await api.get_users_profile_info())[0].id
 
                 profile = await api.get_family_profile(profile_id=profile_id)
@@ -60,24 +61,26 @@ async def cmd_start(message: Message):
                 await session.commit()
                 
                 result = await session.execute(db.select(AuthData).filter_by(user_id=message.from_user.id, auth_method='password'))
-                auth_data = result.scalar_one_or_none()
+                auth_data: AuthData = result.scalar_one_or_none()
                 
                 if auth_data:
                     token = await api.refresh_token(auth_data.token_for_refresh, auth_data.client_id, auth_data.client_secret)
                     if token:
+                        print(token)
                         user.token = token
                         auth_data.token_for_refresh = api.token_for_refresh
                         need_update_date = await get_token_expire_date(api.token)
                         auth_data.token_expired_at = need_update_date
-                        
                         await session.commit()
+
+                        schedule_refresh(user.user_id, need_update_date)
 
             except APIError as e:
                 logger.error(
                     f"APIError ({e.status_code}) for user {message.from_user.id}: {e}"
                 )
 
-                await message.edit_text(
+                await await_message.edit_text(
                     text=get_error_message_by_status(e.status_code),
                     reply_markup=kb.start_command,
                 )
@@ -116,7 +119,9 @@ async def cmd_start(message: Message):
 
 
 @router.callback_query(F.data == 'choose_login')
-async def choose_login_handler(callback: CallbackQuery):
+async def choose_login_handler(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    
     text = (
         "Выберите способ авторизации:\n\n"
         "👤 <b>1. По логину и паролю</b> (рекомендуется)\n"
@@ -140,7 +145,7 @@ async def login_callback_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await callback.message.edit_text(
         text="⚡ Для доступа к информации <b>Московской электронной школы (МЭШ)</b> необходим логин от <b>mos.ru</b>.\n\nВы можете ввести:\n  - 👤 Логин\n  - ✉️ Email\n  - 📱 Номер телефон (в формате +7 без пробелов)\n\n⚠️ <b>Важно:</b> Для авторизации у Вас должен быть привязан номер телефона к аккаунту mos.ru\n\n⚠️ <b>Важно:</b> Мы не сохраняем данные вашей авторизации. Вся информация используется только для подключения к системе и предоставления данных.",
-        reply_markup=None,
+        reply_markup=kb.back_to_choose_auth,
     )
 
     await state.update_data(main_message=callback.message.message_id)
@@ -158,7 +163,7 @@ async def login_handler(message: Message, state: FSMContext, bot: Bot):
         chat_id=message.chat.id,
         message_id=data["main_message"],
         text="🔒 Теперь введите ваш пароль от <b>mos.ru</b>.\n\n⚠️ <b>Важно:</b> Мы не сохраняем данные вашей авторизации. Пароль используется только для безопасного подключения к системе <b>Московской электронной школы (МЭШ)</b>",
-        reply_markup=None,
+        reply_markup=kb.back_to_choose_auth,
     )
     await message.delete()
 
@@ -188,7 +193,7 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
                 chat_id=message.chat.id,
                 message_id=data["main_message"],
                 text=f"📱 На ваш номер, привязанный к <b>mos.ru</b>, отправлено SMS с кодом подтверждения\nПожалуйста, введите код, чтобы завершить авторизацию",
-                reply_markup=None,
+                reply_markup=kb.back_to_choose_auth,
             )
 
         except APIError as e:
@@ -279,6 +284,8 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
                     auth_data.client_secret = api.client_secret
 
                     await session.commit()
+                    
+                    schedule_refresh(user.user_id, need_update_date)
 
                     await ensure_user_settings(session, message.from_user.id)
 
@@ -462,11 +469,11 @@ async def auth_by_qr_callback_handler(callback: CallbackQuery, state: FSMContext
         text = (
                 "📲 Отсканируйте этот QR-код в мобильном приложении <b>МЭШ</b> для входа\n\n"
                 "<i>⏳ Время ожидания: до 5 минут\n"
-                "⏳ Обратите внимание: срок действия сессии ограничен 10 днями"
+                "⏳ Обратите внимание: срок действия сессии ограничен 10 днями. "
                 "Для постоянной работы лучше использовать авторизацию по логину и паролю</i>"
             )
         
-        qr_code_message = await callback.message.answer_photo(qr_code, caption=text, reply_markup=kb.start_command)
+        qr_code_message = await callback.message.answer_photo(qr_code, caption=text, reply_markup=kb.back_to_choose_auth)
         token = await check_qr_login(http_session)
         if not token:
             await qr_code_message.delete()

@@ -60,6 +60,6 @@ async def get_replaces(user_id, date_object):
                     return text
 
             else:
-                return None
+                return f'❌ <b>Нет замен на </b>{date_object.strftime("%d %B (%a)")}'
     except:
         pass

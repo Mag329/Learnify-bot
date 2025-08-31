@@ -14,6 +14,13 @@ from app.utils.user.utils import (
 async def get_notifications(user_id, all=False, is_checker=False):
     try:
         api, user = await get_student(user_id)
+        if not user:
+            if is_checker:
+                return None
+            else:
+                await user_send_message(
+                    user_id, "❌ <b>Вы не авторизованы</b>", kb.reauth
+                )
 
         notifications = await api.get_notifications(
             student_id=user.student_id, profile_id=user.profile_id

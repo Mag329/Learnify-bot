@@ -82,4 +82,7 @@ class StatsMiddleware(BaseMiddleware):
                 f"Calling handler: {handler.__name__} with data: {data}"
             )
 
-        return
+            return
+
+        else:
+            return await handler(event, data)

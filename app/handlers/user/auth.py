@@ -452,6 +452,8 @@ async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
         
         await session.commit()
         
+        await ensure_user_settings(session, message.from_user.id)
+        
         await save_profile_data(
             session, message.from_user.id, profile.profile
         )
@@ -528,6 +530,8 @@ async def auth_by_qr_callback_handler(callback: CallbackQuery, state: FSMContext
             user.active = True
             
             await session.commit()
+            
+            await ensure_user_settings(session, callback.from_user.id)
             
             await save_profile_data(
                 session, callback.from_user.id, profile.profile

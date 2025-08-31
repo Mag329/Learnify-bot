@@ -31,11 +31,11 @@ logger = logging.getLogger(__name__)
 async def cmd_start(message: Message):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
-            db.select(User).filter_by(user_id=message.from_user.id, active=True)
+            db.select(User).filter_by(user_id=message.from_user.id)
         )
         user = result.scalar_one_or_none()
 
-        if user:
+        if user and user.active:
             await_message = await message.answer(AWAIT_RESPONSE_MESSAGE)
 
             await ensure_user_settings(session, message.from_user.id)
@@ -66,7 +66,6 @@ async def cmd_start(message: Message):
                 if auth_data:
                     token = await api.refresh_token(auth_data.token_for_refresh, auth_data.client_id, auth_data.client_secret)
                     if token:
-                        print(token)
                         user.token = token
                         auth_data.token_for_refresh = api.token_for_refresh
                         need_update_date = await get_token_expire_date(api.token)
@@ -112,6 +111,11 @@ async def cmd_start(message: Message):
             )
 
         else:
+            if not user:
+                user = User(user_id=message.from_user.id, active=False)
+                session.add(user)
+                await session.commit()
+            
             await message.answer(
                 text=START_MESSAGE,
                 reply_markup=kb.start_command,
@@ -448,6 +452,10 @@ async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
         
         await session.commit()
         
+        await save_profile_data(
+            session, message.from_user.id, profile.profile
+        )
+        
         await message.answer(
             text=SUCCESSFUL_AUTH.format(
                 profile.profile.last_name,
@@ -520,6 +528,10 @@ async def auth_by_qr_callback_handler(callback: CallbackQuery, state: FSMContext
             user.active = True
             
             await session.commit()
+            
+            await save_profile_data(
+                session, callback.from_user.id, profile.profile
+            )
             
             await qr_code_message.delete()
             

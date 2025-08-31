@@ -27,7 +27,7 @@ async def get_profile(user_id):
         data.birth_date.day,
     ):
         age -= 1
-
+        
     for children in profile.children:
         if (
             children.last_name == data.last_name
@@ -35,7 +35,12 @@ async def get_profile(user_id):
             and children.middle_name == data.middle_name
         ):
             school = children.school
+            school_info = await api.get_school_info(profile_id=user.profile_id, school_id=school.id, class_unit_id=children.class_unit_id)
             class_name = children.class_name
+            break
+        
+    classroom_teacher = school_info.classroom_teachers[0]
+    classroom_teacher_name = f'{classroom_teacher.last_name} {classroom_teacher.first_name} {classroom_teacher.middle_name}'
 
     text = "👤 <b>Профиль</b>\n\n"
     text += f"🆔 <b>ID:</b> <code>{data.id}</code>\n"
@@ -54,6 +59,7 @@ async def get_profile(user_id):
 
     text += f"🏫 <b>Школа:</b> <code>{school.short_name}</code>\n"
     text += f"🧑‍💼 <b>Директор:</b> <code>{school.principal}</code>\n"
-    text += f"📚 <b>Класс:</b> <code>{class_name}</code>\n\n"
+    text += f"📚 <b>Класс:</b> <code>{class_name}</code>\n"
+    text += f"👩‍🏫 <b>Классный руководитель:</b> <code>{classroom_teacher_name}</code>\n"
 
     return text

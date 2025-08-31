@@ -42,7 +42,7 @@ class User(Base):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.BigInteger, unique=True)
-    token = db.Column(db.Text, nullable=False)
+    token = db.Column(db.Text, nullable=True)
     profile_id = db.Column(db.Integer, nullable=True)
     role = db.Column(db.String, nullable=True)
     person_id = db.Column(db.String, nullable=True)

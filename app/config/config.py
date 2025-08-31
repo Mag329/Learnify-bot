@@ -1,4 +1,4 @@
-BOT_VERSION = "1.8.1 (prerelease 3)"
+BOT_VERSION = "1.8.1"
 
 
 # Bot info

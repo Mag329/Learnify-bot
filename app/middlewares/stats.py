@@ -27,15 +27,18 @@ class StatsMiddleware(BaseMiddleware):
     ):
         state = data.get("state")
 
+        message_state = await state.get_state()
+        
         if (
-            await state.get_state() != AuthState.login
-            and await state.get_state() != AuthState.password
-            and await state.get_state() != AuthState.sms_code_class
+            message_state not in [AuthState.login, AuthState.password, AuthState.sms_code_class, AuthState.token]
         ):
             user = None
             action_type = None
             action_data = None
-            session_start = datetime.utcnow()
+            session_start = datetime.now()
+            result = await handler(event, data)
+            session_end = datetime.now()
+            processing_time = (session_end - session_start).total_seconds() * 1000
 
             # Логируем действия пользователя
             if event.message:
@@ -56,33 +59,27 @@ class StatsMiddleware(BaseMiddleware):
                     "language_code": user.language_code,
                 }
 
-                # Время обработки события
-                session_end = datetime.utcnow()
-                processing_time = (session_end - session_start).total_seconds() * 1000
-
                 # Формируем документ для отправки в Logstash
                 doc = {
                     "user": user_info,
                     "action_type": action_type,
                     "action_data": action_data,
-                    "timestamp": session_start.isoformat(),
-                    "processing_time_seconds": processing_time,
-                    "bot_version": BOT_VERSION,  # Версия бота (можно добавить из конфига)
+                    "timestamp": session_start.isoformat() + "Z",
+                    "processing_time_ms": processing_time,
+                    "bot_version": BOT_VERSION,
                 }
 
                 # Отправляем данные в Logstash
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.connect((LOGSTASH_HOST, LOGSTASH_PORT))
-                    sock.sendall(json.dumps(doc).encode("utf-8"))
+                    sock.sendall((json.dumps(doc) + "\n").encode("utf-8"))
                     sock.close()
                 except Exception as e:
                     middleware_logger.error(f"Failed to send data to Logstash: {e}")
 
-            # Логируем вызов хэндлера
             middleware_logger.info(
                 f"Calling handler: {handler.__name__} with data: {data}"
             )
 
-        # Продолжаем выполнение хэндлера
-        return await handler(event, data)
+        return

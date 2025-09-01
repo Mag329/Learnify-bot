@@ -17,6 +17,8 @@ user_tasks = {}
 @handle_api_error()
 async def get_schedule(user_id, date_object, short=True, direction="right"):
     api, user = await get_student(user_id)
+    
+    original_date = date_object
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -66,6 +68,16 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
                     date_object -= timedelta(days=1)  # Переход влево
             else:
                 empty_days = 0
+                
+        if empty_days > 14:
+            schedule = await api.get_events(
+                person_id=user.person_id,
+                mes_role=user.role,
+                begin_date=original_date,
+                end_date=original_date,
+            )
+            date_object = original_date
+            
 
     text = f'📅 <b>Расписание на</b> {date_object.strftime("%d %B (%a)")}:\n\n'
 

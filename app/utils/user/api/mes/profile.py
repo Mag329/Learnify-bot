@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from app.utils.database import AsyncSessionLocal, db, UserData
 from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import get_student, get_web_api, parse_and_format_phone
 
@@ -11,6 +12,10 @@ async def get_profile(user_id):
     profile = await api.get_family_profile(profile_id=user.profile_id)
     data = profile.profile
     web_profile = await web_api.get_user_info()
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(db.select(UserData).filter_by(user_id=user_id))
+        user_data: UserData = result.scalar_one_or_none()
 
     # Баланс
     balance_data = await api.get_status(
@@ -18,7 +23,8 @@ async def get_profile(user_id):
     )
     balance = balance_data.students[0].balance / 100 if balance_data.students else "Н/Д"
 
-    formatted_phone = await parse_and_format_phone(web_profile.info.mobile)
+    formatted_phone = await parse_and_format_phone(user_data.phone) if user_data.phone else "Н/Д"
+    email = user_data.email if user_data.email else "Н/Д"
 
     current_date = datetime.today()
     age = current_date.year - data.birth_date.year
@@ -48,7 +54,7 @@ async def get_profile(user_id):
     text += f"📜 <b>Фамилия:</b> <code>{data.last_name}</code>\n"
     text += f"🧬 <b>Отчество:</b> <code>{data.middle_name}</code>\n\n"
 
-    text += f"✉️ <b>Почта:</b> <code>{data.email}</code>\n"
+    text += f"✉️ <b>Почта:</b> <code>{email}</code>\n"
     text += f"📱 <b>Телефон:</b> <code>{formatted_phone}</code>\n"
     text += f"🪪 <b>СНИЛС:</b> <code>{data.snils[:3]}-{data.snils[3:6]}-{data.snils[6:9]}-{data.snils[9:]}</code>\n\n"
 

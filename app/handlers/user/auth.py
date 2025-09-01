@@ -73,6 +73,10 @@ async def cmd_start(message: Message):
                         await session.commit()
 
                         schedule_refresh(user.user_id, need_update_date)
+                        
+                await save_profile_data(
+                    session, message.from_user.id, profile.profile
+                )
 
             except APIError as e:
                 logger.error(

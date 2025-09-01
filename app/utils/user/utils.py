@@ -86,7 +86,7 @@ async def get_mark_with_weight(mark, weight):
 
 
 @handle_api_error()
-async def get_student(user_id, active=True):
+async def get_student(user_id, active=True) -> list[AsyncMobileAPI, User]:
     async with AsyncSessionLocal() as session:
         query = db.select(User).filter_by(user_id=user_id)
         if active:
@@ -177,19 +177,32 @@ async def ensure_user_settings(session, user_id: int):
 async def save_profile_data(session, user_id, profile_data):
     result = await session.execute(db.select(UserData).filter_by(user_id=user_id))
     user_data = result.scalar_one_or_none()
-
-    web_api, _ = await get_web_api(user_id)
-    web_profile = await web_api.get_user_info()
-
+    
     if not user_data:
+        api, user = await get_student(user_id)
+        profile = await api.get_family_profile(profile_id=user.profile_id)
+        
+        phone = profile.profile.phone
+        if phone and not phone.startswith("7"):
+            if phone.startswith("8"):
+                phone = "7" + phone[1:]
+            else:
+                phone = "7" + phone
+        elif not phone:
+            phone = None
+        
+        email = profile.profile.email
+        if not email:
+            email = None
+        
         user_data = UserData(
             user_id=user_id,
             first_name=profile_data.first_name,
             last_name=profile_data.last_name,
             middle_name=profile_data.middle_name,
             gender=profile_data.sex,
-            phone=web_profile.info.mobile,
-            email=web_profile.info.mail,
+            phone=phone,
+            email=email,
             birthday=profile_data.birth_date,
         )
         session.add(user_data)

@@ -14,6 +14,8 @@ temp_events = {}
 @handle_api_error()
 async def get_homework(user_id, date_object, direction="right"):
     api, user = await get_student(user_id)
+    
+    original_date = date_object
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -63,6 +65,15 @@ async def get_homework(user_id, date_object, direction="right"):
                     date_object -= timedelta(days=1)  # Переход влево
             else:
                 empty_days = 0
+                
+        if empty_days > 14:
+            homework = await api.get_homeworks_short(
+                student_id=user.student_id,
+                profile_id=user.profile_id,
+                from_date=original_date,
+                to_date=original_date,
+            )
+            date_object = original_date
 
     else:
         homework = await api.get_homeworks_short(

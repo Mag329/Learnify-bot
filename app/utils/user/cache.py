@@ -1,10 +1,12 @@
 from datetime import datetime, time
 import redis.asyncio as redis
 
-from app.config.config import DEFAULT_SHORT_CACHE_TTL, DEFAULT_MEDIUM_CACHE_TTL, DEFAULT_LONG_CACHE_TTL, DEFAULT_CACHE_TTL
+from app.config.config import DEFAULT_SHORT_CACHE_TTL, DEFAULT_MEDIUM_CACHE_TTL, DEFAULT_LONG_CACHE_TTL, DEFAULT_CACHE_TTL, DEV
 
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+host = 'localhost' if DEV else 'redis'
+
+redis_client = redis.Redis(host=host, port=6379, db=0, decode_responses=True)
 
 async def invalidate_cache_for_notification(user_id, notification):
     event_type = notification.event_type

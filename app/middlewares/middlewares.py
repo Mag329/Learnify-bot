@@ -6,7 +6,11 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from envparse import env
 
-from app.config.config import LOG_FILE
+from app.config.config import LOG_FILE, NO_SUBSCRIPTION_ERROR
+from app.utils.misc import check_subscription
+from app.utils.user.utils import user_send_message
+import app.keyboards.user.keyboards as kb
+
 
 env.read_envfile()
 
@@ -53,3 +57,25 @@ class LoggingMiddleware(BaseMiddleware):
             )
 
         return await handler(event, data)
+
+
+class Check_Subscription(BaseMiddleware):
+    async def __call__(
+        self,
+        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+        event: TelegramObject,
+        data: Dict[str, Any],
+    ):  
+        if event.message:
+            if event.message.text == "/start":
+                return await handler(event, data)
+            
+            user_id = event.message.from_user.id
+        elif event.callback_query:
+            user_id = event.callback_query.from_user.id
+            
+        result = await check_subscription(user_id=user_id, bot=event.bot)
+        if result:
+            return await handler(event, data)
+        else:
+            await user_send_message(user_id, NO_SUBSCRIPTION_ERROR, kb.link_to_channel)

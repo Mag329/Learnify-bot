@@ -1,74 +1,86 @@
-version: '3.8'
 services:
-  app:
-    container_name: mesh_bot
-    build: ./
-    env_file: .env
-    environment:
-      - TZ=Europe/Moscow
-      - TMPDIR='/var/tmp'
-    volumes:
-      - .:/src
-    restart: always
-    # depends_on:
-      # - elasticsearch
-    networks:
-      - elk
+  # app:
+  #   container_name: mesh_bot
+  #   build: ./
+  #   env_file: .env
+  #   environment:
+  #     - TZ=Europe/Moscow
+  #     - TMPDIR='/var/tmp'
+  #   volumes:
+  #     - .:/src
+  #   restart: always
+  #   # depends_on:
+  #     # - elasticsearch
+  #   networks:
+  #     - elk
 
-  elasticsearch:
-    image: elasticsearch:8.5.0
-    environment:
-      - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-      - xpack.security.enabled=false
-    restart: always
-    ports:
-      - "9200:9200"
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
-    networks:
-      - elk
+  # elasticsearch:
+  #   image: elasticsearch:8.5.0
+  #   environment:
+  #     - discovery.type=single-node
+  #     - ES_JAVA_OPTS=-Xms512m -Xmx512m
+  #     - xpack.security.enabled=false
+  #   restart: always
+  #   ports:
+  #     - "9200:9200"
+  #   volumes:
+  #     - elasticsearch_data:/usr/share/elasticsearch/data
+  #   networks:
+  #     - elk
 
-  logstash:
-    container_name: 'learnify-logstash'
-    image: logstash:8.5.0
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-    environment:
-      - LS_JAVA_OPTS=-Xms256m -Xmx256m
-    restart: always
-    depends_on:
-      - elasticsearch
-    networks:
-      - elk
+  # logstash:
+  #   container_name: 'learnify-logstash'
+  #   image: logstash:8.5.0
+  #   ports:
+  #     - "5000:5000"
+  #   volumes:
+  #     - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+  #   environment:
+  #     - LS_JAVA_OPTS=-Xms256m -Xmx256m
+  #   restart: always
+  #   depends_on:
+  #     - elasticsearch
+  #   networks:
+  #     - elk
 
-  kibana:
-    image: kibana:8.5.0
-    ports:
-      - "5601:5601"
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    restart: always      
-    depends_on:
-      - elasticsearch
-    networks:
-      - elk
+  # kibana:
+  #   image: kibana:8.5.0
+  #   ports:
+  #     - "5601:5601"
+  #   environment:
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #   restart: always      
+  #   depends_on:
+  #     - elasticsearch
+  #   networks:
+  #     - elk
     
-  alembic:
-    build: ./
-    command: alembic upgrade head
-    env_file: .env
-    environment:
-      - DATABASE_URL=postgresql+psycopg2://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DB}
+  # alembic:
+  #   build: ./
+  #   command: alembic upgrade head
+  #   env_file: .env
+  #   environment:
+  #     - DATABASE_URL=postgresql+psycopg2://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DB}
+  #   volumes:
+  #     - .:/app
+  #   networks:
+  #     - elk
+
+  redis:
+    image: redis:7-alpine
+    container_name: mesh_redis
+    restart: always
+    ports:
+      - "6379:6379"
     volumes:
-      - .:/app
+      - redis_data:/data
+    command: redis-server --appendonly yes
     networks:
       - elk
 
 volumes:
   elasticsearch_data:
+  redis_data:
 
 networks:
   elk:

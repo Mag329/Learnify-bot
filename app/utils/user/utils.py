@@ -121,35 +121,60 @@ async def get_web_api(user_id, active=True):
         return api, user
 
 
-async def render_settings_text(definitions, settings, selected_key):
+async def render_settings_text(definitions, settings, selected_key, is_experimental=False):
     lines = []
     for definition in definitions:
+        # Пропускаем невидимые настройки
+        if not definition.visible:
+            continue
+            
         val = getattr(settings, definition.key, None)
         display = "✅" if val is True else "❌" if val is False else str(val)
         prefix = "➡️" if definition.key == selected_key else "▫️"
+        
+        # Добавляем эмодзи для экспериментальных функций
+        if definition.experimental:
+            display = f"{display}"
+            
         lines.append(f"{prefix} {definition.label}: {display}")
     return "\n\n".join(lines)
 
 
-async def send_settings_editor(message_or_callback, selected_index: int):
+async def send_settings_editor(message_or_callback, selected_index: int, is_experimental=False):
     async with AsyncSessionLocal() as session:
         user_id = message_or_callback.from_user.id
         result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
         settings = result.scalars().first()
 
+        # Фильтруем настройки по типу
+        if is_experimental:
+            filter_condition = SettingDefinition.experimental == True
+        else:
+            filter_condition = SettingDefinition.experimental == False
+            
         result = await session.execute(
             db.select(SettingDefinition)
             .filter_by(visible=True)
+            .filter(filter_condition)
             .order_by(SettingDefinition.ordering)
         )
         definitions = result.scalars().all()
 
+        if not definitions:
+            text = "🧪 <b>Экспериментальные функции</b>\n\nНет доступных экспериментальных настроек"
+            if isinstance(message_or_callback, Message):
+                await message_or_callback.answer(text, reply_markup=kb.back_to_main_settings)
+            else:
+                await message_or_callback.message.edit_text(text, reply_markup=kb.back_to_main_settings)
+            return
+
         selected_index = max(0, min(selected_index, len(definitions) - 1))
         selected_key = definitions[selected_index].key
 
-        text = "⚙️ <b>Настройки</b>\n\n"
-        text += await render_settings_text(definitions, settings, selected_key)
-        keyboard = await kb.build_settings_nav_keyboard(definitions, selected_index)
+        title = "🧪 <b>Экспериментальные настройки</b>" if is_experimental else "⚙️ <b>Основные настройки</b>"
+        text = f"{title}\n\n"
+        text += await render_settings_text(definitions, settings, selected_key, is_experimental)
+        keyboard = await kb.build_settings_nav_keyboard(user_id, definitions, selected_index, is_experimental)
 
         if isinstance(message_or_callback, Message):
             await message_or_callback.answer(text, reply_markup=keyboard)
@@ -176,25 +201,25 @@ async def ensure_user_settings(session, user_id: int):
 
 async def save_profile_data(session, user_id, profile_data):
     result = await session.execute(db.select(UserData).filter_by(user_id=user_id))
-    user_data = result.scalar_one_or_none()
+    user_data: UserData = result.scalar_one_or_none()
+    
+    api, user = await get_student(user_id)
+    profile = await api.get_family_profile(profile_id=user.profile_id)
+    
+    phone = profile.profile.phone
+    if phone and not phone.startswith("7"):
+        if phone.startswith("8"):
+            phone = "7" + phone[1:]
+        else:
+            phone = "7" + phone
+    elif not phone:
+        phone = None
+    
+    email = profile.profile.email
+    if not email:
+        email = None
     
     if not user_data:
-        api, user = await get_student(user_id)
-        profile = await api.get_family_profile(profile_id=user.profile_id)
-        
-        phone = profile.profile.phone
-        if phone and not phone.startswith("7"):
-            if phone.startswith("8"):
-                phone = "7" + phone[1:]
-            else:
-                phone = "7" + phone
-        elif not phone:
-            phone = None
-        
-        email = profile.profile.email
-        if not email:
-            email = None
-        
         user_data = UserData(
             user_id=user_id,
             first_name=profile_data.first_name,
@@ -206,6 +231,14 @@ async def save_profile_data(session, user_id, profile_data):
             birthday=profile_data.birth_date,
         )
         session.add(user_data)
+    else:
+        user_data.first_name = profile_data.first_name
+        user_data.last_name = profile_data.last_name
+        user_data.middle_name = profile_data.middle_name
+        user_data.gender = profile_data.sex
+        user_data.phone = phone
+        user_data.email = email
+        user_data.birthday = profile_data.birth_date
 
     await session.commit()
 

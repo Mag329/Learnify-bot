@@ -39,6 +39,7 @@ async def schedule_handler(message: Message, state: FSMContext):
         )
 
 
+
 @router.callback_query(F.data == "schedule_left")
 async def schedule_left_callback_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer()

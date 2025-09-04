@@ -1,4 +1,4 @@
-BOT_VERSION = "1.8.1.3"
+BOT_VERSION = "1.8.1.4"
 
 
 # Bot info
@@ -23,6 +23,7 @@ ERROR_500_MESSAGE = "❌ <b>Произошла ошибка</b>\nВнутрен�
 SUCCESSFUL_AUTH = "✅ <b>Успешная авторизация</b>\n\nВы вошли как <i>{0} {1} {2}</i>"
 UPDATE_NOTIFICATION_HEADER = "🚀 <b>Обновление</b>\n\n"
 UPDATE_NOTIFICATION_FOOTER = f"\n\n\n<i>Версия бота:</i> {BOT_VERSION}"
+NO_SUBSCRIPTION_ERROR = "📢 <b>Для использования бота необходимо подписаться на наш канал!</b>\n\nПосле подписки повторите команду"
 
 
 # LOAD
@@ -34,3 +35,10 @@ env.read_envfile()
 LOGSTASH_HOST = env.str("LOGSTASH_HOST")
 LOGSTASH_PORT = env.int("LOGSTASH_PORT")
 LEARNIFY_WEB = env.str('LEARNIFY_WEB')
+
+DEFAULT_SHORT_CACHE_TTL = env.int('DEFAULT_SHORT_CACHE_TTL')
+DEFAULT_MEDIUM_CACHE_TTL = env.int('DEFAULT_MEDIUM_CACHE_TTL')
+DEFAULT_LONG_CACHE_TTL = env.int('DEFAULT_LONG_CACHE_TTL')
+DEFAULT_CACHE_TTL = env.int('DEFAULT_CACHE_TTL')
+
+CHANNEL_ID = env.int('CHANNEL_ID')

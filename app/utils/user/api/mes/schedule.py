@@ -1,14 +1,18 @@
 import asyncio
+import json
 from datetime import datetime, timedelta, timezone
 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
+from app.config.config import DEFAULT_SHORT_CACHE_TTL, DEFAULT_MEDIUM_CACHE_TTL, DEFAULT_LONG_CACHE_TTL
 import app.keyboards.user.keyboards as kb
 from app.states.user.states import ScheduleState
 from app.utils.database import AsyncSessionLocal, Settings, db
-from app.utils.user.decorators import handle_api_error
+from app.utils.user.decorators import handle_api_error, cache
 from app.utils.user.utils import EMOJI_NUMBERS, get_emoji_subject, get_student
+from app.utils.user.cache import redis_client, get_ttl
+
 
 # Словарь для хранения задач пользователей
 user_tasks = {}
@@ -16,6 +20,26 @@ user_tasks = {}
 
 @handle_api_error()
 async def get_schedule(user_id, date_object, short=True, direction="right"):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(Settings).filter_by(user_id=user_id)
+        )
+        settings: Settings = result.scalar_one_or_none()
+        if settings and settings.experimental_features and settings.use_cache:
+            short_cache_key = f"get_schedule:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}:short"
+            full_cache_key = f"get_schedule:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}:full"
+            
+            if not short:
+                cached_full = await redis_client.get(full_cache_key)
+                if cached_full:
+                    data = json.loads(cached_full)
+                    return data['text'], datetime.strptime(data['date'], '%Y-%m-%d')
+            
+            use_cache = True
+        else:
+            use_cache = False
+    
+    
     api, user = await get_student(user_id)
     
     original_date = date_object
@@ -98,11 +122,24 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
             replaced_text = "\n    👤 - 🔄 замена"
             text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i> {" <code>Н</code>" if event.is_missed_lesson else ""} {" 🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}{replaced_text if event.replaced else ""}\n\n'
 
+    if use_cache:
+        cache_data = {
+            'text': text,
+            'date': date_object.strftime('%Y-%m-%d')
+        }
+        
+        ttl = await get_ttl()
+        
+        if short and date_object == original_date:
+            await redis_client.setex(short_cache_key, ttl, json.dumps(cache_data))
+        else:
+            await redis_client.setex(full_cache_key, ttl, json.dumps(cache_data))
+
     return text, date_object
 
 
 async def update_detailed_schedule(message: Message, user_id: int, date: datetime):
-    detailed_schedule, new_date = await get_schedule(user_id, date, False)
+    detailed_schedule, _ = await get_schedule(user_id, date, False)
     if detailed_schedule:
         if message.html_text != detailed_schedule:
             await message.edit_text(detailed_schedule, reply_markup=kb.schedule)
@@ -115,31 +152,3 @@ async def cancel_previous_task(user_id: int):
             task.cancel()
 
 
-async def handle_schedule_navigation(
-    user_id: int,
-    message: Message,
-    state: FSMContext,
-    direction: str,
-):
-    data = await state.get_data()
-    date = data.get("date", datetime.now())
-
-    if direction == "left":
-        date -= timedelta(days=1)
-    elif direction == "right":
-        date += timedelta(days=1)
-    else:  # "today"
-        date = datetime.now()
-
-    text, new_date = await get_schedule(user_id, date, direction)
-    await state.set_state(ScheduleState.date)
-    await state.update_data(date=new_date)
-
-    if text:
-        await message.edit_text(text, reply_markup=kb.schedule)
-
-        # Перезапуск отложенной задачи
-        await cancel_previous_task(user_id)
-        user_tasks[user_id] = asyncio.create_task(
-            update_detailed_schedule(message, user_id, new_date)
-        )

@@ -215,6 +215,12 @@ get_results = InlineKeyboardMarkup(
     ]
 )
 
+confirm_exit = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text='✅ Да', callback_data='accept_exit_from_account'), InlineKeyboardButton(text='❌ Нет', callback_data='decline_exit_from_account')],
+    ]
+)
+
 back_to_menu = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")]
@@ -224,6 +230,19 @@ back_to_menu = InlineKeyboardMarkup(
 delete_message = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="Закрыть", callback_data="delete_message")]
+    ]
+)
+
+link_to_channel = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🔗 Перейти в канал", url="https://t.me/bot_learnify")]
+    ]
+)
+
+check_subscribe = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="🔗 Перейти в канал", url="https://t.me/bot_learnify")],
+        [InlineKeyboardButton(text="🔎 Проверить", callback_data='check_subscription')],
     ]
 )
 
@@ -273,30 +292,52 @@ async def choice_subject(user_id, for_):
     return keyboard.as_markup()
 
 
-async def build_settings_nav_keyboard(definitions, selected_index):
+async def build_settings_nav_keyboard(user_id, definitions, selected_index, is_experimental=False):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(Settings).filter_by(user_id=user_id)
+        )
+        settings: Settings = result.scalar()
+    
     selected_key = definitions[selected_index].key
 
     keyboard = InlineKeyboardBuilder()
-
+    
     keyboard.row(
         InlineKeyboardButton(
-            text="🔼", callback_data=f"nav_up_settings:{selected_index}"
+            text="🔼", callback_data=f"nav_up_settings:{selected_index}:{'experimental' if is_experimental else 'main'}"
         ),
         InlineKeyboardButton(
-            text="🔽", callback_data=f"nav_down_settings:{selected_index}"
+            text="🔽", callback_data=f"nav_down_settings:{selected_index}:{'experimental' if is_experimental else 'main'}"
         ),
     )
     keyboard.row(
         InlineKeyboardButton(
             text="✏️ Изменить",
-            callback_data=f"edit_settings:{selected_index}:{selected_key}",
+            callback_data=f"edit_settings:{selected_index}:{selected_key}:{'experimental' if is_experimental else 'main'}",
         )
     )
+    
+    if settings and settings.experimental_features:
+        if is_experimental:
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="🔙 Назад", callback_data="back_to_main_settings"
+                )
+            )
+        else:
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="🧪 Экспериментальные функции", callback_data="show_experimental_settings"
+                )
+    )
+    
+    keyboard.row(InlineKeyboardButton(text="🤖 О боте", callback_data="about_bot"))
+    
     keyboard.row(
         InlineKeyboardButton(
             text="🚪 Выйти из аккаунта", callback_data="exit_from_account"
         )
     )
-    keyboard.row(InlineKeyboardButton(text="🤖 О боте", callback_data="about_bot"))
 
     return keyboard.as_markup()

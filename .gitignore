@@ -5,6 +5,7 @@ __pycache__/
 .vscode/
 .DS_Store
 .env
+alembic.ini
 alembic/versions/*
 logs/
 data/

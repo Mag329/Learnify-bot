@@ -1,11 +1,15 @@
 from datetime import datetime, timedelta, timezone
+import json
 
 from aiogram.fsm.context import FSMContext
 
 import app.keyboards.user.keyboards as kb
+from app.config.config import DEFAULT_SHORT_CACHE_TTL
 from app.utils.database import AsyncSessionLocal, Settings, db
-from app.utils.user.decorators import handle_api_error
+from app.utils.user.decorators import handle_api_error, cache, cache_text_only
 from app.utils.user.utils import get_emoji_subject, get_student
+from app.utils.user.cache import redis_client, get_ttl
+
 
 # Temp dicts
 temp_events = {}
@@ -13,6 +17,23 @@ temp_events = {}
 
 @handle_api_error()
 async def get_homework(user_id, date_object, direction="right"):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(Settings).filter_by(user_id=user_id)
+        )
+        settings: Settings = result.scalar_one_or_none()
+        if settings and settings.experimental_features and settings.use_cache:
+            cache_key = f"homeworks:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}"
+            
+            cached_full = await redis_client.get(cache_key)
+            if cached_full:
+                data = json.loads(cached_full)
+                return data['text'], datetime.strptime(data['date'], '%Y-%m-%d')
+            
+            use_cache = True
+        else:
+            use_cache = False
+    
     api, user = await get_student(user_id)
     
     original_date = date_object
@@ -96,12 +117,29 @@ async def get_homework(user_id, date_object, direction="right"):
 
     if len(homework.payload) == 0:
         text = f'❌ <b>У вас нет домашних заданий на </b>{date_object.strftime("%d %B (%a)")}'
-
+    
+    
+    if date_object == original_date and use_cache:
+        cache_data = {
+            'text': text,
+            'date': date_object.strftime('%Y-%m-%d')
+        }
+        
+        ttl = await get_ttl()
+        
+        await redis_client.setex(cache_key, ttl, json.dumps(cache_data))
+    
     return text, date_object
 
 
 @handle_api_error()
 async def get_homework_by_subject(user_id, subject_id, date_object):
+    cache_key = f"homework_subject:{user_id}:{subject_id}:{date_object.strftime('%Y-%m-%d')}"
+    
+    cache = await redis_client.get(cache_key)
+    if cache:
+        return cache
+    
     api, user = await get_student(user_id)
 
     cache = temp_events.get(user_id)
@@ -193,6 +231,8 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
             text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
             text += f"    ❌ <b>Нет домашних заданий</b>\n"
             text += "\n"
+            
+    await redis_client.setex(cache_key, DEFAULT_SHORT_CACHE_TTL, text)
 
     return text
 
@@ -222,7 +262,7 @@ async def handle_homework_navigation(
         text = await get_homework_by_subject(user_id, subject_id, date)
         markup = kb.subject_homework
     else:
-        text, _ = await get_homework(user_id, date, direction)
+        text, date = await get_homework(user_id, date, direction)
         markup = kb.homework
 
-    return text, markup
+    return text, date, markup

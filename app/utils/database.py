@@ -110,16 +110,21 @@ class Settings(Base):
     next_day_if_lessons_end_schedule = db.Column(db.Boolean, default=True)
     next_day_if_lessons_end_homeworks = db.Column(db.Boolean, default=True)
     experimental_features = db.Column(db.Boolean, default=False)
+    
+    # Exremental features
+    use_cache = db.Column(db.Boolean, default=False)
 
 
 class SettingDefinition(Base):
     __tablename__ = "setting_definitions"
 
-    key = db.Column(db.String(64), primary_key=True)
-    label = db.Column(db.String(256), nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String, unique=True, nullable=False)
+    label = db.Column(db.String, nullable=False)
     type = db.Column(db.String(32), default="bool")
     ordering = db.Column(db.Integer, default=0)
     visible = db.Column(db.Boolean, default=True)
+    experimental = db.Column(db.Boolean, default=False)
 
 
 class UserData(Base):

@@ -1,10 +1,11 @@
 from collections import defaultdict
 
-from app.utils.user.decorators import handle_api_error
+from app.utils.user.decorators import handle_api_error, cache_text_only
 from app.utils.user.utils import get_student
 
 
 @handle_api_error()
+@cache_text_only()
 async def get_rating_rank_class(user_id):
     api, student = await get_student(user_id)
     profile = await api.get_family_profile(profile_id=student.profile_id)

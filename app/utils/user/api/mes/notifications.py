@@ -1,3 +1,6 @@
+import asyncio
+import logging
+
 from octodiary.exceptions import APIError
 
 import app.keyboards.user.keyboards as kb
@@ -9,6 +12,10 @@ from app.utils.user.utils import (
     get_student,
     user_send_message,
 )
+from app.utils.user.cache import invalidate_cache_for_notification
+
+
+logger = logging.getLogger(__name__)
 
 
 async def get_notifications(user_id, all=False, is_checker=False):
@@ -17,10 +24,8 @@ async def get_notifications(user_id, all=False, is_checker=False):
         if not user:
             if is_checker:
                 return None
-            else:
-                await user_send_message(
-                    user_id, "❌ <b>Вы не авторизованы</b>", kb.reauth
-                )
+            await user_send_message(user_id, "❌ <b>Вы не авторизованы</b>", kb.reauth)
+            return None
 
         notifications = await api.get_notifications(
             student_id=user.student_id, profile_id=user.profile_id
@@ -48,12 +53,11 @@ async def get_notifications(user_id, all=False, is_checker=False):
                 .all()
             )
 
-            if not events:
-                return None
-
             existing = {(e.teacher_id, e.event_type, e.date) for e in events}
 
             new_notifications = []
+            cache_invalidation_tasks = []
+            
             for n in notifications:
                 key = (n.author_profile_id, n.event_type, n.created_at)
                 if key not in existing:
@@ -67,7 +71,14 @@ async def get_notifications(user_id, all=False, is_checker=False):
                             teacher_id=n.author_profile_id,
                         )
                     )
+                    cache_invalidation_tasks.append(
+                        invalidate_cache_for_notification(user_id, n)
+                    )
+                    
             await session.commit()
+            if cache_invalidation_tasks:
+                for task in cache_invalidation_tasks:
+                    asyncio.create_task(task)
 
         if not all:
             notifications = new_notifications
@@ -102,7 +113,7 @@ async def get_notifications(user_id, all=False, is_checker=False):
             if n.event_type == "create_mark":
                 detail = f"<b>Новая оценка:</b>\n            <i><code>{await get_mark_with_weight(n.new_mark_value, n.new_mark_weight)} - {n.control_form_name}</code></i>"
             elif n.event_type == "update_mark":
-                detail = f"<b>Изменение оценки:</b>\n            <i><code>{n.old_mark_value} -> {get_mark_with_weight(n.new_mark_value, n.new_mark_weight)} - {n.control_form_name}</code></i>"
+                detail = f"<b>Изменение оценки:</b>\n            <i><code>{n.old_mark_value} -> {await get_mark_with_weight(n.new_mark_value, n.new_mark_weight)} - {n.control_form_name}</code></i>"
             elif n.event_type == "delete_mark":
                 detail = f"<b>Удаление оценки:</b>\n            <i><code>{n.old_mark_value} - {n.control_form_name}</code></i>"
             elif n.event_type in {"create_homework", "update_homework"}:
@@ -128,6 +139,6 @@ async def get_notifications(user_id, all=False, is_checker=False):
                 kb.reauth if e.status_code in [401, 403] else kb.delete_message,
             )
     except Exception as e:
-        print(e)
+        logger.error(e)
         if not is_checker:
             await user_send_message(user_id, ERROR_MESSAGE, kb.delete_message)

@@ -26,7 +26,7 @@ from app.handlers.user import (
     settings,
     inline_mode
 )
-from app.middlewares.middlewares import LoggingMiddleware
+from app.middlewares.middlewares import LoggingMiddleware, Check_Subscription
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
 from app.utils.misc import create_settings_definitions_if_not_exists
@@ -94,8 +94,8 @@ async def main():
 
     # Middlewares
     dp.update.middleware(LoggingMiddleware())
-
     dp.update.middleware(StatsMiddleware())
+    dp.update.middleware(Check_Subscription())
 
     await bot.delete_webhook(drop_pending_updates=True)
 

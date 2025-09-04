@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import aiohttp
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import AWAIT_RESPONSE_MESSAGE, START_MESSAGE, SUCCESSFUL_AUTH
+from app.config.config import AWAIT_RESPONSE_MESSAGE, START_MESSAGE, SUCCESSFUL_AUTH, NO_SUBSCRIPTION_ERROR
 from app.states.user.states import AuthState
 from app.utils.database import AsyncSessionLocal, User, db, AuthData
 from app.utils.user.utils import (
@@ -21,6 +21,7 @@ from app.utils.user.utils import (
     get_web_api,
     save_profile_data,
 )
+from app.utils.misc import check_subscription
 from app.utils.user.api.mes.auth import get_token_expire_date, get_login_qr_code, check_qr_login, schedule_refresh
 
 router = Router()
@@ -28,20 +29,45 @@ logger = logging.getLogger(__name__)
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message):
+@router.callback_query(F.data == 'check_subscription')
+async def cmd_start(event: list[Message, CallbackQuery]):
+    if isinstance(event, Message):
+        user_id = event.from_user.id
+        bot = event.bot
+        message = event
+    elif isinstance(event, CallbackQuery):
+        user_id = event.from_user.id
+        bot = event.bot
+        message = event.message
+        await event.answer()
+    else:
+        return
+    
     async with AsyncSessionLocal() as session:
+        subscribe_status = await check_subscription(user_id, bot)
+        if not subscribe_status:
+            text= (
+                "📢 <b>Для использования бота необходимо подписаться на наш канал!</b>\n\n"
+                "ℹ️ Там мы публикуем только важные уведомления:\n"
+                "🔄 Обновления\n"
+                "⚙️ Информацию о работе бота\n\n"
+                "🚫 Никакой рекламы — только полезная информация ✅"
+            )
+            await message.answer(text=text, reply_markup=kb.check_subscribe)
+            return
+        
         result = await session.execute(
-            db.select(User).filter_by(user_id=message.from_user.id)
+            db.select(User).filter_by(user_id=user_id)
         )
         user = result.scalar_one_or_none()
 
         if user and user.active:
             await_message = await message.answer(AWAIT_RESPONSE_MESSAGE)
 
-            await ensure_user_settings(session, message.from_user.id)
+            await ensure_user_settings(session, user_id)
 
             try:
-                api, _ = await get_student(message.from_user.id)
+                api, _ = await get_student(user_id)
 
                 profile = None
                 
@@ -60,7 +86,7 @@ async def cmd_start(message: Message):
 
                 await session.commit()
                 
-                result = await session.execute(db.select(AuthData).filter_by(user_id=message.from_user.id, auth_method='password'))
+                result = await session.execute(db.select(AuthData).filter_by(user_id=user_id, auth_method='password'))
                 auth_data: AuthData = result.scalar_one_or_none()
                 
                 if auth_data:
@@ -75,12 +101,12 @@ async def cmd_start(message: Message):
                         schedule_refresh(user.user_id, need_update_date)
                         
                 await save_profile_data(
-                    session, message.from_user.id, profile.profile
+                    session, user_id, profile.profile
                 )
 
             except APIError as e:
                 logger.error(
-                    f"APIError ({e.status_code}) for user {message.from_user.id}: {e}"
+                    f"APIError ({e.status_code}) for user {user_id}: {e}"
                 )
 
                 await await_message.edit_text(
@@ -91,7 +117,7 @@ async def cmd_start(message: Message):
 
             except Exception as e:
                 logger.exception(
-                    f"Unhandled exception for user {message.from_user.id}: {e}"
+                    f"Unhandled exception for user {user_id}: {e}"
                 )
 
                 # Редактирование сообщения для необработанных исключений
@@ -111,12 +137,12 @@ async def cmd_start(message: Message):
                     profile.profile.first_name,
                     profile.profile.middle_name,
                 ),
-                reply_markup=await kb.main(message.from_user.id),
+                reply_markup=await kb.main(user_id),
             )
 
         else:
             if not user:
-                user = User(user_id=message.from_user.id, active=False)
+                user = User(user_id=user_id, active=False)
                 session.add(user)
                 await session.commit()
             
@@ -124,6 +150,9 @@ async def cmd_start(message: Message):
                 text=START_MESSAGE,
                 reply_markup=kb.start_command,
             )
+
+
+
 
 
 @router.callback_query(F.data == 'choose_login')
@@ -345,6 +374,12 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
 
 
 @router.callback_query(F.data == "exit_from_account")
+async def confirm_exit_from_account(callback: CallbackQuery):
+    await callback.answer()
+    await callback.message.answer('❗ Вы уверены, что хотите выйти из аккаунта?', reply_markup=kb.confirm_exit)
+
+
+@router.callback_query(F.data == "confirm_exit_from_account")
 async def exit_from_account(callback: CallbackQuery):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -364,6 +399,12 @@ async def exit_from_account(callback: CallbackQuery):
             await callback.message.edit_text(
                 "❌ Ошибка выхода из аккаунта", reply_markup=kb.start_command
             )
+
+
+@router.callback_query(F.data == "decline_exit_from_account")
+async def decline_exit_from_account(callback: CallbackQuery):
+    await callback.answer()
+    await callback.message.delete()
 
 
 @router.callback_query(F.data == "auth_with_token")

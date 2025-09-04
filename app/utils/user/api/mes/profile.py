@@ -1,11 +1,13 @@
 from datetime import datetime
 
+from app.config.config import DEFAULT_LONG_CACHE_TTL
 from app.utils.database import AsyncSessionLocal, db, UserData
-from app.utils.user.decorators import handle_api_error
+from app.utils.user.decorators import handle_api_error, cache_text_only
 from app.utils.user.utils import get_student, get_web_api, parse_and_format_phone
 
 
 @handle_api_error()
+@cache_text_only(DEFAULT_LONG_CACHE_TTL)
 async def get_profile(user_id):
     api, user = await get_student(user_id)
     web_api, _ = await get_web_api(user_id)

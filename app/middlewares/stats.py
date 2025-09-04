@@ -78,9 +78,9 @@ class StatsMiddleware(BaseMiddleware):
                 except Exception as e:
                     middleware_logger.error(f"Failed to send data to Logstash: {e}")
 
-            middleware_logger.info(
-                f"Calling handler: {handler.__name__} with data: {data}"
-            )
+            # middleware_logger.info(
+            #     f"Calling handler: {handler.__name__} with data: {data}"
+            # )
 
             return
 

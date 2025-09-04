@@ -11,36 +11,36 @@ router = Router()
 
 @router.message(F.text == "⚙️ Настройки")
 async def settings(message: Message):
-    # text = f"⚙️ <b>Настройки</b>\n\n🤖 <b>Информация о боте</b>\n    - 📦 <b>Версия бота:</b> {BOT_VERSION}\n    - 👨‍💻 <b>Разработчик:</b> {DEVELOPER}\n    - 🌐 <b>Сайт разработчика:</b> {DEVELOPER_SITE}"
+    await send_settings_editor(message, selected_index=0, is_experimental=False)
 
-    # await message.answer(
-    #     text,
-    #     reply_markup=await kb.user_settings(message.from_user.id),
-    #     disable_web_page_preview=True,
-    # )
-    await send_settings_editor(message, selected_index=0)
+
+@router.message(F.text == "🧪 Экспериментальные")
+async def experimental_settings(message: Message):
+    await send_settings_editor(message, selected_index=0, is_experimental=True)
 
 
 @router.callback_query(F.data.startswith(("nav_up_settings:", "nav_down_settings:")))
 async def nav_settings_handler(callback: CallbackQuery):
     await callback.answer()
 
-    action, index_str = callback.data.split(":")
+    action, index_str, settings_type = callback.data.split(":")
     index = int(index_str)
+    is_experimental = settings_type == "experimental"
 
     if action == "nav_up_settings":
         new_index = index - 1
     else:  # nav_down_settings
         new_index = index + 1
 
-    await send_settings_editor(callback, selected_index=new_index)
+    await send_settings_editor(callback, selected_index=new_index, is_experimental=is_experimental)
 
 
 @router.callback_query(F.data.startswith("edit_settings:"))
 async def edit_setting(callback: CallbackQuery, state: FSMContext):
     try:
-        _, index_str, key = callback.data.split(":")
+        _, index_str, key, settings_type = callback.data.split(":")
         selected_index = int(index_str)
+        is_experimental = settings_type == "experimental"
     except ValueError:
         await callback.answer("Некорректные данные", show_alert=True)
         return
@@ -55,6 +55,16 @@ async def edit_setting(callback: CallbackQuery, state: FSMContext):
         if not definition:
             await callback.answer("Настройка не найдена", show_alert=True)
             return
+
+        # Проверяем доступность экспериментальных функций
+        if definition.experimental:
+            result = await db_session.execute(
+                db.select(Settings).filter_by(user_id=callback.from_user.id)
+            )
+            settings: Settings = result.scalar()
+            if not settings.experimental_features:
+                await callback.answer("⚠️ Экспериментальные функции отключены", show_alert=True)
+                return
 
         # Получаем текущие настройки сессии
         result = await db_session.execute(
@@ -71,7 +81,7 @@ async def edit_setting(callback: CallbackQuery, state: FSMContext):
             current_value = getattr(settings, definition.key, False)
             setattr(settings, definition.key, not current_value)
             await db_session.commit()
-            await send_settings_editor(callback, selected_index=selected_index)
+            await send_settings_editor(callback, selected_index=selected_index, is_experimental=is_experimental)
         else:
             await callback.message.answer(
                 f"Введите новое значение для: <b>{definition.label}</b>"
@@ -80,6 +90,7 @@ async def edit_setting(callback: CallbackQuery, state: FSMContext):
                 setting_key=key,
                 setting_type=definition.type,
                 selected_index=selected_index,
+                is_experimental=is_experimental
             )
             await state.set_state(SettingsEditStates.waiting_for_value)
 
@@ -90,6 +101,7 @@ async def process_new_setting_value(message: Message, state: FSMContext):
     setting_key = data.get("setting_key")
     setting_type = data.get("setting_type")
     selected_index = data.get("selected_index")
+    is_experimental = data.get("is_experimental", False)
 
     value = message.text.strip()
 
@@ -118,6 +130,17 @@ async def process_new_setting_value(message: Message, state: FSMContext):
         await db_session.commit()
 
     await message.answer("✅ Значение успешно обновлено!")
-    await send_settings_editor(message, selected_index=selected_index)
-
+    await send_settings_editor(message, selected_index=selected_index, is_experimental=is_experimental)
     await state.clear()
+
+
+@router.callback_query(F.data == "back_to_main_settings")
+async def back_to_main_settings(callback: CallbackQuery):
+    await callback.answer()
+    await send_settings_editor(callback, selected_index=0, is_experimental=False)
+
+
+@router.callback_query(F.data == "show_experimental_settings")
+async def show_experimental_settings(callback: CallbackQuery):
+    await callback.answer()
+    await send_settings_editor(callback, selected_index=0, is_experimental=True)

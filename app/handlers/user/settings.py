@@ -5,6 +5,8 @@ from aiogram.types import CallbackQuery, Message
 from app.states.user.states import SettingsEditStates
 from app.utils.database import AsyncSessionLocal, SettingDefinition, Settings, db
 from app.utils.user.utils import send_settings_editor
+from app.utils.user.cache import clear_user_cache
+import app.keyboards.user.keyboards as kb
 
 router = Router()
 
@@ -144,3 +146,14 @@ async def back_to_main_settings(callback: CallbackQuery):
 async def show_experimental_settings(callback: CallbackQuery):
     await callback.answer()
     await send_settings_editor(callback, selected_index=0, is_experimental=True)
+    
+    
+@router.callback_query(F.data == 'clear_cache')
+async def clear_cache_handler(callback: CallbackQuery):
+    await callback.answer()
+    num = await clear_user_cache(callback.from_user.id)
+    text = (
+        "✅ <b>Кэш успешно очищен!</b>\n\n"
+        f"🗑️ Удалено <i>{num}</i> сохранённых запросов"
+    )
+    await callback.message.answer(text, reply_markup=kb.delete_message)

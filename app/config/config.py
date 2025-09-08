@@ -1,4 +1,4 @@
-BOT_VERSION = "1.8.1.4"
+BOT_VERSION = "1.8.1.5"
 
 
 # Bot info
@@ -44,3 +44,5 @@ DEFAULT_CACHE_TTL = env.int('DEFAULT_CACHE_TTL')
 CHANNEL_ID = env.int('CHANNEL_ID')
 
 DEV = env.bool('DEV')
+
+BOT_USERNAME = None

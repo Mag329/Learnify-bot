@@ -108,9 +108,11 @@ async def subject_homework_callback_handler(callback: CallbackQuery, state: FSMC
 )
 async def subject_homework_navigation(callback: CallbackQuery, state: FSMContext):
     direction = callback.data.split("_")[-1]
-    text, markup = await handle_homework_navigation(
+    text, date, markup = await handle_homework_navigation(
         callback.from_user.id, state, direction, subject_mode=True
     )
+    
+    await state.update_data(date=date)
 
     await callback.answer()
 

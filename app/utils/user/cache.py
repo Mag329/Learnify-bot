@@ -62,3 +62,13 @@ async def get_cache(key):
     if cached_text and datetime.now().time() > time(16, 30):
         return cached_text
     return None
+
+
+async def clear_user_cache(user_id: str):
+    pattern = f"*:{user_id}:*"
+    
+    deleted = 0
+    async for key in redis_client.scan_iter(match=pattern):
+        await redis_client.delete(key)
+        deleted += 1
+    return deleted

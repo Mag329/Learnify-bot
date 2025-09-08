@@ -58,7 +58,7 @@ async def get_homework(user_id, date_object, direction="right"):
         and settings.next_day_if_lessons_end_homeworks
     ):
         date_object += timedelta(days=1)
-        homework = await api.get_homeworks_short(
+        homework = await api.get_homeworks(
             student_id=user.student_id,
             profile_id=user.profile_id,
             from_date=date_object,
@@ -70,7 +70,7 @@ async def get_homework(user_id, date_object, direction="right"):
         empty_days = 0
 
         while homework_count <= 0 and empty_days <= 14:
-            homework = await api.get_homeworks_short(
+            homework = await api.get_homeworks(
                 student_id=user.student_id,
                 profile_id=user.profile_id,
                 from_date=date_object,
@@ -88,7 +88,7 @@ async def get_homework(user_id, date_object, direction="right"):
                 empty_days = 0
                 
         if empty_days > 14:
-            homework = await api.get_homeworks_short(
+            homework = await api.get_homeworks(
                 student_id=user.student_id,
                 profile_id=user.profile_id,
                 from_date=original_date,
@@ -97,7 +97,7 @@ async def get_homework(user_id, date_object, direction="right"):
             date_object = original_date
 
     else:
-        homework = await api.get_homeworks_short(
+        homework = await api.get_homeworks(
             student_id=user.student_id,
             profile_id=user.profile_id,
             from_date=date_object,
@@ -109,8 +109,8 @@ async def get_homework(user_id, date_object, direction="right"):
     for task in homework.payload:
         description = task.description.rstrip("\n")
         materials = (
-            f"<i> (Для выполнения: {task.materials_count[0].amount})</i>"
-            if task.materials_count and len(task.materials_count) > 0
+            f"<i> (Для выполнения: {len(task.materials)})</i>"
+            if task.materials and len(task.materials) > 0
             else ""
         )
         text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    <code>{description}</code>\n\n"
@@ -134,11 +134,21 @@ async def get_homework(user_id, date_object, direction="right"):
 
 @handle_api_error()
 async def get_homework_by_subject(user_id, subject_id, date_object):
-    cache_key = f"homework_subject:{user_id}:{subject_id}:{date_object.strftime('%Y-%m-%d')}"
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(Settings).filter_by(user_id=user_id)
+        )
+        settings: Settings = result.scalar_one_or_none()
+        if settings and settings.experimental_features and settings.use_cache:
+            cache_key = f"homework_subject:{user_id}:{subject_id}:{date_object.strftime('%Y-%m-%d')}"
     
-    cache = await redis_client.get(cache_key)
-    if cache:
-        return cache
+            cache_redis = await redis_client.get(cache_key)
+            if cache_redis:
+                return cache_redis
+            
+            use_cache = True
+        else:
+            use_cache = False
     
     api, user = await get_student(user_id)
 
@@ -232,7 +242,8 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
             text += f"    ❌ <b>Нет домашних заданий</b>\n"
             text += "\n"
             
-    await redis_client.setex(cache_key, DEFAULT_SHORT_CACHE_TTL, text)
+    if use_cache:
+        await redis_client.setex(cache_key, DEFAULT_SHORT_CACHE_TTL, text)
 
     return text
 
@@ -252,8 +263,6 @@ async def handle_homework_navigation(
         date += timedelta(days=7 if subject_mode else 1)
     else:  # today
         date = datetime.now()
-
-    await state.update_data(date=date)
 
     if subject_mode:
         subject_id = data.get("subject_id")

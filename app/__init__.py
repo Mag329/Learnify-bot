@@ -123,6 +123,10 @@ async def main():
     # scheduler.add_job(replaced_checker, "interval", minutes=10, args=(bot,))
 
     scheduler.start()
+    
+    from app.config import config
 
+    config.BOT_USERNAME = (await bot.me()).username
+    
     logging.info("Polling bot...")
     await dp.start_polling(bot)

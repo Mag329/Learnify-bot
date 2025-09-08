@@ -330,7 +330,13 @@ async def build_settings_nav_keyboard(user_id, definitions, selected_index, is_e
                 InlineKeyboardButton(
                     text="🧪 Экспериментальные функции", callback_data="show_experimental_settings"
                 )
-    )
+            )
+            if settings.use_cache:
+                keyboard.row(
+                    InlineKeyboardButton(
+                        text="📦 Очистить кэш", callback_data="clear_cache"
+                    )
+                )
     
     keyboard.row(InlineKeyboardButton(text="🤖 О боте", callback_data="about_bot"))
     

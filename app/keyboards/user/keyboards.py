@@ -217,7 +217,7 @@ get_results = InlineKeyboardMarkup(
 
 confirm_exit = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text='✅ Да', callback_data='accept_exit_from_account'), InlineKeyboardButton(text='❌ Нет', callback_data='decline_exit_from_account')],
+        [InlineKeyboardButton(text='✅ Да', callback_data='confirm_exit_from_account'), InlineKeyboardButton(text='❌ Нет', callback_data='decline_exit_from_account')],
     ]
 )
 

@@ -105,7 +105,12 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
 
     text = f'📅 <b>Расписание на</b> {date_object.strftime("%d %B (%a)")}:\n\n'
 
-    for num, event in enumerate(schedule.response, 1):
+    num = 0
+    for event in schedule.response:
+        if event.source != "PLAN":
+            continue
+        num += 1
+        
         start_time = event.start_at.strftime("%H:%M")
         end_time = event.finish_at.strftime("%H:%M")
 

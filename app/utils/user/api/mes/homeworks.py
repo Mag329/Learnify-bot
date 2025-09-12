@@ -23,7 +23,7 @@ async def get_homework(user_id, date_object, direction="right"):
             db.select(Settings).filter_by(user_id=user_id)
         )
         settings: Settings = result.scalar_one_or_none()
-        if settings and settings.experimental_features and settings.use_cache:
+        if settings and settings.experimental_features and settings.use_cache and direction != 'to_date':
             cache_key = f"homeworks:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}"
             
             cached_full = await redis_client.get(cache_key)

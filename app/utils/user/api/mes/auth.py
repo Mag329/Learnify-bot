@@ -120,7 +120,17 @@ def schedule_refresh(user_id: int, expires_at: datetime):
             id=job_id,
             replace_existing=True
         )
+        
 
+def delete_refresh_task(user_id):
+    job_id = f"refresh_token_{user_id}"
+    
+    try:
+        scheduler.remove_job(job_id)
+    except:
+        pass
+    
+    
 
 async def restore_refresh_tokens_jobs():
     async with AsyncSessionLocal() as session:

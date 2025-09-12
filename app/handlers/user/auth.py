@@ -23,7 +23,7 @@ from app.utils.user.utils import (
     save_profile_data,
 )
 from app.utils.misc import check_subscription
-from app.utils.user.api.mes.auth import get_token_expire_date, get_login_qr_code, check_qr_login, schedule_refresh
+from app.utils.user.api.mes.auth import delete_refresh_task, get_token_expire_date, get_login_qr_code, check_qr_login, schedule_refresh
 from app.utils.user.utils import deep_links
 
 
@@ -401,6 +401,7 @@ async def exit_from_account(callback: CallbackQuery):
             await callback.message.edit_text(
                 "🚪 Вы вышли из аккаунта", reply_markup=kb.start_command
             )
+            delete_refresh_task(user.user_id)
         else:
             await callback.answer()
             await callback.message.edit_text(
@@ -438,9 +439,11 @@ async def auth_by_token_callback_handler(callback: CallbackQuery, state: FSMCont
 async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
     token = message.text
     
+    await message.delete()
+    
     data = await state.get_data()
     if not data['main_message']:
-        await message.answer(
+        return await message.answer(
             "❌ Ошибка авторизации",
             reply_markup=kb.start_command,
         )
@@ -453,14 +456,14 @@ async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
                     reply_markup=kb.token_auth,
                 )
     
-    await state.clear()
-    
     token_expire_timestamp = await get_token_expire_date(token, 0)
     if token_expire_timestamp - datetime.now() < timedelta(hours=1):
-        await message.answer(
+        return await message.answer(
             "❌ Токен истечёт меньше, чем через час\nПопробуйте авторизоваться заново через сайт <a href='https://mos.ru'>mos.ru</a>, или выберите другой способ авторизации",
             reply_markup=kb.start_command,
         )
+        
+    await state.clear()
     
     async with AsyncSessionLocal() as session:
         result = await session.execute(db.select(User).filter_by(user_id=message.from_user.id))
@@ -509,6 +512,8 @@ async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
         await save_profile_data(
             session, message.from_user.id, profile.profile
         )
+        
+        await bot.delete_message(chat_id=message.from_user.id, message_id=data["main_message"])
         
         await message.answer(
             text=SUCCESSFUL_AUTH.format(

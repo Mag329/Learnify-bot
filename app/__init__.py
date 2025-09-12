@@ -38,6 +38,7 @@ env.read_envfile()
 bot = Bot(
     token=env.str("TOKEN"),
     default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    disable_web_page_preview=True
 )
 dp = Dispatcher(storage=MemoryStorage())
 

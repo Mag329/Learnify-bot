@@ -128,14 +128,22 @@ async def get_homework(user_id, date_object, direction="right"):
 
         is_done = task.is_done
 
-        if not is_done:
-            link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-True">◼️</a>'
+        link = ''
+        description_text = ''
+        
+        if settings.enable_homework_done_function:
+            if not is_done:
+                link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-True">◼️</a>'
+            else:
+                link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-False">✔️</a>'
+                
+            description_text = (
+                f"<s>{description}</s>" if is_done else f"<code>{description}</code>"
+            )
         else:
-            link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-False">✔️</a>'
-
-        description_text = (
-            f"<s>{description}</s>" if is_done else f"<code>{description}</code>"
-        )
+            description_text = (
+                f"<code>{description}</code>"
+            )
 
         text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    {link} {description_text}\n\n"
 

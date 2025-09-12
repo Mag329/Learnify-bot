@@ -169,7 +169,10 @@ async def send_settings_editor(
                 )
             return
 
-        selected_index = max(0, min(selected_index, len(definitions) - 1))
+        if selected_index > len(definitions) - 1:
+            selected_index = 0
+        elif selected_index < 0:
+            selected_index = len(definitions) - 1
         selected_key = definitions[selected_index].key
 
         title = (

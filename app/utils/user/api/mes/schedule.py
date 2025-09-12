@@ -81,7 +81,12 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
                 begin_date=date_object,
                 end_date=date_object,
             )
-            lessons_count = schedule.total_count
+            lessons_count = 0
+            for event in schedule.response:
+                if event.source != "PLAN":
+                    continue
+                lessons_count += 1
+                
             if lessons_count <= 0:
                 empty_days += 1
                 if direction in ["right", "today"]:

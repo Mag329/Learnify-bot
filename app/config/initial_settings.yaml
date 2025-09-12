@@ -40,10 +40,17 @@
   visible: true
   experimental: false
 
+- key: enable_homework_done_function
+  label: Включить возможность отметить ДЗ как выполненное 
+  type: bool
+  ordering: 7
+  visible: true
+  experimental: false
+
 - key: experimental_features
   label: Включить экспериментальные функции
   type: bool
-  ordering: 7
+  ordering: 8
   visible: true
   experimental: false
 

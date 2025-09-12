@@ -109,6 +109,7 @@ class Settings(Base):
     skip_empty_days_homeworks = db.Column(db.Boolean, default=True)
     next_day_if_lessons_end_schedule = db.Column(db.Boolean, default=True)
     next_day_if_lessons_end_homeworks = db.Column(db.Boolean, default=True)
+    enable_homework_done_function = db.Column(db.Boolean, default=True)
     experimental_features = db.Column(db.Boolean, default=False)
 
     # Exremental features

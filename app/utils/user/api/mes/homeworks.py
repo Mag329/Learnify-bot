@@ -108,9 +108,16 @@ async def get_homework(user_id, date_object, direction="right"):
 
     for task in homework.payload:
         description = task.description.rstrip("\n")
+        
+        materials_amount = 0
+        for material in task.materials:
+            if material.type in ['attachments']:
+                continue
+            materials_amount += 1
+            
         materials = (
-            f"<i> (Для выполнения: {len(task.materials)})</i>"
-            if task.materials and len(task.materials) > 0
+            f"<i> (Для выполнения: {materials_amount})</i>"
+            if materials_amount > 0
             else ""
         )
         text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    <code>{description}</code>\n\n"

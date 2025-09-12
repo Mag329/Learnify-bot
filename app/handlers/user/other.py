@@ -1,8 +1,10 @@
 from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery, Message
+from aiogram.filters import CommandStart, CommandObject
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import BOT_VERSION, DEVELOPER, DEVELOPER_SITE
+from app.utils.user.utils import get_student
 
 router = Router()
 
@@ -14,7 +16,7 @@ async def about_bot(callback: CallbackQuery):
     await callback.answer()
     await callback.message.answer(
         text, reply_markup=kb.delete_message, disable_web_page_preview=True
-    )
+    )   
 
 
 @router.message(F.text)

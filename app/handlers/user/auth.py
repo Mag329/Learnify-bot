@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from aiogram import Bot, F, Router
 from aiogram.filters import CommandStart
@@ -23,18 +24,24 @@ from app.utils.user.utils import (
 )
 from app.utils.misc import check_subscription
 from app.utils.user.api.mes.auth import get_token_expire_date, get_login_qr_code, check_qr_login, schedule_refresh
+from app.utils.user.utils import deep_links
+
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.message(CommandStart())
+@router.message(CommandStart(deep_link=False))
 @router.callback_query(F.data == 'check_subscription')
-async def cmd_start(event: list[Message, CallbackQuery]):
+async def cmd_start(event: list[Message, CallbackQuery], bot: Bot, command: Optional[CommandStart] = None, state: Optional[FSMContext] = None):
     if isinstance(event, Message):
         user_id = event.from_user.id
         bot = event.bot
         message = event
+        
+        if command.args:
+            return await deep_links(message, command.args, bot, state)
+        
     elif isinstance(event, CallbackQuery):
         user_id = event.from_user.id
         bot = event.bot

@@ -5,6 +5,7 @@ from aiogram.fsm.context import FSMContext
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import DEFAULT_SHORT_CACHE_TTL
+from app.config import config
 from app.utils.database import AsyncSessionLocal, Settings, db
 from app.utils.user.decorators import handle_api_error, cache, cache_text_only
 from app.utils.user.utils import get_emoji_subject, get_student
@@ -65,7 +66,7 @@ async def get_homework(user_id, date_object, direction="right"):
             to_date=date_object,
         )
 
-    if settings.skip_empty_days_homeworks:
+    if settings.skip_empty_days_homeworks and direction != 'to_date':
         homework_count = 0
         empty_days = 0
 
@@ -120,7 +121,17 @@ async def get_homework(user_id, date_object, direction="right"):
             if materials_amount > 0
             else ""
         )
-        text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    <code>{description}</code>\n\n"
+        
+        is_done = task.is_done
+        
+        if not is_done:
+            link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-True">◼️</a>'
+        else:
+            link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-False">✔️</a>'
+            
+        description_text = f"<s>{description}</s>" if is_done else f"<code>{description}</code>"
+
+        text += f'{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    {link} {description_text}\n\n'
 
     if len(homework.payload) == 0:
         text = f'❌ <b>У вас нет домашних заданий на </b>{date_object.strftime("%d %B (%a)")}'
@@ -244,14 +255,14 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
         )
         
 
-    text = f"{await get_emoji_subject(subject_name)} <b>{subject_name}</b>\n\n"
+    text = f"{await get_emoji_subject(subject_name)} <b>{subject_name}</b> {begin_date.strftime("%d %b")} – {end_date.strftime("%d %b")}\n\n"
 
     for homework in homeworks_list:
         if homework["homework"] or len(homework["materials"]) > 0:
             text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
             if homework["homework"]:
                 text += f"    📚 <b>Домашние задание:</b>\n"
-                text += f"        - <i><code>{homework['homework']}</code></i>\n"
+                text += f'        - <i><code>{homework['homework']}</code></i>\n'
 
             if len(homework["materials"]) > 0:
                 text += f"\n    🔗 <b>Для выполнения:</b>\n"
@@ -286,6 +297,8 @@ async def handle_homework_navigation(
         date -= timedelta(days=7 if subject_mode else 1)
     elif direction == "right":
         date += timedelta(days=7 if subject_mode else 1)
+    elif direction == 'to_date':
+        date = date
     else:  # today
         date = datetime.now()
 

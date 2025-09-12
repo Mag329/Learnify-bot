@@ -1,6 +1,9 @@
 import random
 from datetime import datetime, timedelta, timezone
 
+from aiogram import Bot
+from aiogram.fsm.context import FSMContext
+
 import phonenumbers
 from aiogram.types import Message
 from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
@@ -45,6 +48,7 @@ EMOJI_SUBJECTS = {
     "История": "🏺",
     "Обществознание": "⚖️",
     "Труд (технология)": "🔧",
+    "Индивидуальный проект": "📑",
 }
 
 EMOJI_OTHER_SUBJECTS = ["📒", "📕", "📗", "📘", "📙"]
@@ -272,3 +276,33 @@ async def parse_and_format_phone(raw_number: str) -> str:
 
     except phonenumbers.NumberParseException:
         return "Н/Д"
+
+
+
+async def deep_links(message, args, bot: Bot, state: FSMContext):
+    if args.startswith('done-homework-'):
+        from app.utils.user.api.mes.homeworks import handle_homework_navigation
+        
+        homework_entry_id = args.split('-')[2]
+        done = args.split('-')[3]
+        done = True if done == 'True' else False
+
+        api, user = await get_student(message.from_user.id)
+        
+        await message.delete()
+        
+        await api.done_homework(
+            homework_entry_id=homework_entry_id,
+            profile_id=user.profile_id,
+            done=done
+        )
+        
+        text, date, markup = await handle_homework_navigation(
+            message.from_user.id, state, 'to_date', subject_mode=False
+        )
+        
+        await state.update_data(date=date)
+        
+        await message.answer(text, reply_markup=markup)
+        
+            

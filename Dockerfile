@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # Install locales and generate the ru_RU.UTF-8 locale
 RUN apt-get update && apt-get install -y \

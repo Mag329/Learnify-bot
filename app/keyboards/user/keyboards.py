@@ -1,10 +1,10 @@
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton
+from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
+                           KeyboardButton)
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
+from app.config.config import LEARNIFY_WEB
 from app.utils.database import AsyncSessionLocal, Settings, db
 from app.utils.user.utils import get_emoji_subject, get_student
-
-from app.config.config import LEARNIFY_WEB
 
 start_command = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -14,16 +14,32 @@ start_command = InlineKeyboardMarkup(
 
 choice_auth_variant = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="🧑‍💻 Войти по логину", callback_data="auth_with_login")],
-        [InlineKeyboardButton(text="🔐 Войти по токену", callback_data="auth_with_token")],
-        [InlineKeyboardButton(text="📷 Войти по QR-коду", callback_data="auth_with_qr")]
+        [
+            InlineKeyboardButton(
+                text="🧑‍💻 Войти по логину", callback_data="auth_with_login"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🔐 Войти по токену", callback_data="auth_with_token"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="📷 Войти по QR-коду", callback_data="auth_with_qr"
+            )
+        ],
     ]
 )
 
 token_auth = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text='🔑 Получить токен', url=f'{LEARNIFY_WEB}/auth/method/token')],
-        [InlineKeyboardButton(text="🔙 Назад", callback_data="choose_login")]
+        [
+            InlineKeyboardButton(
+                text="🔑 Получить токен", url=f"{LEARNIFY_WEB}/auth/method/token"
+            )
+        ],
+        [InlineKeyboardButton(text="🔙 Назад", callback_data="choose_login")],
     ]
 )
 
@@ -217,7 +233,14 @@ get_results = InlineKeyboardMarkup(
 
 confirm_exit = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text='✅ Да', callback_data='confirm_exit_from_account'), InlineKeyboardButton(text='❌ Нет', callback_data='decline_exit_from_account')],
+        [
+            InlineKeyboardButton(
+                text="✅ Да", callback_data="confirm_exit_from_account"
+            ),
+            InlineKeyboardButton(
+                text="❌ Нет", callback_data="decline_exit_from_account"
+            ),
+        ],
     ]
 )
 
@@ -235,14 +258,22 @@ delete_message = InlineKeyboardMarkup(
 
 link_to_channel = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="🔗 Перейти в канал", url="https://t.me/bot_learnify")]
+        [
+            InlineKeyboardButton(
+                text="🔗 Перейти в канал", url="https://t.me/bot_learnify"
+            )
+        ]
     ]
 )
 
 check_subscribe = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="🔗 Перейти в канал", url="https://t.me/bot_learnify")],
-        [InlineKeyboardButton(text="🔎 Проверить", callback_data='check_subscription')],
+        [
+            InlineKeyboardButton(
+                text="🔗 Перейти в канал", url="https://t.me/bot_learnify"
+            )
+        ],
+        [InlineKeyboardButton(text="🔎 Проверить", callback_data="check_subscription")],
     ]
 )
 
@@ -292,23 +323,25 @@ async def choice_subject(user_id, for_):
     return keyboard.as_markup()
 
 
-async def build_settings_nav_keyboard(user_id, definitions, selected_index, is_experimental=False):
+async def build_settings_nav_keyboard(
+    user_id, definitions, selected_index, is_experimental=False
+):
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            db.select(Settings).filter_by(user_id=user_id)
-        )
+        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
         settings: Settings = result.scalar()
-    
+
     selected_key = definitions[selected_index].key
 
     keyboard = InlineKeyboardBuilder()
-    
+
     keyboard.row(
         InlineKeyboardButton(
-            text="🔼", callback_data=f"nav_up_settings:{selected_index}:{'experimental' if is_experimental else 'main'}"
+            text="🔼",
+            callback_data=f"nav_up_settings:{selected_index}:{'experimental' if is_experimental else 'main'}",
         ),
         InlineKeyboardButton(
-            text="🔽", callback_data=f"nav_down_settings:{selected_index}:{'experimental' if is_experimental else 'main'}"
+            text="🔽",
+            callback_data=f"nav_down_settings:{selected_index}:{'experimental' if is_experimental else 'main'}",
         ),
     )
     keyboard.row(
@@ -317,7 +350,7 @@ async def build_settings_nav_keyboard(user_id, definitions, selected_index, is_e
             callback_data=f"edit_settings:{selected_index}:{selected_key}:{'experimental' if is_experimental else 'main'}",
         )
     )
-    
+
     if settings and settings.experimental_features:
         if is_experimental:
             keyboard.row(
@@ -328,7 +361,8 @@ async def build_settings_nav_keyboard(user_id, definitions, selected_index, is_e
         else:
             keyboard.row(
                 InlineKeyboardButton(
-                    text="🧪 Экспериментальные функции", callback_data="show_experimental_settings"
+                    text="🧪 Экспериментальные функции",
+                    callback_data="show_experimental_settings",
                 )
             )
             if settings.use_cache:
@@ -337,9 +371,9 @@ async def build_settings_nav_keyboard(user_id, definitions, selected_index, is_e
                         text="📦 Очистить кэш", callback_data="clear_cache"
                     )
                 )
-    
+
     keyboard.row(InlineKeyboardButton(text="🤖 О боте", callback_data="about_bot"))
-    
+
     keyboard.row(
         InlineKeyboardButton(
             text="🚪 Выйти из аккаунта", callback_data="exit_from_account"

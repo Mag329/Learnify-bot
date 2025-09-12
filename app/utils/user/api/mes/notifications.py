@@ -6,14 +6,9 @@ from octodiary.exceptions import APIError
 import app.keyboards.user.keyboards as kb
 from app.config.config import ERROR_403_MESSAGE, ERROR_MESSAGE
 from app.utils.database import AsyncSessionLocal, Event, Settings, db
-from app.utils.user.utils import (
-    get_emoji_subject,
-    get_mark_with_weight,
-    get_student,
-    user_send_message,
-)
 from app.utils.user.cache import invalidate_cache_for_notification
-
+from app.utils.user.utils import (get_emoji_subject, get_mark_with_weight,
+                                  get_student, user_send_message)
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +52,7 @@ async def get_notifications(user_id, all=True, is_checker=False):
 
             new_notifications = []
             cache_invalidation_tasks = []
-            
+
             for n in notifications:
                 key = (n.author_profile_id, n.event_type, n.created_at)
                 if key not in existing:
@@ -74,7 +69,7 @@ async def get_notifications(user_id, all=True, is_checker=False):
                     cache_invalidation_tasks.append(
                         invalidate_cache_for_notification(user_id, n)
                     )
-                    
+
             await session.commit()
             if cache_invalidation_tasks:
                 for task in cache_invalidation_tasks:

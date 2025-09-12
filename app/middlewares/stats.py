@@ -28,10 +28,13 @@ class StatsMiddleware(BaseMiddleware):
         state = data.get("state")
 
         message_state = await state.get_state()
-        
-        if (
-            message_state not in [AuthState.login, AuthState.password, AuthState.sms_code_class, AuthState.token]
-        ):
+
+        if message_state not in [
+            AuthState.login,
+            AuthState.password,
+            AuthState.sms_code_class,
+            AuthState.token,
+        ]:
             user = None
             action_type = None
             action_data = None

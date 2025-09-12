@@ -4,20 +4,20 @@ from aiogram.fsm.context import FSMContext
 
 import app.keyboards.user.keyboards as kb
 from app.states.user.states import VisitState
+from app.utils.user.cache import redis_client
 from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import get_student
-from app.utils.user.cache import redis_client
 
 
 @handle_api_error()
 async def get_visits(user_id, date_object):
     cache_key = f"visits:{user_id}:{date_object.strftime('%Y-%m-%d')}"
-    
+
     # Пытаемся получить данные из кэша
     cached_text = await redis_client.get(cache_key)
     if cached_text:
         return cached_text
-    
+
     api, user = await get_student(user_id)
 
     date_start_week = date_object - timedelta(days=date_object.weekday())
@@ -37,7 +37,7 @@ async def get_visits(user_id, date_object):
         text += f'📅 <b>{visit.date.strftime("%d %B (%a)")}:</b>\n'
         for visit_in_day in visit.visits:
             text += f"    🔒 {visit_in_day.in_}\n    ⏱️ {visit_in_day.duration}\n    🔓 {visit_in_day.out}\n\n"
-            
+
     await redis_client.setex(cache_key, 7200, text)
 
     return text

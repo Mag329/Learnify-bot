@@ -1,16 +1,15 @@
-from datetime import datetime, timedelta, timezone
 import json
+from datetime import datetime, timedelta, timezone
 
 from aiogram.fsm.context import FSMContext
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import DEFAULT_SHORT_CACHE_TTL
 from app.config import config
+from app.config.config import DEFAULT_SHORT_CACHE_TTL
 from app.utils.database import AsyncSessionLocal, Settings, db
-from app.utils.user.decorators import handle_api_error, cache, cache_text_only
+from app.utils.user.cache import get_ttl, redis_client
+from app.utils.user.decorators import cache, cache_text_only, handle_api_error
 from app.utils.user.utils import get_emoji_subject, get_student
-from app.utils.user.cache import redis_client, get_ttl
-
 
 # Temp dicts
 temp_events = {}
@@ -19,24 +18,29 @@ temp_events = {}
 @handle_api_error()
 async def get_homework(user_id, date_object, direction="right"):
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            db.select(Settings).filter_by(user_id=user_id)
-        )
+        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
         settings: Settings = result.scalar_one_or_none()
-        if settings and settings.experimental_features and settings.use_cache and direction != 'to_date':
-            cache_key = f"homeworks:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}"
-            
+        if (
+            settings
+            and settings.experimental_features
+            and settings.use_cache
+            and direction != "to_date"
+        ):
+            cache_key = (
+                f"homeworks:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}"
+            )
+
             cached_full = await redis_client.get(cache_key)
             if cached_full:
                 data = json.loads(cached_full)
-                return data['text'], datetime.strptime(data['date'], '%Y-%m-%d')
-            
+                return data["text"], datetime.strptime(data["date"], "%Y-%m-%d")
+
             use_cache = True
         else:
             use_cache = False
-    
+
     api, user = await get_student(user_id)
-    
+
     original_date = date_object
 
     async with AsyncSessionLocal() as session:
@@ -66,7 +70,7 @@ async def get_homework(user_id, date_object, direction="right"):
             to_date=date_object,
         )
 
-    if settings.skip_empty_days_homeworks and direction != 'to_date':
+    if settings.skip_empty_days_homeworks and direction != "to_date":
         homework_count = 0
         empty_days = 0
 
@@ -87,7 +91,7 @@ async def get_homework(user_id, date_object, direction="right"):
                     date_object -= timedelta(days=1)  # Переход влево
             else:
                 empty_days = 0
-                
+
         if empty_days > 14:
             homework = await api.get_homeworks(
                 student_id=user.student_id,
@@ -109,67 +113,63 @@ async def get_homework(user_id, date_object, direction="right"):
 
     for task in homework.payload:
         description = task.description.rstrip("\n")
-        
+
         materials_amount = 0
         for material in task.materials:
-            if material.type in ['attachments']:
+            if material.type in ["attachments"]:
                 continue
             materials_amount += 1
-            
+
         materials = (
             f"<i> (Для выполнения: {materials_amount})</i>"
             if materials_amount > 0
             else ""
         )
-        
+
         is_done = task.is_done
-        
+
         if not is_done:
             link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-True">◼️</a>'
         else:
             link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-False">✔️</a>'
-            
-        description_text = f"<s>{description}</s>" if is_done else f"<code>{description}</code>"
 
-        text += f'{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    {link} {description_text}\n\n'
+        description_text = (
+            f"<s>{description}</s>" if is_done else f"<code>{description}</code>"
+        )
+
+        text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    {link} {description_text}\n\n"
 
     if len(homework.payload) == 0:
         text = f'❌ <b>У вас нет домашних заданий на </b>{date_object.strftime("%d %B (%a)")}'
-    
-    
+
     if date_object == original_date and use_cache:
-        cache_data = {
-            'text': text,
-            'date': date_object.strftime('%Y-%m-%d')
-        }
-        
+        cache_data = {"text": text, "date": date_object.strftime("%Y-%m-%d")}
+
         ttl = await get_ttl()
-        
+
         await redis_client.setex(cache_key, ttl, json.dumps(cache_data))
-    
+
     return text, date_object
 
 
 @handle_api_error()
 async def get_homework_by_subject(user_id, subject_id, date_object):
     date_object = date_object - timedelta(days=date_object.weekday())
-    
+
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            db.select(Settings).filter_by(user_id=user_id)
-        )
+        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
         settings: Settings = result.scalar_one_or_none()
         if settings and settings.experimental_features and settings.use_cache:
             cache_key = f"homework_subject:{user_id}:{subject_id}:{date_object.strftime('%Y-%m-%d')}"
-    
+
             cache_redis = await redis_client.get(cache_key)
             if cache_redis:
                 return cache_redis
-            
+
             use_cache = True
         else:
             use_cache = False
-    
+
     api, user = await get_student(user_id)
 
     cache = temp_events.get(user_id)
@@ -222,7 +222,10 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
                             }
                         )
                 else:
-                    activity_url = await api.get_activity_launch_link(homework_entry_id=homework.homework_entry_id, material_id=material.uuid)
+                    activity_url = await api.get_activity_launch_link(
+                        homework_entry_id=homework.homework_entry_id,
+                        material_id=material.uuid,
+                    )
                     materials.append(
                         {
                             "url": activity_url,
@@ -240,7 +243,7 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
                     "homework_entry_id": homework.homework_entry_id,
                 }
             )
-            
+
     if not subject_name:
         subjects = await api.get_subjects(
             student_id=user.student_id, profile_id=user.profile_id
@@ -253,7 +256,6 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
             ),
             None,
         )
-        
 
     text = f"{await get_emoji_subject(subject_name)} <b>{subject_name}</b> {begin_date.strftime("%d %b")} – {end_date.strftime("%d %b")}\n\n"
 
@@ -262,7 +264,7 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
             text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
             if homework["homework"]:
                 text += f"    📚 <b>Домашние задание:</b>\n"
-                text += f'        - <i><code>{homework['homework']}</code></i>\n'
+                text += f"        - <i><code>{homework['homework']}</code></i>\n"
 
             if len(homework["materials"]) > 0:
                 text += f"\n    🔗 <b>Для выполнения:</b>\n"
@@ -274,10 +276,10 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
             text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
             text += f"    ❌ <b>Нет домашних заданий</b>\n"
             text += "\n"
-    
+
     if len(homeworks_list) == 0:
         text += f"❌ <b>У вас нет домашних заданий по предмету</b>"
-            
+
     if use_cache:
         await redis_client.setex(cache_key, DEFAULT_SHORT_CACHE_TTL, text)
 
@@ -297,7 +299,7 @@ async def handle_homework_navigation(
         date -= timedelta(days=7 if subject_mode else 1)
     elif direction == "right":
         date += timedelta(days=7 if subject_mode else 1)
-    elif direction == 'to_date':
+    elif direction == "to_date":
         date = date
     else:  # today
         date = datetime.now()
@@ -311,5 +313,5 @@ async def handle_homework_navigation(
     else:
         text, date = await get_homework(user_id, date, direction)
         markup = kb.homework
-        
+
     return text, date, markup

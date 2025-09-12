@@ -6,11 +6,9 @@ from aiogram.types import CallbackQuery, Message
 
 import app.keyboards.user.keyboards as kb
 from app.states.user.states import HomeworkState
-from app.utils.user.api.mes.homeworks import (
-    get_homework,
-    get_homework_by_subject,
-    handle_homework_navigation,
-)
+from app.utils.user.api.mes.homeworks import (get_homework,
+                                              get_homework_by_subject,
+                                              handle_homework_navigation)
 
 router = Router()
 
@@ -40,7 +38,7 @@ async def general_homework_navigation(callback: CallbackQuery, state: FSMContext
     text, date, markup = await handle_homework_navigation(
         callback.from_user.id, state, direction, subject_mode=False
     )
-    
+
     await state.update_data(date=date)
 
     await callback.answer()
@@ -111,7 +109,7 @@ async def subject_homework_navigation(callback: CallbackQuery, state: FSMContext
     text, date, markup = await handle_homework_navigation(
         callback.from_user.id, state, direction, subject_mode=True
     )
-    
+
     await state.update_data(date=date)
 
     await callback.answer()

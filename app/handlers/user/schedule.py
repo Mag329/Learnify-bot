@@ -7,12 +7,10 @@ from aiogram.types import CallbackQuery, Message
 
 import app.keyboards.user.keyboards as kb
 from app.states.user.states import ScheduleState
-from app.utils.user.api.mes.schedule import (
-    cancel_previous_task,
-    get_schedule,
-    update_detailed_schedule,
-    user_tasks,
-)
+from app.utils.user.api.mes.schedule import (cancel_previous_task,
+                                             get_schedule,
+                                             update_detailed_schedule,
+                                             user_tasks)
 
 router = Router()
 
@@ -37,7 +35,6 @@ async def schedule_handler(message: Message, state: FSMContext):
         user_tasks[message.from_user.id] = asyncio.create_task(
             update_detailed_schedule(schedule_message, message.from_user.id, new_date)
         )
-
 
 
 @router.callback_query(F.data == "schedule_left")

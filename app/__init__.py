@@ -14,19 +14,10 @@ from pytz import timezone
 import app.keyboards.user.keyboards as kb
 from app.config.config import *
 from app.handlers.admin import panel
-from app.handlers.user import (
-    auth,
-    homeworks,
-    marks,
-    menu,
-    notifications,
-    other,
-    results,
-    schedule,
-    settings,
-    inline_mode
-)
-from app.middlewares.middlewares import LoggingMiddleware, CheckSubscription
+from app.handlers.user import (auth, homeworks, inline_mode, marks, menu,
+                               notifications, other, results, schedule,
+                               settings)
+from app.middlewares.middlewares import CheckSubscription, LoggingMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
 from app.utils.misc import create_settings_definitions_if_not_exists
@@ -37,8 +28,9 @@ env.read_envfile()
 
 bot = Bot(
     token=env.str("TOKEN"),
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-    disable_web_page_preview=True
+    default=DefaultBotProperties(
+        parse_mode=ParseMode.HTML, link_preview_is_disabled=True
+    ),
 )
 dp = Dispatcher(storage=MemoryStorage())
 
@@ -100,18 +92,16 @@ async def main():
 
     await bot.delete_webhook(drop_pending_updates=True)
 
-    from app.utils.checkers import (
-        birthday_checker,
-        new_notifications_checker,
-        replaced_checker,
-    )
+    from app.utils.checkers import (birthday_checker,
+                                    new_notifications_checker,
+                                    replaced_checker)
     from app.utils.user.api.mes.auth import restore_refresh_tokens_jobs
 
     await create_settings_definitions_if_not_exists()
 
     await new_notifications_checker(bot)
     scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))
-    
+
     await restore_refresh_tokens_jobs()
 
     if env.bool("USE_GIGACHAT", default=False):
@@ -124,10 +114,10 @@ async def main():
     # scheduler.add_job(replaced_checker, "interval", minutes=10, args=(bot,))
 
     scheduler.start()
-    
+
     from app.config import config
 
     config.BOT_USERNAME = (await bot.me()).username
-    
+
     logging.info("Polling bot...")
     await dp.start_polling(bot)

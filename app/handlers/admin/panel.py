@@ -11,11 +11,8 @@ from octodiary.urls import Systems
 
 import app.keyboards.admin.keyboards as kb
 import app.keyboards.user.keyboards as user_kb
-from app.config.config import (
-    LOG_FILE,
-    UPDATE_NOTIFICATION_FOOTER,
-    UPDATE_NOTIFICATION_HEADER,
-)
+from app.config.config import (LOG_FILE, UPDATE_NOTIFICATION_FOOTER,
+                               UPDATE_NOTIFICATION_HEADER)
 from app.states.admin.states import UpdateNotificationState
 from app.utils.admin.utils import admin_required, main_page
 from app.utils.database import AsyncSessionLocal, Settings, User, db

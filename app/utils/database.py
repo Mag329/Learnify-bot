@@ -54,7 +54,7 @@ class User(Base):
 
 class AuthData(Base):
     __tablename__ = "auth_data"
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(
         db.BigInteger,
@@ -66,7 +66,7 @@ class AuthData(Base):
     token_for_refresh = db.Column(db.String, nullable=True)
     client_id = db.Column(db.String, nullable=True)
     client_secret = db.Column(db.String, nullable=True)
-    
+
 
 class Event(Base):
     __tablename__ = "events"
@@ -110,7 +110,7 @@ class Settings(Base):
     next_day_if_lessons_end_schedule = db.Column(db.Boolean, default=True)
     next_day_if_lessons_end_homeworks = db.Column(db.Boolean, default=True)
     experimental_features = db.Column(db.Boolean, default=False)
-    
+
     # Exremental features
     use_cache = db.Column(db.Boolean, default=False)
 

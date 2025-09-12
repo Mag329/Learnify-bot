@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from app.utils.user.decorators import handle_api_error, cache_text_only
+from app.utils.user.decorators import cache_text_only, handle_api_error
 from app.utils.user.utils import get_student
 
 

@@ -1,31 +1,19 @@
 import random
 from datetime import datetime, timedelta, timezone
 
+import phonenumbers
 from aiogram import Bot
 from aiogram.fsm.context import FSMContext
-
-import phonenumbers
 from aiogram.types import Message
 from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
 from octodiary.exceptions import APIError
 from octodiary.urls import Systems
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import (
-    ERROR_403_MESSAGE,
-    ERROR_408_MESSAGE,
-    ERROR_500_MESSAGE,
-    ERROR_MESSAGE,
-)
-from app.utils.database import (
-    AsyncSessionLocal,
-    Event,
-    SettingDefinition,
-    Settings,
-    User,
-    UserData,
-    db,
-)
+from app.config.config import (ERROR_403_MESSAGE, ERROR_408_MESSAGE,
+                               ERROR_500_MESSAGE, ERROR_MESSAGE)
+from app.utils.database import (AsyncSessionLocal, Event, SettingDefinition,
+                                Settings, User, UserData, db)
 from app.utils.user.decorators import handle_api_error
 
 EMOJI_SUBJECTS = {
@@ -126,26 +114,30 @@ async def get_web_api(user_id, active=True):
         return api, user
 
 
-async def render_settings_text(definitions, settings, selected_key, is_experimental=False):
+async def render_settings_text(
+    definitions, settings, selected_key, is_experimental=False
+):
     lines = []
     for definition in definitions:
         # Пропускаем невидимые настройки
         if not definition.visible:
             continue
-            
+
         val = getattr(settings, definition.key, None)
         display = "✅" if val is True else "❌" if val is False else str(val)
         prefix = "➡️" if definition.key == selected_key else "▫️"
-        
+
         # Добавляем эмодзи для экспериментальных функций
         if definition.experimental:
             display = f"{display}"
-            
+
         lines.append(f"{prefix} {definition.label}: {display}")
     return "\n\n".join(lines)
 
 
-async def send_settings_editor(message_or_callback, selected_index: int, is_experimental=False):
+async def send_settings_editor(
+    message_or_callback, selected_index: int, is_experimental=False
+):
     async with AsyncSessionLocal() as session:
         user_id = message_or_callback.from_user.id
         result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
@@ -156,7 +148,7 @@ async def send_settings_editor(message_or_callback, selected_index: int, is_expe
             filter_condition = SettingDefinition.experimental == True
         else:
             filter_condition = SettingDefinition.experimental == False
-            
+
         result = await session.execute(
             db.select(SettingDefinition)
             .filter_by(visible=True)
@@ -168,18 +160,30 @@ async def send_settings_editor(message_or_callback, selected_index: int, is_expe
         if not definitions:
             text = "🧪 <b>Экспериментальные функции</b>\n\nНет доступных экспериментальных настроек"
             if isinstance(message_or_callback, Message):
-                await message_or_callback.answer(text, reply_markup=kb.back_to_main_settings)
+                await message_or_callback.answer(
+                    text, reply_markup=kb.back_to_main_settings
+                )
             else:
-                await message_or_callback.message.edit_text(text, reply_markup=kb.back_to_main_settings)
+                await message_or_callback.message.edit_text(
+                    text, reply_markup=kb.back_to_main_settings
+                )
             return
 
         selected_index = max(0, min(selected_index, len(definitions) - 1))
         selected_key = definitions[selected_index].key
 
-        title = "🧪 <b>Экспериментальные настройки</b>" if is_experimental else "⚙️ <b>Основные настройки</b>"
+        title = (
+            "🧪 <b>Экспериментальные настройки</b>"
+            if is_experimental
+            else "⚙️ <b>Основные настройки</b>"
+        )
         text = f"{title}\n\n"
-        text += await render_settings_text(definitions, settings, selected_key, is_experimental)
-        keyboard = await kb.build_settings_nav_keyboard(user_id, definitions, selected_index, is_experimental)
+        text += await render_settings_text(
+            definitions, settings, selected_key, is_experimental
+        )
+        keyboard = await kb.build_settings_nav_keyboard(
+            user_id, definitions, selected_index, is_experimental
+        )
 
         if isinstance(message_or_callback, Message):
             await message_or_callback.answer(text, reply_markup=keyboard)
@@ -207,10 +211,10 @@ async def ensure_user_settings(session, user_id: int):
 async def save_profile_data(session, user_id, profile_data):
     result = await session.execute(db.select(UserData).filter_by(user_id=user_id))
     user_data: UserData = result.scalar_one_or_none()
-    
+
     api, user = await get_student(user_id)
     profile = await api.get_family_profile(profile_id=user.profile_id)
-    
+
     phone = profile.profile.phone
     if phone and not phone.startswith("7"):
         if phone.startswith("8"):
@@ -219,11 +223,11 @@ async def save_profile_data(session, user_id, profile_data):
             phone = "7" + phone
     elif not phone:
         phone = None
-    
+
     email = profile.profile.email
     if not email:
         email = None
-    
+
     if not user_data:
         user_data = UserData(
             user_id=user_id,
@@ -278,31 +282,26 @@ async def parse_and_format_phone(raw_number: str) -> str:
         return "Н/Д"
 
 
-
 async def deep_links(message, args, bot: Bot, state: FSMContext):
-    if args.startswith('done-homework-'):
+    if args.startswith("done-homework-"):
         from app.utils.user.api.mes.homeworks import handle_homework_navigation
-        
-        homework_entry_id = args.split('-')[2]
-        done = args.split('-')[3]
-        done = True if done == 'True' else False
+
+        homework_entry_id = args.split("-")[2]
+        done = args.split("-")[3]
+        done = True if done == "True" else False
 
         api, user = await get_student(message.from_user.id)
-        
+
         await message.delete()
-        
+
         await api.done_homework(
-            homework_entry_id=homework_entry_id,
-            profile_id=user.profile_id,
-            done=done
+            homework_entry_id=homework_entry_id, profile_id=user.profile_id, done=done
         )
-        
+
         text, date, markup = await handle_homework_navigation(
-            message.from_user.id, state, 'to_date', subject_mode=False
+            message.from_user.id, state, "to_date", subject_mode=False
         )
-        
+
         await state.update_data(date=date)
-        
+
         await message.answer(text, reply_markup=markup)
-        
-            

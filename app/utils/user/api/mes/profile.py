@@ -1,9 +1,10 @@
 from datetime import datetime
 
 from app.config.config import DEFAULT_LONG_CACHE_TTL
-from app.utils.database import AsyncSessionLocal, db, UserData
-from app.utils.user.decorators import handle_api_error, cache_text_only
-from app.utils.user.utils import get_student, get_web_api, parse_and_format_phone
+from app.utils.database import AsyncSessionLocal, UserData, db
+from app.utils.user.decorators import cache_text_only, handle_api_error
+from app.utils.user.utils import (get_student, get_web_api,
+                                  parse_and_format_phone)
 
 
 @handle_api_error()
@@ -14,7 +15,7 @@ async def get_profile(user_id):
     profile = await api.get_family_profile(profile_id=user.profile_id)
     data = profile.profile
     web_profile = await web_api.get_user_info()
-    
+
     async with AsyncSessionLocal() as session:
         result = await session.execute(db.select(UserData).filter_by(user_id=user_id))
         user_data: UserData = result.scalar_one_or_none()
@@ -25,7 +26,9 @@ async def get_profile(user_id):
     )
     balance = balance_data.students[0].balance / 100 if balance_data.students else "Н/Д"
 
-    formatted_phone = await parse_and_format_phone(user_data.phone) if user_data.phone else "Н/Д"
+    formatted_phone = (
+        await parse_and_format_phone(user_data.phone) if user_data.phone else "Н/Д"
+    )
     email = user_data.email if user_data.email else "Н/Д"
 
     current_date = datetime.today()
@@ -35,7 +38,7 @@ async def get_profile(user_id):
         data.birth_date.day,
     ):
         age -= 1
-        
+
     for children in profile.children:
         if (
             children.last_name == data.last_name
@@ -43,12 +46,16 @@ async def get_profile(user_id):
             and children.middle_name == data.middle_name
         ):
             school = children.school
-            school_info = await api.get_school_info(profile_id=user.profile_id, school_id=school.id, class_unit_id=children.class_unit_id)
+            school_info = await api.get_school_info(
+                profile_id=user.profile_id,
+                school_id=school.id,
+                class_unit_id=children.class_unit_id,
+            )
             class_name = children.class_name
             break
-        
+
     classroom_teacher = school_info.classroom_teachers[0]
-    classroom_teacher_name = f'{classroom_teacher.last_name} {classroom_teacher.first_name} {classroom_teacher.middle_name}'
+    classroom_teacher_name = f"{classroom_teacher.last_name} {classroom_teacher.first_name} {classroom_teacher.middle_name}"
 
     text = "👤 <b>Профиль</b>\n\n"
     text += f"🆔 <b>ID:</b> <code>{data.id}</code>\n"
@@ -68,6 +75,8 @@ async def get_profile(user_id):
     text += f"🏫 <b>Школа:</b> <code>{school.short_name}</code>\n"
     text += f"🧑‍💼 <b>Директор:</b> <code>{school.principal}</code>\n"
     text += f"📚 <b>Класс:</b> <code>{class_name}</code>\n"
-    text += f"👩‍🏫 <b>Классный руководитель:</b> <code>{classroom_teacher_name}</code>\n"
+    text += (
+        f"👩‍🏫 <b>Классный руководитель:</b> <code>{classroom_teacher_name}</code>\n"
+    )
 
     return text

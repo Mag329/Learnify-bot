@@ -2,11 +2,12 @@ from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from app.states.user.states import SettingsEditStates
-from app.utils.database import AsyncSessionLocal, SettingDefinition, Settings, db
-from app.utils.user.utils import send_settings_editor
-from app.utils.user.cache import clear_user_cache
 import app.keyboards.user.keyboards as kb
+from app.states.user.states import SettingsEditStates
+from app.utils.database import (AsyncSessionLocal, SettingDefinition, Settings,
+                                db)
+from app.utils.user.cache import clear_user_cache
+from app.utils.user.utils import send_settings_editor
 
 router = Router()
 
@@ -34,7 +35,9 @@ async def nav_settings_handler(callback: CallbackQuery):
     else:  # nav_down_settings
         new_index = index + 1
 
-    await send_settings_editor(callback, selected_index=new_index, is_experimental=is_experimental)
+    await send_settings_editor(
+        callback, selected_index=new_index, is_experimental=is_experimental
+    )
 
 
 @router.callback_query(F.data.startswith("edit_settings:"))
@@ -65,7 +68,9 @@ async def edit_setting(callback: CallbackQuery, state: FSMContext):
             )
             settings: Settings = result.scalar()
             if not settings.experimental_features:
-                await callback.answer("⚠️ Экспериментальные функции отключены", show_alert=True)
+                await callback.answer(
+                    "⚠️ Экспериментальные функции отключены", show_alert=True
+                )
                 return
 
         # Получаем текущие настройки сессии
@@ -83,7 +88,9 @@ async def edit_setting(callback: CallbackQuery, state: FSMContext):
             current_value = getattr(settings, definition.key, False)
             setattr(settings, definition.key, not current_value)
             await db_session.commit()
-            await send_settings_editor(callback, selected_index=selected_index, is_experimental=is_experimental)
+            await send_settings_editor(
+                callback, selected_index=selected_index, is_experimental=is_experimental
+            )
         else:
             await callback.message.answer(
                 f"Введите новое значение для: <b>{definition.label}</b>"
@@ -92,7 +99,7 @@ async def edit_setting(callback: CallbackQuery, state: FSMContext):
                 setting_key=key,
                 setting_type=definition.type,
                 selected_index=selected_index,
-                is_experimental=is_experimental
+                is_experimental=is_experimental,
             )
             await state.set_state(SettingsEditStates.waiting_for_value)
 
@@ -132,7 +139,9 @@ async def process_new_setting_value(message: Message, state: FSMContext):
         await db_session.commit()
 
     await message.answer("✅ Значение успешно обновлено!")
-    await send_settings_editor(message, selected_index=selected_index, is_experimental=is_experimental)
+    await send_settings_editor(
+        message, selected_index=selected_index, is_experimental=is_experimental
+    )
     await state.clear()
 
 
@@ -146,9 +155,9 @@ async def back_to_main_settings(callback: CallbackQuery):
 async def show_experimental_settings(callback: CallbackQuery):
     await callback.answer()
     await send_settings_editor(callback, selected_index=0, is_experimental=True)
-    
-    
-@router.callback_query(F.data == 'clear_cache')
+
+
+@router.callback_query(F.data == "clear_cache")
 async def clear_cache_handler(callback: CallbackQuery):
     await callback.answer()
     num = await clear_user_cache(callback.from_user.id)

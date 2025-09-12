@@ -18,7 +18,7 @@ from app.utils.user.cache import invalidate_cache_for_notification
 logger = logging.getLogger(__name__)
 
 
-async def get_notifications(user_id, all=False, is_checker=False):
+async def get_notifications(user_id, all=True, is_checker=False):
     try:
         api, user = await get_student(user_id)
         if not user:
@@ -107,7 +107,7 @@ async def get_notifications(user_id, all=False, is_checker=False):
         text = f"🔔 <b>Уведомления ({len(filtered)}):</b>\n\n"
 
         for n in filtered:
-            time = n.created_at.strftime("%d.%m %H:%M:%S")
+            time = n.created_at.strftime("%d.%m %H:%M")
             subject = f"{await get_emoji_subject(n.subject_name)} {n.subject_name} ({time})\n        "
 
             if n.event_type == "create_mark":

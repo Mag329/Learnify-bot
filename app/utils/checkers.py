@@ -18,7 +18,7 @@ async def new_notifications_checker(bot: Bot):
         users = result.scalars().all()
 
         for user in users:
-            result = await get_notifications(user.user_id, is_checker=True)
+            result = await get_notifications(user.user_id, all=False, is_checker=True)
             if result:
                 try:
                     chat = await bot.get_chat(user.user_id)

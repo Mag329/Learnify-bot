@@ -184,7 +184,7 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
 
     now = datetime.now()
     begin_date = date_object
-    end_date = date_object + timedelta(days=7)
+    end_date = date_object + timedelta(days=6)
 
     if (
         cache is not None

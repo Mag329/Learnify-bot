@@ -31,9 +31,11 @@ async def get_visits(user_id, date_object):
         to_date=date_week_end,
     )
 
+    visits = sorted(visits.payload, key=lambda x: x.date)
+
     text = f'📊 <b>Посещения за неделю ({date_start_week.strftime("%d.%m")}-{date_week_end.strftime("%d.%m")}):</b>\n\n'
 
-    for visit in reversed(visits.payload):
+    for visit in visits:
         text += f'📅 <b>{visit.date.strftime("%d %B (%a)")}:</b>\n'
         for visit_in_day in visit.visits:
             text += f"    🔒 {visit_in_day.in_}\n    ⏱️ {visit_in_day.duration}\n    🔓 {visit_in_day.out}\n\n"

@@ -20,24 +20,16 @@ async def get_homework(user_id, date_object, direction="right"):
     async with AsyncSessionLocal() as session:
         result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
         settings: Settings = result.scalar_one_or_none()
-        if (
-            settings
-            and settings.experimental_features
-            and settings.use_cache
-            and direction != "to_date"
-        ):
-            cache_key = (
-                f"homeworks:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}"
-            )
 
-            cached_full = await redis_client.get(cache_key)
-            if cached_full:
-                data = json.loads(cached_full)
-                return data["text"], datetime.strptime(data["date"], "%Y-%m-%d")
-
-            use_cache = True
-        else:
-            use_cache = False
+    use_cache = settings and settings.experimental_features and settings.use_cache
+    cache_key = f"homeworks:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction if direction != 'to_date' else 'today'}"
+    
+    # Чтение кэша только если это не "to_date"
+    if use_cache and direction != 'to_date':
+        cached_full = await redis_client.get(cache_key)
+        if cached_full:
+            data = json.loads(cached_full)
+            return data["text"], datetime.strptime(data["date"], "%Y-%m-%d")
 
     api, user = await get_student(user_id)
 
@@ -110,40 +102,22 @@ async def get_homework(user_id, date_object, direction="right"):
         )
 
     text = f'📚 <b>Домашние задания на</b> {date_object.strftime("%d %B (%a)")}:\n\n'
+    sorted_homeworks = sorted(homework.payload, key=lambda x: x.subject_name)
 
-    for task in homework.payload:
+    for task in sorted_homeworks:
         description = task.description.rstrip("\n")
-
-        materials_amount = 0
-        for material in task.materials:
-            if material.type in ["attachments"]:
-                continue
-            materials_amount += 1
-
-        materials = (
-            f"<i> (Для выполнения: {materials_amount})</i>"
-            if materials_amount > 0
-            else ""
-        )
-
+        materials_amount = sum(1 for m in task.materials if m.type not in ["attachments"])
+        materials = f"<i> (Для выполнения: {materials_amount})</i>" if materials_amount else ""
+        description_code = f"<code>{description}</code>" if "https://" not in description else f"<i>{description}</i>"
         is_done = task.is_done
 
-        link = ''
-        description_text = ''
-        
         if settings.enable_homework_done_function:
-            if not is_done:
-                link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-True">◼️</a>'
-            else:
-                link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-False">✔️</a>'
-                
-            description_text = (
-                f"<s>{description}</s>" if is_done else f"<code>{description}</code>"
-            )
+            link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-{"True" if not is_done else "False"}">'
+            link += "◼️</a>" if not is_done else "✔️</a>"
+            description_text = f"<s>{description}</s>" if is_done else description_code
         else:
-            description_text = (
-                f"<code>{description}</code>"
-            )
+            link = ""
+            description_text = description_code
 
         text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    {link} {description_text}\n\n"
 
@@ -152,9 +126,7 @@ async def get_homework(user_id, date_object, direction="right"):
 
     if date_object == original_date and use_cache:
         cache_data = {"text": text, "date": date_object.strftime("%Y-%m-%d")}
-
         ttl = await get_ttl()
-
         await redis_client.setex(cache_key, ttl, json.dumps(cache_data))
 
     return text, date_object
@@ -211,8 +183,10 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
 
     subject_name = ""
     homeworks_list = []
+    
+    sorted_homeworks = sorted(homeworks.payload, key=lambda x: x.date_prepared_for)
 
-    for homework in homeworks.payload:
+    for homework in sorted_homeworks:
         if homework.subject_id == subject_id:
             subject_name = homework.subject_name
 
@@ -271,8 +245,9 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
         if homework["homework"] or len(homework["materials"]) > 0:
             text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
             if homework["homework"]:
+                task = homework['homework']
                 text += f"    📚 <b>Домашние задание:</b>\n"
-                text += f"        - <i><code>{homework['homework']}</code></i>\n"
+                text += f"        - {f'<code>{task}</code>' if 'https://' not in task else f'<i>{task}</i>'}\n"
 
             if len(homework["materials"]) > 0:
                 text += f"\n    🔗 <b>Для выполнения:</b>\n"

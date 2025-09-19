@@ -1,10 +1,13 @@
 from collections import Counter, defaultdict
 from datetime import date, datetime, time, timedelta
+import json
 from statistics import median, mode
 
 from octodiary.exceptions import APIError
 
+from app.utils.database import AsyncSessionLocal, db, Settings
 from app.utils.user.decorators import handle_api_error
+from app.utils.user.cache import get_ttl, redis_client
 from app.utils.user.utils import get_emoji_subject, get_student
 
 
@@ -27,13 +30,45 @@ async def minutes_to_time(duration_minutes):
     return f"{hours} ч. {minutes} мин."
 
 
+async def convert_dates(obj):
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {k: convert_dates(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [convert_dates(item) for item in obj]
+        else:
+            return obj
+        
+        
+async def parse_date(date_str):
+        if date_str == "Н/Д":
+            return "Н/Д"
+        try:
+            return datetime.fromisoformat(date_str).date()
+        except:
+            return date_str
+
+
 @handle_api_error()
 async def get_results(user_id, quarter):
     quarter = int(quarter)
-
     target_title = f"{quarter} четверть"
-
     quarter -= 1
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
+        settings: Settings = result.scalar_one_or_none()
+
+    use_cache = settings and settings.experimental_features and settings.use_cache
+    cache_key = f"results:{user_id}:{quarter + 1}"  # quarter+1 потому что мы уменьшили quarter выше
+
+    # Пытаемся получить данные из кэша
+    if use_cache:
+        cached_data = await redis_client.get(cache_key)
+        if cached_data:
+            return json.loads(cached_data)
+
 
     api, user = await get_student(user_id)
 
@@ -111,7 +146,9 @@ async def get_results(user_id, quarter):
 
     for item in sorted_schedules:
         if item.type == "vacation" or (
-            item.type == "holiday" and "каник" in item.title
+            item.type == "holiday" and 
+            item.title and 
+            "каник" in item.title
         ):
             if current_start:
                 quarters.append((current_start, item.date - timedelta(days=1)))
@@ -198,9 +235,9 @@ async def get_results(user_id, quarter):
     # Формирование словаря с итоговыми данными
     result = {
         "subjects": subject_data,
-        "most_homework_date": most_homework_date,
+        "most_homework_date": await convert_dates(most_homework_date),
         "most_homework_count": most_homework_count,
-        "least_homework_date": least_homework_date,
+        "least_homework_date": await convert_dates(least_homework_date),
         "least_homework_count": least_homework_count,
         "avg_homework_count": avg_homework_count,
         "total_grades": len(global_marks),
@@ -210,17 +247,21 @@ async def get_results(user_id, quarter):
             "marks_count": max_marks_subject_amount,
         },
         "grades_count": dict(marks_by_grade),
-        "longest_day": {"date": longest_day[0], "duration": longest_day[1]},
-        "shortest_day": {"date": shortest_day[0], "duration": shortest_day[1]},
+        "longest_day": {"date": await convert_dates(longest_day[0]), "duration": longest_day[1]},
+        "shortest_day": {"date": await convert_dates(shortest_day[0]), "duration": shortest_day[1]},
         "earliest_in": {
-            "date": earliest_in["date"],
+            "date": await convert_dates(earliest_in["date"]),
             "time": earliest_in["time"].strftime("%H:%M"),
         },
         "latest_out": {
-            "date": latest_out["date"],
+            "date": await convert_dates(latest_out["date"]),
             "time": latest_out["time"].strftime("%H:%M"),
         },
     }
+    
+    if use_cache:
+        ttl = await get_ttl()
+        await redis_client.setex(cache_key, ttl, json.dumps(result))
 
     return result
 
@@ -253,13 +294,22 @@ async def results_format(data, state, subject=None, quarter=None):
             sticker = marks_emoji.get(grade, "📊")
             text += f'         {sticker}: <span class="tg-spoiler">{count}</span>\n'
 
-        text += f'\n    📈 <i>Больше всего домашнего задания:</i> <span class="tg-spoiler">{data["most_homework_date"].strftime("%d %B")} ({data["most_homework_count"]})</span>\n'
-        text += f'    📉 <i>Меньше всего домашнего задания:</i> <span class="tg-spoiler">{data["least_homework_date"].strftime("%d %B")} ({data["least_homework_count"]})</span>\n'
+        most_hw_date = await parse_date(data["most_homework_date"])
+        least_hw_date = await parse_date(data["least_homework_date"])
+        
+        text += f'\n    📈 <i>Больше всего домашнего задания:</i> <span class="tg-spoiler">{most_hw_date.strftime("%d %B") if most_hw_date != "Н/Д" else "Н/Д"} ({data["most_homework_count"]})</span>\n'
+        text += f'    📉 <i>Меньше всего домашнего задания:</i> <span class="tg-spoiler">{least_hw_date.strftime("%d %B") if least_hw_date != "Н/Д" else "Н/Д"} ({data["least_homework_count"]})</span>\n'
         text += f'    📊 <i>Среднее количество домашнего задания:</i> <span class="tg-spoiler">{data["avg_homework_count"]}</span>\n\n'
 
-        text += f'    🕒 <i>Самый долгий день:</i> <span class="tg-spoiler">{data["longest_day"]["date"].strftime("%d %B") if data["longest_day"]["date"] != "Н/Д" else data["longest_day"]["date"]} - {await minutes_to_time(data["longest_day"]["duration"])}</span>\n'
-        text += f'    📅 <i>Самый короткий день:</i> <span class="tg-spoiler">{data["shortest_day"]["date"].strftime("%d %B") if data["shortest_day"]["date"] != "Н/Д" else data["shortest_day"]["date"]} - {await minutes_to_time(data["shortest_day"]["duration"])}</span>\n'
-        text += f'    ⏰ <i>Самый ранний заход:</i> <span class="tg-spoiler">{data["earliest_in"]["date"].strftime("%d %B") if data["earliest_in"]["date"] != "Н/Д" else data["earliest_in"]["date"]} - {data["earliest_in"]["time"]}</span>\n'
-        text += f'    ⏳ <i>Самый поздний уход:</i> <span class="tg-spoiler">{data["latest_out"]["date"].strftime("%d %B") if data["latest_out"]["date"] != "Н/Д" else data["latest_out"]["date"]} - {data["latest_out"]["time"]}</span>\n'
+        # Аналогично для остальных дат
+        longest_date = await parse_date(data["longest_day"]["date"])
+        shortest_date = await parse_date(data["shortest_day"]["date"])
+        earliest_date = await parse_date(data["earliest_in"]["date"])
+        latest_date = await parse_date(data["latest_out"]["date"])
+
+        text += f'    🕒 <i>Самый долгий день:</i> <span class="tg-spoiler">{longest_date.strftime("%d %B") if longest_date != "Н/Д" else "Н/Д"} - {await minutes_to_time(data["longest_day"]["duration"])}</span>\n'
+        text += f'    📅 <i>Самый короткий день:</i> <span class="tg-spoiler">{shortest_date.strftime("%d %B") if shortest_date != "Н/Д" else "Н/Д"} - {await minutes_to_time(data["shortest_day"]["duration"])}</span>\n'
+        text += f'    ⏰ <i>Самый ранний заход:</i> <span class="tg-spoiler">{earliest_date.strftime("%d %B") if earliest_date != "Н/Д" else "Н/Д"} - {data["earliest_in"]["time"]}</span>\n'
+        text += f'    ⏳ <i>Самый поздний уход:</i> <span class="tg-spoiler">{latest_date.strftime("%d %B") if latest_date != "Н/Д" else "Н/Д"} - {data["latest_out"]["time"]}</span>\n'
 
     return text

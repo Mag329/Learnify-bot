@@ -1,4 +1,4 @@
-BOT_VERSION = "1.8.1.8"
+BOT_VERSION = "1.8.1.9"
 
 
 # Bot info
@@ -7,7 +7,7 @@ DEVELOPER_SITE = "https://mag329.site"
 
 
 # Other
-BASE_QUARTER = 4
+BASE_QUARTER = 1
 LOG_FILE = "logs/bot.log"
 
 

@@ -47,7 +47,7 @@ async def results_navigation_handler(callback: CallbackQuery, state: FSMContext)
     subjects = data.get("subjects", [])
 
     if subject_index is None or not subjects:
-        return await callback.message.edit_text("❌ Ошибка: нет доступных предметов.")
+        return await callback.message.edit_text("❌ <b>Ошибка: нет доступных предметов</b>")
 
     direction = callback.data.split("_")[-1]  # "left" or "right"
 

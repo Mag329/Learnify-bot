@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://share.mag329.site/api/shares/794lj4CEYK3IaBFq/files/74c6a487-7c4b-4be7-bac2-3382e586a442" alt="Learnify Logo" width="150" style="border-radius: 50%;" />
+  <img src="https://share.mag329.tech/api/shares/794lj4CEYK3IaBFq/files/74c6a487-7c4b-4be7-bac2-3382e586a442" alt="Learnify Logo" width="150" style="border-radius: 50%;" />
 
   <h1>Learnify — МЭШ бот</h1>
 
@@ -28,11 +28,11 @@
 ## Интерфейс
 <div align=center style="padding: 30px">
 
-  <img src="https://share.mag329.site/api/shares/nMGN4WmiY8iCzMlw/files/8a39d2df-3bc2-4b44-b213-38960ba805ed" alt="Schedule" width="250" style="border-radius: 5%;" />
+  <img src="https://share.mag329.tech/api/shares/nMGN4WmiY8iCzMlw/files/8a39d2df-3bc2-4b44-b213-38960ba805ed" alt="Schedule" width="250" style="border-radius: 5%;" />
 
-  <img src="https://share.mag329.site/api/shares/vvjLM6YQoK4jQOWB/files/f839ea1a-f9f4-4467-a761-c08f1c7a8167" alt="Schedule" width="250" style="border-radius: 5%;" />
+  <img src="https://share.mag329.tech/api/shares/vvjLM6YQoK4jQOWB/files/f839ea1a-f9f4-4467-a761-c08f1c7a8167" alt="Schedule" width="250" style="border-radius: 5%;" />
 
-  <img src="https://share.mag329.site/api/shares/7BtPzYBOZTGJiVbt/files/bc7b8601-b575-4531-ab2f-e79c57bf51d2" alt="Schedule" width="250" style="border-radius: 5%;" />
+  <img src="https://share.mag329.tech/api/shares/7BtPzYBOZTGJiVbt/files/bc7b8601-b575-4531-ab2f-e79c57bf51d2" alt="Schedule" width="250" style="border-radius: 5%;" />
 </div>
 
 ---

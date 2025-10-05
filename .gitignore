@@ -11,3 +11,4 @@ logs/
 data/
 .VSCodeCounter/
 .pre-commit-config.yaml
+.fuse_hidden*

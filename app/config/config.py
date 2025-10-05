@@ -3,7 +3,7 @@ BOT_VERSION = "1.8.2"
 
 # Bot info
 DEVELOPER = "@Mag329"
-DEVELOPER_SITE = "https://mag329.site"
+DEVELOPER_SITE = "https://mag329.tech"
 
 
 # Other

@@ -1,0 +1,23 @@
+- name: day
+  title: день
+  price: 5
+  duration: 1
+  ordering: 1
+
+- name: week
+  title: неделя
+  price: 30
+  duration: 7
+  ordering: 2
+
+- name: month
+  title: месяц
+  price: 100
+  duration: 30
+  ordering: 3
+
+- name: year
+  title: год
+  price: 1000
+  duration: 365
+  ordering: 4

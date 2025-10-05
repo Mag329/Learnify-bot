@@ -144,3 +144,44 @@ class UserData(Base):
     phone = db.Column(db.String, nullable=True)
     email = db.Column(db.String, nullable=True)
     birthday = db.Column(db.DateTime, nullable=True)
+
+
+class PremiumSubscriptionPlan(Base):
+    __tablename__ = "premium_subscription_plans"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    title = db.Column(db.String, nullable=False)
+    price = db.Column(db.Integer, nullable=False)
+    duration = db.Column(db.Integer, nullable=False)
+    ordering = db.Column(db.Integer, default=0)
+    
+    
+class PremiumSubscription(Base):
+    __tablename__ = "premium_subscriptions"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    expires_at = db.Column(db.DateTime, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    operation_type = db.Column(db.String(25), nullable=False)
+    amount = db.Column(db.Integer, nullable=False)
+    balance_before = db.Column(db.Integer, nullable=False)
+    balance_after = db.Column(db.Integer, nullable=False)
+    timestamp = db.Column(db.DateTime(timezone=False), default=datetime.now())
+    telegram_transaction_id = db.Column(db.String, nullable=True)

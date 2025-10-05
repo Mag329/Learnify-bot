@@ -1,5 +1,6 @@
 import random
 from datetime import datetime, timedelta, timezone
+from typing import Tuple
 
 import phonenumbers
 from aiogram import Bot
@@ -8,10 +9,11 @@ from aiogram.types import Message
 from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
 from octodiary.exceptions import APIError
 from octodiary.urls import Systems
+from learnifyapi.client import LearnifyAPI
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import (ERROR_403_MESSAGE, ERROR_408_MESSAGE,
-                               ERROR_500_MESSAGE, ERROR_MESSAGE)
+                               ERROR_500_MESSAGE, ERROR_MESSAGE, LEARNIFY_API_TOKEN)
 from app.utils.database import (AsyncSessionLocal, Event, SettingDefinition,
                                 Settings, User, UserData, db)
 from app.utils.user.decorators import handle_api_error
@@ -112,7 +114,7 @@ async def get_web_api(user_id, active=True):
         api = AsyncWebAPI(system=Systems.MES)
         api.token = user.token
         return api, user
-
+    
 
 async def render_settings_text(
     definitions, settings, selected_key, is_experimental=False

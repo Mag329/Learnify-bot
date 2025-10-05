@@ -3,7 +3,7 @@ BOT_VERSION = "1.8.2"
 
 # Bot info
 DEVELOPER = "@Mag329"
-DEVELOPER_SITE = "https://mag329.site"
+DEVELOPER_SITE = "https://mag329.tech"
 
 
 # Other
@@ -35,6 +35,7 @@ env.read_envfile()
 LOGSTASH_HOST = env.str("LOGSTASH_HOST")
 LOGSTASH_PORT = env.int("LOGSTASH_PORT")
 LEARNIFY_WEB = env.str("LEARNIFY_WEB")
+LEARNIFY_API_TOKEN = env.str("LEARNIFY_API_TOKEN", default=None)
 
 DEFAULT_SHORT_CACHE_TTL = env.int("DEFAULT_SHORT_CACHE_TTL")
 DEFAULT_MEDIUM_CACHE_TTL = env.int("DEFAULT_MEDIUM_CACHE_TTL")
@@ -42,7 +43,15 @@ DEFAULT_LONG_CACHE_TTL = env.int("DEFAULT_LONG_CACHE_TTL")
 DEFAULT_CACHE_TTL = env.int("DEFAULT_CACHE_TTL")
 
 CHANNEL_ID = env.int("CHANNEL_ID")
-
 DEV = env.bool("DEV")
+
+if LEARNIFY_API_TOKEN:
+    SUBS_PRICE_DAY = env.int("SUBS_PRICE_DAY", default=5)
+    SUBS_PRICE_WEEK = env.int("SUBS_PRICE_WEEK", default=30)
+    SUBS_PRICE_MONTH = env.int("SUBS_PRICE_MONTH", default=100)
+    SUBS_PRICE_YEAR = env.int("SUBS_PRICE_YEAR", default=1000)
+else:
+    SUBS_PRICE_DAY = SUBS_PRICE_WEEK = SUBS_PRICE_MONTH = SUBS_PRICE_YEAR = 0
+
 
 BOT_USERNAME = None

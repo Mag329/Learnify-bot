@@ -65,6 +65,9 @@ class CheckSubscription(BaseMiddleware):
         event: TelegramObject,
         data: Dict[str, Any],
     ):
+        if not (getattr(event, "message", None) or getattr(event, "callback_query", None)):
+            return await handler(event, data)
+        
         if event.message:
             if event.message.text == "/start":
                 return await handler(event, data)
@@ -72,7 +75,7 @@ class CheckSubscription(BaseMiddleware):
             user_id = event.message.from_user.id
         elif event.callback_query:
             user_id = event.callback_query.from_user.id
-
+        
         result = await check_subscription(user_id=user_id, bot=event.bot)
         if result:
             return await handler(event, data)

@@ -2,8 +2,9 @@ from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
                            KeyboardButton)
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
-from app.config.config import LEARNIFY_WEB
-from app.utils.database import AsyncSessionLocal, Settings, db
+from app.config.config import LEARNIFY_API_TOKEN, LEARNIFY_WEB
+from app.utils.database import AsyncSessionLocal, Settings, db, PremiumSubscriptionPlan
+from app.utils.user.api.learnify.subscription import get_user_info
 from app.utils.user.utils import get_emoji_subject, get_student
 
 start_command = InlineKeyboardMarkup(
@@ -36,7 +37,7 @@ token_auth = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="🔑 Получить токен", url=f"{LEARNIFY_WEB}/auth/method/token"
+                text="🔑 Получить токен", url=f"{LEARNIFY_WEB}/api/v1/auth/method/token"
             )
         ],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="choose_login")],
@@ -141,14 +142,15 @@ notifications_all = InlineKeyboardMarkup(
     ]
 )
 
-menu = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits")],
-        [InlineKeyboardButton(text="👤 Профиль", callback_data="profile")],
-        [InlineKeyboardButton(text="📈 Рейтинг", callback_data="rating_rank_class")],
-        [InlineKeyboardButton(text="🏆 Итоги", callback_data="results")],
-    ]
-)
+# menu = InlineKeyboardMarkup(
+#     inline_keyboard=[
+#         [InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits")],
+#         [InlineKeyboardButton(text="👤 Профиль", callback_data="profile")],
+#         [InlineKeyboardButton(text="📈 Рейтинг", callback_data="rating_rank_class")],
+#         [InlineKeyboardButton(text="🏆 Итоги", callback_data="results")],
+#         [InlineKeyboardButton(text="💳 Подписка", callback_data="subscription_page")],
+#     ]
+# )
 
 visits = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -289,7 +291,6 @@ async def main(user_id):
         KeyboardButton(text="🎓 Оценки"),
         KeyboardButton(text="📚 Домашние задания"),
     )
-
     keyboard.row(
         KeyboardButton(text="📋 Меню"),
     )
@@ -297,6 +298,25 @@ async def main(user_id):
     keyboard.row(KeyboardButton(text="⚙️ Настройки"))
 
     return keyboard.as_markup(resize_keyboard=True)
+
+
+async def menu():
+    keyboard = InlineKeyboardBuilder()
+
+    keyboard.row(
+        InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits"),
+        InlineKeyboardButton(text="👤 Профиль", callback_data="profile")
+    )
+    keyboard.row(
+        InlineKeyboardButton(text="📈 Рейтинг", callback_data="rating_rank_class"),
+        InlineKeyboardButton(text="🏆 Итоги", callback_data="results")
+    )
+    if LEARNIFY_API_TOKEN:
+        keyboard.row(
+            InlineKeyboardButton(text="💳 Подписка", callback_data="subscription_page")
+        )
+
+    return keyboard.as_markup()
 
 
 async def choice_subject(user_id, for_):
@@ -381,3 +401,89 @@ async def build_settings_nav_keyboard(
     )
 
     return keyboard.as_markup()
+
+
+async def subscription_keyboard(user_id, subscription):
+    async with AsyncSessionLocal() as session:
+        
+        keyboard = InlineKeyboardBuilder()
+        
+        if subscription and subscription.is_active:
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="🔁 Продлить",
+                    callback_data="renew_subscription",
+                )
+            )
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="🎁 Подарить", 
+                    callback_data="give_subscription"
+                )
+            )
+            keyboard.row(InlineKeyboardButton(
+                text="❌ Отменить",
+                callback_data="cancel_subscription"
+                )
+            )
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="↪️ Назад", 
+                    callback_data="back_to_menu"
+                )
+            )
+        else:
+            keyboard.row(InlineKeyboardButton(
+                text="✅ Оформить",
+                callback_data="get_subscription"
+                )
+            )
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="↪️ Назад", 
+                    callback_data="back_to_menu"
+                )
+            )
+        
+        return keyboard.as_markup()
+    
+
+async def choose_subscription_plan(user_id):
+    keyboard = InlineKeyboardBuilder()
+    if LEARNIFY_API_TOKEN:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(db.select(PremiumSubscriptionPlan).order_by(PremiumSubscriptionPlan.ordering))
+            plans = result.scalars().all()
+            
+        for plan in plans:
+            keyboard.button(
+                text=f"{plan.title.capitalize()} ({plan.price} ⭐️)",
+                callback_data=f"subscription_plan_{plan.name}",
+            )
+
+        # Автоматически формируем ряды по 2 кнопки
+        keyboard.adjust(2)
+
+        keyboard.row(
+            InlineKeyboardButton(
+                text="↪️ Назад", 
+                callback_data="back_to_menu"
+            )
+        )
+        
+        return keyboard.as_markup()
+    
+    
+async def buy_subscription_keyboard(price, for_,):
+    if LEARNIFY_API_TOKEN:
+        keyboard = InlineKeyboardBuilder()
+        if for_ == 'myself':
+            text = f"💳 Купить Premium за {price} ⭐️"
+        else:
+            text = f"🎁 Подарить Premium за {price} ⭐️"
+        keyboard.row(
+            InlineKeyboardButton(
+                text=text, 
+                pay=True,
+            )
+        )

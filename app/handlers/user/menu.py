@@ -14,7 +14,7 @@ router = Router()
 async def main_menu_handler(message: Message):
     await message.answer(
         "📋 Меню",
-        reply_markup=kb.menu,
+        reply_markup=await kb.menu(),
     )
 
 
@@ -76,5 +76,5 @@ async def back_to_menu_callback_handler(callback: CallbackQuery):
 
     await callback.message.edit_text(
         text="📋 Меню",
-        reply_markup=kb.menu,
+        reply_markup=await kb.menu(),
     )

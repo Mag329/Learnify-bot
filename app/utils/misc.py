@@ -5,7 +5,7 @@ import yaml
 import app.keyboards.user.keyboards as kb
 from app.config.config import (CHANNEL_ID, DEFAULT_MEDIUM_CACHE_TTL,
                                NO_SUBSCRIPTION_ERROR)
-from app.utils.database import AsyncSessionLocal, SettingDefinition, db
+from app.utils.database import AsyncSessionLocal, SettingDefinition, db, PremiumSubscriptionPlan
 from app.utils.user.cache import redis_client
 from app.utils.user.utils import user_send_message
 
@@ -26,6 +26,26 @@ async def create_settings_definitions_if_not_exists():
             )
             if not exists:
                 session.add(SettingDefinition(**setting))
+
+        await session.commit()
+        
+
+async def create_premium_subscription_plans_if_not_exists():
+    async with AsyncSessionLocal() as session:
+        path = os.path.join(
+            os.path.dirname(__file__), "..", "config", "premium_plans.yaml"
+        )
+        with open(path, encoding="utf-8") as f:
+            plans = yaml.safe_load(f)
+
+        for plan in plans:
+            exists = await session.scalar(
+                db.select(PremiumSubscriptionPlan).where(
+                    PremiumSubscriptionPlan.name == plan["name"]
+                )
+            )
+            if not exists:
+                session.add(PremiumSubscriptionPlan(**plan))
 
         await session.commit()
 

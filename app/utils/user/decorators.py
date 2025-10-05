@@ -3,6 +3,7 @@ import logging
 from datetime import datetime, time, timedelta
 
 from octodiary.exceptions import APIError
+from learnifyapi.exceptions import APIError as LearnifyAPIError
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import (DEFAULT_SHORT_CACHE_TTL, ERROR_403_MESSAGE,
@@ -36,6 +37,11 @@ def handle_api_error():
                     )
                 else:
                     await user_send_message(user_id, ERROR_MESSAGE, kb.delete_message)
+            except LearnifyAPIError as e:
+                if e.status_code == 403:
+                    await user_send_message(user_id, ERROR_403_MESSAGE, kb.delete_message)
+                else:
+                    await user_send_message(user_id, ERROR_MESSAGE, kb.delete_message)
             except Exception as e:
                 logger.exception(f"Unhandled exception for user {user_id}: {e}")
                 await user_send_message(user_id, ERROR_MESSAGE, kb.delete_message)
@@ -43,6 +49,7 @@ def handle_api_error():
         return wrapper
 
     return decorator
+
 
 
 def cache(ttl=None):

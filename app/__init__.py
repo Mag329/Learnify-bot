@@ -16,11 +16,11 @@ from app.config.config import *
 from app.handlers.admin import panel
 from app.handlers.user import (auth, homeworks, inline_mode, marks, menu,
                                notifications, other, results, schedule,
-                               settings)
+                               settings, subscription)
 from app.middlewares.middlewares import CheckSubscription, LoggingMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
-from app.utils.misc import create_settings_definitions_if_not_exists
+from app.utils.misc import create_premium_subscription_plans_if_not_exists, create_settings_definitions_if_not_exists
 from app.utils.scheduler import scheduler
 
 env = Env()
@@ -78,6 +78,8 @@ async def main():
     dp.include_router(schedule.router)
     dp.include_router(menu.router)
     dp.include_router(results.router)
+    if LEARNIFY_API_TOKEN:
+        dp.include_router(subscription.router)
     # dp.include_router(inline_mode.router)
 
     # Admin
@@ -98,6 +100,9 @@ async def main():
     from app.utils.user.api.mes.auth import restore_refresh_tokens_jobs
 
     await create_settings_definitions_if_not_exists()
+    
+    if LEARNIFY_API_TOKEN:
+        await create_premium_subscription_plans_if_not_exists()
 
     await new_notifications_checker(bot)
     scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))

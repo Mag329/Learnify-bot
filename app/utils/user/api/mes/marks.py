@@ -57,7 +57,7 @@ async def get_marks_by_subject(user_id, subject_id):
             continue
         
         text += (
-            f'📊 <i>Средний бал:</i> {period.value}\n'
+            f'📊 <i>Средний балл:</i> {period.value}\n'
             f'🧮 <i>Всего оценок:</i> {len(period.marks)}\n'
         )
         

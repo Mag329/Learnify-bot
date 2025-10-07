@@ -107,19 +107,14 @@ mark = InlineKeyboardMarkup(
             InlineKeyboardButton(text="📅", callback_data="mark_today"),
             InlineKeyboardButton(text="➡️", callback_data="mark_right"),
         ],
-        # [
-        #     InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_marks"),
-        # ]
+        [
+            InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_marks"),
+        ]
     ]
 )
 
 subject_marks = InlineKeyboardMarkup(
     inline_keyboard=[
-        [
-            InlineKeyboardButton(text="⬅️", callback_data="subject_marks_quarter_left"),
-            InlineKeyboardButton(text="📅", callback_data="subject_marks_quarter_now"),
-            InlineKeyboardButton(text="➡️", callback_data="subject_marks_quarter_right"),
-        ],
         [
             InlineKeyboardButton(
                 text="📚 Выбрать предмет", callback_data="choose_subject_marks"
@@ -143,10 +138,8 @@ notifications_all = InlineKeyboardMarkup(
 
 menu = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits")],
-        [InlineKeyboardButton(text="👤 Профиль", callback_data="profile")],
-        [InlineKeyboardButton(text="📈 Рейтинг", callback_data="rating_rank_class")],
-        [InlineKeyboardButton(text="🏆 Итоги", callback_data="results")],
+        [InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits"), InlineKeyboardButton(text="👤 Профиль", callback_data="profile")],
+        [InlineKeyboardButton(text="📈 Рейтинг", callback_data="rating_rank_class"), InlineKeyboardButton(text="🏆 Итоги", callback_data="results")],
     ]
 )
 

@@ -119,7 +119,10 @@ async def get_homework(user_id, date_object, direction="right"):
             link = ""
             description_text = description_code
 
-        text += f"{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}<b>:</b>\n    {link} {description_text}\n\n"
+        subject_name = f'{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}'
+        subject_name_with_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=subject-homework-{task.subject_id}-{task.date_prepared_for.strftime("%d_%m_%Y")}">{subject_name}</a>'
+        
+        text += f"{subject_name_with_link}<b>:</b>\n    {link} {description_text}\n\n"
 
     if len(homework.payload) == 0:
         text = f'❌ <b>У вас нет домашних заданий на </b>{date_object.strftime("%d %B (%a)")}'
@@ -272,25 +275,30 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
 async def handle_homework_navigation(
     user_id: int,
     state: FSMContext,
-    direction: str,
+    direction: str = None,
     subject_mode: bool = False,
+    date: datetime = None,
+    subject_id=None
 ):
     data = await state.get_data()
-    date = data.get("date", datetime.now())
 
-    if direction == "left":
-        date -= timedelta(days=7 if subject_mode else 1)
-    elif direction == "right":
-        date += timedelta(days=7 if subject_mode else 1)
-    elif direction == "to_date":
-        date = date
-    else:  # today
-        date = datetime.now()
+    if not date:
+        date = data.get("date", datetime.now())
+        if direction == "left":
+            date -= timedelta(days=7 if subject_mode else 1)
+        elif direction == "right":
+            date += timedelta(days=7 if subject_mode else 1)
+        elif direction == "to_date":
+            date = date
+        else:  # today
+            date = datetime.now()
+
 
     if subject_mode:
-        subject_id = data.get("subject_id")
+        subject_id = subject_id or data.get("subject_id")
         if not subject_id:
             return None, date, await kb.choice_subject(user_id, "homework")
+
         text = await get_homework_by_subject(user_id, subject_id, date)
         markup = kb.subject_homework
     else:

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import app.keyboards.user.keyboards as kb
 from app.states.user.states import SettingsEditStates
 from app.utils.user.api.learnify.subscription import create_subscription, get_user_info
-from app.utils.database import AsyncSessionLocal, PremiumSubscriptionPlan, db
+from app.utils.database import AsyncSessionLocal, db, PremiumSubscriptionPlan, PremiumSubscription, Transaction
 
 
 router = Router()
@@ -74,6 +74,23 @@ async def test(message: Message):
     
     result, user = await create_subscription(user_id=user_id, expires_at=datetime.now() + timedelta(days=plan.duration))
 
+    async with AsyncSessionLocal() as session:
+        if result:
+            transaction = Transaction(
+                user_id=user_id,
+                operation_type='credit',
+                amount=plan.price,
+                telegram_transaction_id=message.successful_payment.telegram_payment_charge_id,
+            )
+            
+            subscription = PremiumSubscription(
+                user_id=user_id,
+                expires_at=datetime.now() + timedelta(days=plan.duration),
+            )
+            
+            session.add(transaction)
+            await session.commit()
+    
     text = (
         '✅ Подписка успешно оформлена!\n\n'
         f'🗓️ Срок действия подписки: <i>{result.expires_at.strftime("%H:%M:%S %d %B %Y")}</i>\n\n'

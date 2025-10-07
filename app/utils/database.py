@@ -181,7 +181,5 @@ class Transaction(Base):
     )
     operation_type = db.Column(db.String(25), nullable=False)
     amount = db.Column(db.Integer, nullable=False)
-    balance_before = db.Column(db.Integer, nullable=False)
-    balance_after = db.Column(db.Integer, nullable=False)
     timestamp = db.Column(db.DateTime(timezone=False), default=datetime.now())
     telegram_transaction_id = db.Column(db.String, nullable=True)

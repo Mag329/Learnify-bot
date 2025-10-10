@@ -166,8 +166,9 @@ class PremiumSubscription(Base):
         db.ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
-    expires_at = db.Column(db.DateTime, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
+    balance = db.Column(db.Float, default=0)
     
 
 class Transaction(Base):

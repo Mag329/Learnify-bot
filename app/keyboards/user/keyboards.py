@@ -411,11 +411,9 @@ async def subscription_keyboard(user_id, subscription):
         if subscription and subscription.is_active:
             keyboard.row(
                 InlineKeyboardButton(
-                    text="🔁 Продлить",
-                    callback_data="renew_subscription",
-                )
-            )
-            keyboard.row(
+                    text="💰 Пополнить",
+                    callback_data="replenish_subscription",
+                ),
                 InlineKeyboardButton(
                     text="🎁 Подарить", 
                     callback_data="give_subscription"

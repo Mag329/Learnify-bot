@@ -2,7 +2,7 @@ from learnifyapi.client import LearnifyAPI
 from learnifyapi.exceptions import APIError
 
 from app.config.config import LEARNIFY_API_TOKEN
-from app.utils.database import AsyncSessionLocal, User, db
+from app.utils.database import AsyncSessionLocal, PremiumSubscription, User, db
 from app.utils.user.decorators import handle_api_error
 
 
@@ -10,18 +10,18 @@ from app.utils.user.decorators import handle_api_error
 @handle_api_error()
 async def get_user_info(user_id):
     async with AsyncSessionLocal() as session:
-        query = db.select(User).filter_by(user_id=user_id)
-        result = await session.execute(query)
+        result = await session.execute(db.select(User).filter_by(user_id=user_id))
         user = result.scalar_one_or_none()
 
         if not user:
             return None
-
+        
         async with LearnifyAPI(token=LEARNIFY_API_TOKEN) as api:
             try:
                 info = await api.get_user(user_id)
             except APIError as e:
                 info = None
+                
             return info
         
         

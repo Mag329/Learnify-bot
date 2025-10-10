@@ -310,3 +310,36 @@ async def deep_links(message, args, bot: Bot, state: FSMContext):
         await state.update_data(date=date)
 
         await message.answer(text, reply_markup=markup)
+
+    if args.startswith("subject-homework-"):
+        from app.utils.user.api.mes.homeworks import handle_homework_navigation
+        
+        subject_id = int(args.split("-")[2])
+        date = datetime.strptime(args.split("-")[3], "%d_%m_%Y")
+        
+        await message.delete()
+        
+        text, date, markup = await handle_homework_navigation(
+            message.from_user.id, state, subject_mode=True, date=date, subject_id=subject_id
+        )
+        
+
+        await state.update_data(date=date)
+        await state.update_data(subject_id=subject_id)
+
+        await message.answer(text, reply_markup=markup)
+        
+    if args.startswith("subject-marks-"):
+        from app.utils.user.api.mes.marks import get_marks_by_subject
+        
+        subject_id = int(args.split("-")[2])
+        
+        await message.delete()
+        
+        text = await get_marks_by_subject(
+            message.from_user.id, subject_id=subject_id
+        )
+        
+        await state.update_data(subject_id=subject_id)
+
+        await message.answer(text, reply_markup=kb.subject_marks)

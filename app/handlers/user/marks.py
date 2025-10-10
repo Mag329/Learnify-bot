@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, Message
 
 import app.keyboards.user.keyboards as kb
 from app.states.user.states import MarkState
-from app.utils.user.api.mes.marks import get_marks, handle_marks_navigation
+from app.utils.user.api.mes.marks import get_marks, get_marks_by_subject, handle_marks_navigation
 
 router = Router()
 
@@ -43,4 +43,50 @@ async def marks_navigation_handler(callback: CallbackQuery, state: FSMContext):
     else:
         await callback.message.edit_text(
             "📭 Оценок за выбранную дату нет", reply_markup=markup
+        )
+
+
+@router.callback_query(F.data == "choose_subject_marks")
+async def choose_subject_marks_callback_handler(
+    callback: CallbackQuery, state: FSMContext
+):
+    await callback.answer()
+
+    await callback.message.edit_text(
+        "Выберите предмет",
+        reply_markup=await kb.choice_subject(callback.from_user.id, "marks"),
+    )
+    
+
+@router.callback_query(F.data == "back_to_marks")
+async def back_to_marks_callback_handler(callback: CallbackQuery, state: FSMContext):
+    date = datetime.now()
+
+    await state.update_data(date=date)
+    
+    text = await get_marks(callback.from_user.id, date)
+
+    await callback.answer()
+    await callback.message.edit_text(
+        text,
+        reply_markup=kb.mark,
+    )    
+
+    
+@router.callback_query(F.data.startswith("select_subject_marks_"))
+async def subject_marks_callback_handler(callback: CallbackQuery, state: FSMContext):
+    subject_id = int(callback.data.split("_")[-1])
+
+    await state.update_data(subject_id=subject_id)
+
+    text = await get_marks_by_subject(
+        callback.from_user.id, subject_id
+    )
+
+    await callback.answer()
+
+    if text:
+        await callback.message.edit_text(
+            text,
+            reply_markup=kb.subject_marks,
         )

@@ -280,7 +280,7 @@ async def results_format(data, state, subject=None, quarter=None):
         for grade, count in sorted(
             data["subjects"][subject]["marks_count"].items(), reverse=True
         ):
-            sticker = marks_emoji.get(grade, "📊")
+            sticker = marks_emoji.get(int(grade), "📊")
             text += f'         {sticker}: <span class="tg-spoiler">{count}</span>\n'
 
     elif state == "overall_results":
@@ -291,7 +291,7 @@ async def results_format(data, state, subject=None, quarter=None):
 
         text += "    📔 <b>Оценки:</b>\n"
         for grade, count in sorted(data["grades_count"].items(), reverse=True):
-            sticker = marks_emoji.get(grade, "📊")
+            sticker = marks_emoji.get(int(grade), "📊")
             text += f'         {sticker}: <span class="tg-spoiler">{count}</span>\n'
 
         most_hw_date = await parse_date(data["most_homework_date"])

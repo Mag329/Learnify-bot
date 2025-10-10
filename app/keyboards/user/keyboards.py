@@ -37,7 +37,7 @@ token_auth = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="🔑 Получить токен", url=f"{LEARNIFY_WEB}/api/v1/auth/method/token"
+                text="🔑 Получить токен", url=f"{LEARNIFY_WEB}/api/v1/api/v1/auth/method/token"
             )
         ],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="choose_login")],
@@ -108,19 +108,14 @@ mark = InlineKeyboardMarkup(
             InlineKeyboardButton(text="📅", callback_data="mark_today"),
             InlineKeyboardButton(text="➡️", callback_data="mark_right"),
         ],
-        # [
-        #     InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_marks"),
-        # ]
+        [
+            InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_marks"),
+        ]
     ]
 )
 
 subject_marks = InlineKeyboardMarkup(
     inline_keyboard=[
-        [
-            InlineKeyboardButton(text="⬅️", callback_data="subject_marks_quarter_left"),
-            InlineKeyboardButton(text="📅", callback_data="subject_marks_quarter_now"),
-            InlineKeyboardButton(text="➡️", callback_data="subject_marks_quarter_right"),
-        ],
         [
             InlineKeyboardButton(
                 text="📚 Выбрать предмет", callback_data="choose_subject_marks"

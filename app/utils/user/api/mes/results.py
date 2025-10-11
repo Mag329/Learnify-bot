@@ -1,13 +1,13 @@
+import json
 from collections import Counter, defaultdict
 from datetime import date, datetime, time, timedelta
-import json
 from statistics import median, mode
 
 from octodiary.exceptions import APIError
 
-from app.utils.database import AsyncSessionLocal, db, Settings
-from app.utils.user.decorators import handle_api_error
+from app.utils.database import AsyncSessionLocal, Settings, db
 from app.utils.user.cache import get_ttl, redis_client
+from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import get_emoji_subject, get_student
 
 

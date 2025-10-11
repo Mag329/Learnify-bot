@@ -13,15 +13,17 @@ from pytz import timezone
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import *
-from app.handlers.admin import panel
+from app.handlers.admin import panel, payment
 from app.handlers.user import (auth, homeworks, inline_mode, marks, menu,
                                notifications, other, results, schedule,
                                settings, subscription)
 from app.middlewares.middlewares import CheckSubscription, LoggingMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
-from app.utils.misc import create_premium_subscription_plans_if_not_exists, create_settings_definitions_if_not_exists
+from app.utils.misc import (create_premium_subscription_plans_if_not_exists,
+                            create_settings_definitions_if_not_exists)
 from app.utils.scheduler import scheduler
+from app.utils.user.api.learnify.subscription import restore_renew_subscription_jobs
 
 env = Env()
 env.read_envfile()
@@ -84,6 +86,7 @@ async def main():
 
     # Admin
     dp.include_router(panel.router)
+    dp.include_router(payment.router)
 
     dp.include_router(other.router)
 
@@ -108,6 +111,7 @@ async def main():
     scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))
 
     await restore_refresh_tokens_jobs()
+    await restore_renew_subscription_jobs(bot)
 
     if env.bool("USE_GIGACHAT", default=False):
         await birthday_checker(bot)

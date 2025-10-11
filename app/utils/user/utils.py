@@ -1,20 +1,19 @@
 import random
-from datetime import datetime, timedelta, timezone
-from typing import Tuple
+from datetime import datetime
 
 import phonenumbers
 from aiogram import Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from aiogram.utils.media_group import MediaGroupBuilder
 from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
-from octodiary.exceptions import APIError
 from octodiary.urls import Systems
-from learnifyapi.client import LearnifyAPI
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import (ERROR_403_MESSAGE, ERROR_408_MESSAGE,
-                               ERROR_500_MESSAGE, ERROR_MESSAGE, LEARNIFY_API_TOKEN)
-from app.utils.database import (AsyncSessionLocal, Event, SettingDefinition,
+from app.config.config import (ERROR_408_MESSAGE, ERROR_500_MESSAGE,
+                               ERROR_MESSAGE)
+from app.utils.database import (AsyncSessionLocal, Homework,
+                                PremiumSubscription, SettingDefinition,
                                 Settings, User, UserData, db)
 from app.utils.user.decorators import handle_api_error
 
@@ -213,7 +212,7 @@ async def ensure_user_settings(session, user_id: int):
         await session.commit()
 
 
-async def save_profile_data(session, user_id, profile_data):
+async def save_profile_data(session, user_id, profile_data, username):
     result = await session.execute(db.select(UserData).filter_by(user_id=user_id))
     user_data: UserData = result.scalar_one_or_none()
 
@@ -243,6 +242,7 @@ async def save_profile_data(session, user_id, profile_data):
             phone=phone,
             email=email,
             birthday=profile_data.birth_date,
+            username=username,
         )
         session.add(user_data)
     else:
@@ -253,6 +253,7 @@ async def save_profile_data(session, user_id, profile_data):
         user_data.phone = phone
         user_data.email = email
         user_data.birthday = profile_data.birth_date
+        user_data.username = username
 
     await session.commit()
 
@@ -311,7 +312,7 @@ async def deep_links(message, args, bot: Bot, state: FSMContext):
 
         await message.answer(text, reply_markup=markup)
 
-    if args.startswith("subject-homework-"):
+    elif args.startswith("subject-homework-"):
         from app.utils.user.api.mes.homeworks import handle_homework_navigation
         
         subject_id = int(args.split("-")[2])
@@ -329,7 +330,7 @@ async def deep_links(message, args, bot: Bot, state: FSMContext):
 
         await message.answer(text, reply_markup=markup)
         
-    if args.startswith("subject-marks-"):
+    elif args.startswith("subject-marks-"):
         from app.utils.user.api.mes.marks import get_marks_by_subject
         
         subject_id = int(args.split("-")[2])
@@ -343,3 +344,60 @@ async def deep_links(message, args, bot: Bot, state: FSMContext):
         await state.update_data(subject_id=subject_id)
 
         await message.answer(text, reply_markup=kb.subject_marks)
+    
+    elif args.startswith("autogdz-"):
+        from app.utils.user.api.learnify.subscription import get_gdz_answers
+        
+        homework_id = int(args.split("-")[1])
+        
+        await message.delete()
+        
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(db.select(PremiumSubscription).filter_by(user_id=message.from_user.id))
+            premium_user = result.scalar_one_or_none()
+            
+            if not premium_user or not premium_user.is_active:
+                await message.answer(f'❌ <b>Ошибка</b>\n\nУ вас нет подписки <b>Learnify Premium</b> для доступа к этой функции', reply_markup=kb.get_premium)
+                return
+            
+            result = await session.execute(db.select(Homework).filter_by(id=homework_id))
+            homework = result.scalar_one_or_none()
+            if not homework:
+                message.answer('❌ <b>Ошибка</b>\n\nДомашнее задание не найдено')
+            
+            temp_message = await message.answer(f'🔄 Загрузка...')
+            
+            text, solutions = await get_gdz_answers(user_id=message.from_user.id, task=homework.task, subject_id=homework.subject_id)
+            
+            await temp_message.delete()
+            
+            if not solutions:
+                await message.answer('❌ <b>Ошибка</b>\n\nНе удалось получить ответы', reply_markup=kb.delete_message)
+            
+            await message.answer(text, reply_markup=kb.delete_message, protect_content=True)
+            
+            def chunked(iterable, n):
+                for i in range(0, len(iterable), n):
+                    yield iterable[i:i + n]
+            
+            for solution in solutions:
+                images = solution['images']
+                text = solution['text']
+
+                image_chunks = list(chunked(images, 10))
+                total_parts = len(image_chunks)
+
+                for i, image_chunk in enumerate(image_chunks, start=1):
+                    if total_parts > 1:
+                        caption = f"{text}\n🧩 Часть {i}/{total_parts}"
+                    else:
+                        caption = text
+
+                    media_group = MediaGroupBuilder(caption=caption)
+                    for image in image_chunk:
+                        media_group.add_photo(media=image)
+
+                    await message.answer_media_group(
+                        media=media_group.build(),
+                        protect_content=True
+                    )

@@ -2,9 +2,9 @@ from datetime import datetime, timedelta
 
 from aiogram.fsm.context import FSMContext
 
+import app.keyboards.user.keyboards as kb
 from app.config import config
 from app.config.config import BASE_QUARTER
-import app.keyboards.user.keyboards as kb
 from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import (get_emoji_subject, get_mark_with_weight,
                                   get_student)

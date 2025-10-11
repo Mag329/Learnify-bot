@@ -1,23 +1,27 @@
 - name: day
   title: день
+  text_name: 1 день
   price: 5
   duration: 1
   ordering: 1
 
 - name: week
   title: неделя
+  text_name: 1 неделю
   price: 30
   duration: 7
   ordering: 2
 
 - name: month
   title: месяц
+  text_name: 1 месяц
   price: 100
   duration: 30
   ordering: 3
 
 - name: year
   title: год
+  text_name: 1 год
   price: 1000
   duration: 365
   ordering: 4

@@ -36,3 +36,14 @@ class ResultsState(StatesGroup):
 
 class SettingsEditStates(StatesGroup):
     waiting_for_value = State()
+
+
+class ChooseAmountForPaymentState(StatesGroup):
+    amount = State()
+    main_message_id = State()
+    
+
+class ChooseUserForGiftState(StatesGroup):
+    username = State()
+    description = State()
+    main_message_id = State()

@@ -6,7 +6,8 @@ from aiogram.types import CallbackQuery, Message
 
 import app.keyboards.user.keyboards as kb
 from app.states.user.states import MarkState
-from app.utils.user.api.mes.marks import get_marks, get_marks_by_subject, handle_marks_navigation
+from app.utils.user.api.mes.marks import (get_marks, get_marks_by_subject,
+                                          handle_marks_navigation)
 
 router = Router()
 

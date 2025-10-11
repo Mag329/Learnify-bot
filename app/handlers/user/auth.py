@@ -116,7 +116,7 @@ async def cmd_start(
 
                         schedule_refresh(user.user_id, need_update_date)
 
-                await save_profile_data(session, user_id, profile.profile)
+                await save_profile_data(session, user_id, profile.profile, message.from_user.username)
 
             except APIError as e:
                 logger.error(f"APIError ({e.status_code}) for user {user_id}: {e}")
@@ -335,7 +335,7 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
                     await ensure_user_settings(session, message.from_user.id)
 
                     await save_profile_data(
-                        session, message.from_user.id, profile.profile
+                        session, message.from_user.id, profile.profile, message.from_user.username
                     )
 
                     await message.answer(
@@ -514,7 +514,7 @@ async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
 
         await ensure_user_settings(session, message.from_user.id)
 
-        await save_profile_data(session, message.from_user.id, profile.profile)
+        await save_profile_data(session, message.from_user.id, profile.profile, message.from_user.username)
 
         await bot.delete_message(
             chat_id=message.from_user.id, message_id=data["main_message"]
@@ -603,7 +603,7 @@ async def auth_by_qr_callback_handler(callback: CallbackQuery, state: FSMContext
 
             await ensure_user_settings(session, callback.from_user.id)
 
-            await save_profile_data(session, callback.from_user.id, profile.profile)
+            await save_profile_data(session, callback.from_user.id, profile.profile, callback.from_user.username)
 
             await qr_code_message.delete()
 

@@ -2,8 +2,8 @@ import json
 import logging
 from datetime import datetime, time, timedelta
 
-from octodiary.exceptions import APIError
 from learnifyapi.exceptions import APIError as LearnifyAPIError
+from octodiary.exceptions import APIError
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import (DEFAULT_SHORT_CACHE_TTL, ERROR_403_MESSAGE,

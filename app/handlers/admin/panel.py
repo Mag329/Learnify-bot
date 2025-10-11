@@ -1,21 +1,16 @@
 import os
-from datetime import datetime, timedelta
 
 from aiogram import Bot, F, Router
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto, Message
-from octodiary.apis import AsyncMobileAPI
-from octodiary.urls import Systems
+from aiogram.types import CallbackQuery, FSInputFile, Message
 
 import app.keyboards.admin.keyboards as kb
 import app.keyboards.user.keyboards as user_kb
-from app.config.config import (LOG_FILE, UPDATE_NOTIFICATION_FOOTER,
-                               UPDATE_NOTIFICATION_HEADER)
+from app.config.config import LOG_FILE
 from app.states.admin.states import UpdateNotificationState
 from app.utils.admin.utils import admin_required, main_page
-from app.utils.database import AsyncSessionLocal, Settings, User, db
+from app.utils.database import AsyncSessionLocal, User, db
 
 router = Router()
 

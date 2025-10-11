@@ -6,9 +6,9 @@ from aiogram.fsm.context import FSMContext
 import app.keyboards.user.keyboards as kb
 from app.config import config
 from app.config.config import DEFAULT_SHORT_CACHE_TTL
-from app.utils.database import AsyncSessionLocal, Settings, db
+from app.utils.database import AsyncSessionLocal, Homework, Settings, db
 from app.utils.user.cache import get_ttl, redis_client
-from app.utils.user.decorators import cache, cache_text_only, handle_api_error
+from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import get_emoji_subject, get_student
 
 # Temp dicts
@@ -111,6 +111,17 @@ async def get_homework(user_id, date_object, direction="right"):
         description_code = f"<code>{description}</code>" if "https://" not in description else f"<i>{description}</i>"
         is_done = task.is_done
 
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(db.select(Homework).filter_by(task = description, subject_id=task.subject_id))
+            homework_db = result.scalar_one_or_none()
+            if not homework_db:
+                homework_db = Homework(task=description, subject_id=task.subject_id)
+                session.add(homework_db)
+                await session.commit()
+                await session.refresh(homework_db)
+        
+        gdz_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=autogdz-{homework_db.id}">⚡</a>'
+        
         if settings.enable_homework_done_function:
             link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-{"True" if not is_done else "False"}">'
             link += "◼️</a>" if not is_done else "✔️</a>"
@@ -118,6 +129,9 @@ async def get_homework(user_id, date_object, direction="right"):
         else:
             link = ""
             description_text = description_code
+        
+        description_text = f'{description_text} {gdz_link}'
+        
 
         subject_name = f'{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}'
         subject_name_with_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=subject-homework-{task.subject_id}-{task.date_prepared_for.strftime("%d_%m_%Y")}">{subject_name}</a>'

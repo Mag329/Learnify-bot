@@ -5,7 +5,8 @@ import yaml
 import app.keyboards.user.keyboards as kb
 from app.config.config import (CHANNEL_ID, DEFAULT_MEDIUM_CACHE_TTL,
                                NO_SUBSCRIPTION_ERROR)
-from app.utils.database import AsyncSessionLocal, SettingDefinition, db, PremiumSubscriptionPlan
+from app.utils.database import (AsyncSessionLocal, PremiumSubscriptionPlan,
+                                SettingDefinition, db)
 from app.utils.user.cache import redis_client
 from app.utils.user.utils import user_send_message
 

@@ -3,8 +3,8 @@ from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from app.config.config import LEARNIFY_API_TOKEN, LEARNIFY_WEB
-from app.utils.database import AsyncSessionLocal, Settings, db, PremiumSubscriptionPlan
-from app.utils.user.api.learnify.subscription import get_user_info
+from app.utils.database import (AsyncSessionLocal, PremiumSubscriptionPlan,
+                                Settings, db)
 from app.utils.user.utils import get_emoji_subject, get_student
 
 start_command = InlineKeyboardMarkup(
@@ -275,6 +275,13 @@ check_subscribe = InlineKeyboardMarkup(
 )
 
 
+get_premium = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="💎 Подробнее", callback_data="subscription_page")]
+    ]
+)
+
+
 async def main(user_id):
     keyboard = ReplyKeyboardBuilder()
 
@@ -308,7 +315,7 @@ async def menu():
     )
     if LEARNIFY_API_TOKEN:
         keyboard.row(
-            InlineKeyboardButton(text="💳 Подписка", callback_data="subscription_page")
+            InlineKeyboardButton(text="💎 Подписка", callback_data="subscription_page")
         )
 
     return keyboard.as_markup()
@@ -414,9 +421,14 @@ async def subscription_keyboard(user_id, subscription):
                     callback_data="give_subscription"
                 )
             )
-            keyboard.row(InlineKeyboardButton(
-                text="❌ Отменить",
-                callback_data="cancel_subscription"
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="⚙️ Настройки",
+                    callback_data="subscription_settings"
+                ),
+                InlineKeyboardButton(
+                    text="❌ Отменить",
+                    callback_data="cancel_subscription"
                 )
             )
             keyboard.row(
@@ -441,7 +453,7 @@ async def subscription_keyboard(user_id, subscription):
         return keyboard.as_markup()
     
 
-async def choose_subscription_plan(user_id):
+async def choose_subscription_plan(type):
     keyboard = InlineKeyboardBuilder()
     if LEARNIFY_API_TOKEN:
         async with AsyncSessionLocal() as session:
@@ -451,7 +463,7 @@ async def choose_subscription_plan(user_id):
         for plan in plans:
             keyboard.button(
                 text=f"{plan.title.capitalize()} ({plan.price} ⭐️)",
-                callback_data=f"subscription_plan_{plan.name}",
+                callback_data=f"subscription_plan_{plan.name}_{type}",
             )
 
         # Автоматически формируем ряды по 2 кнопки
@@ -472,6 +484,8 @@ async def buy_subscription_keyboard(price, for_,):
         keyboard = InlineKeyboardBuilder()
         if for_ == 'myself':
             text = f"💳 Купить Premium за {price} ⭐️"
+        elif for_ == 'replenish':
+            text = f"💳 Полнить баланс на {price} ⭐️"
         else:
             text = f"🎁 Подарить Premium за {price} ⭐️"
         keyboard.row(

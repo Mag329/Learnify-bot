@@ -71,8 +71,10 @@ async def rating_rank_class_callback_handler(callback: CallbackQuery):
 
 
 @router.callback_query(F.data == "back_to_menu")
-async def back_to_menu_callback_handler(callback: CallbackQuery):
+async def back_to_menu_callback_handler(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
+
+    await state.clear()
 
     await callback.message.edit_text(
         text="📋 Меню",

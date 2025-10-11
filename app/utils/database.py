@@ -144,6 +144,7 @@ class UserData(Base):
     phone = db.Column(db.String, nullable=True)
     email = db.Column(db.String, nullable=True)
     birthday = db.Column(db.DateTime, nullable=True)
+    username = db.Column(db.String, nullable=True)
 
 
 class PremiumSubscriptionPlan(Base):
@@ -152,9 +153,12 @@ class PremiumSubscriptionPlan(Base):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     title = db.Column(db.String, nullable=False)
+    text_name = db.Column(db.String, nullable=False)
     price = db.Column(db.Integer, nullable=False)
     duration = db.Column(db.Integer, nullable=False)
     ordering = db.Column(db.Integer, default=0)
+    
+    subscriptions = relationship("PremiumSubscription", back_populates="plan_obj")
     
     
 class PremiumSubscription(Base):
@@ -169,6 +173,14 @@ class PremiumSubscription(Base):
     expires_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     balance = db.Column(db.Float, default=0)
+    plan = db.Column(
+        db.Integer, 
+        db.ForeignKey('premium_subscription_plans.id'), 
+        nullable=True
+    )
+    auto_renew = db.Column(db.Boolean, default=True)
+    
+    plan_obj = relationship("PremiumSubscriptionPlan", back_populates="subscriptions")
     
 
 class Transaction(Base):
@@ -184,3 +196,41 @@ class Transaction(Base):
     amount = db.Column(db.Integer, nullable=False)
     timestamp = db.Column(db.DateTime(timezone=False), default=datetime.now())
     telegram_transaction_id = db.Column(db.String, nullable=True)
+    
+
+class Homework(Base):
+    __tablename__ = "homeworks"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    task = db.Column(db.String, nullable=False)
+    subject_id = db.Column(db.Integer, nullable=False)
+
+
+class Gdz(Base):
+    __tablename__ = "gdz"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    subject_id = db.Column(db.Integer, nullable=True)
+    subject_name = db.Column(db.String, nullable=True)
+    book_url = db.Column(db.String, nullable=True)
+    search_by = db.Column(db.String, nullable=True)
+
+    
+# class GdzAnswer(Base):
+#     __tablename__ = "gdz_answers"
+    
+#     id = db.Column(db.Integer, primary_key=True)
+#     gdz_id = db.Column(db.Integer, db.ForeignKey("gdz.id"), nullable=False)
+#     task_text = db.Column(db.String, nullable=False)
+    
+# class GdzAnswerSolution(Base):
+#     __tablename__ = "gdz_answer_solutions"
+    
+#     id = db.Column(db.Integer, primary_key=True)
+#     gdz_answer_id = db.Column(db.Integer, db.ForeignKey("gdz_answers.id"), nullable=False)
+#     solution_text = db.Column(db.String, nullable=False)

@@ -19,7 +19,7 @@ services:
     container_name: learnify_bot_postgres
     env_file: .env
     environment:
-      POSTGRES_USER: ${PB_USER}
+      POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
       POSTGRES_DB: ${PG_DB}
       PGDATA: /var/lib/postgresql/data/pgdata

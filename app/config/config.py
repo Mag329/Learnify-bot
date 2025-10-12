@@ -57,3 +57,5 @@ else:
 BOT_USERNAME = None
 ALLOWED_USERS = env.list("ALLOWED_USERS", default=[])
 ONLY_ALLOWED_USERS = env.bool('ONLY_ALLOWED_USERS', default=False)
+REDIS_HOST = env.str("REDIS_HOST", default="localhost")
+REDIS_PORT = env.int("REDIS_PORT", default=6379)

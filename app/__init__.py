@@ -17,7 +17,7 @@ from app.handlers.admin import panel, payment
 from app.handlers.user import (auth, homeworks, inline_mode, marks, menu,
                                notifications, other, results, schedule,
                                settings, subscription)
-from app.middlewares.middlewares import CheckSubscription, LoggingMiddleware
+from app.middlewares.middlewares import AllowedUsersMiddleware, CheckSubscription, LoggingMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
 from app.utils.misc import (create_premium_subscription_plans_if_not_exists,
@@ -94,6 +94,9 @@ async def main():
     dp.update.middleware(LoggingMiddleware())
     dp.update.middleware(StatsMiddleware())
     dp.update.middleware(CheckSubscription())
+    
+    if ONLY_ALLOWED_USERS:
+        dp.update.middleware(AllowedUsersMiddleware())
 
     await bot.delete_webhook(drop_pending_updates=True)
 

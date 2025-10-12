@@ -7,7 +7,7 @@ from aiogram.types import TelegramObject
 from envparse import env
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import LOG_FILE, NO_SUBSCRIPTION_ERROR
+from app.config.config import ALLOWED_USERS, LOG_FILE, NO_SUBSCRIPTION_ERROR
 from app.utils.misc import check_subscription
 from app.utils.user.utils import user_send_message
 
@@ -81,3 +81,14 @@ class CheckSubscription(BaseMiddleware):
             return await handler(event, data)
         else:
             await user_send_message(user_id, NO_SUBSCRIPTION_ERROR, kb.link_to_channel)
+
+
+class AllowedUsersMiddleware(BaseMiddleware):
+    async def __call__(self,
+                        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+                        event: TelegramObject,
+                        data: Dict[str, Any]):
+        if event.from_user.id in ALLOWED_USERS:
+            return await handler(event, data)
+        else:
+            logging.info(f'User {event.from_user.id} is not allowed')

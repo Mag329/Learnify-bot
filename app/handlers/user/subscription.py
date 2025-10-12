@@ -13,7 +13,7 @@ from app.states.user.states import ChooseAmountForPaymentState, ChooseUserForGif
 from app.utils.database import (AsyncSessionLocal, Gdz, PremiumSubscription,
                                 PremiumSubscriptionPlan, Transaction, UserData, db)
 from app.utils.user.api.learnify.subscription import (create_subscription,
-                                                      get_user_info)
+                                                      get_user_info, successful_payment)
 from app.utils.user.utils import get_student
 
 router = Router()
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == "subscription_page")
-async def subscription_page_handler(callback: CallbackQuery):
+async def subscription_page_handler(callback: CallbackQuery, state: FSMContext):
     subscription = await get_user_info(callback.from_user.id)
     
     async with AsyncSessionLocal() as session:
@@ -57,6 +57,8 @@ async def subscription_page_handler(callback: CallbackQuery):
             '• Поддержка развития проекта ❤️\n\n'
             '💰 <b>Стоимость:</b> 100 ⭐️ в месяц'
         )
+    
+    await state.update_data(main_message_id=callback.message.message_id)
         
     await callback.message.edit_text(text=text, reply_markup=await kb.subscription_keyboard(callback.from_user.id, subscription))
     
@@ -68,22 +70,37 @@ async def get_subscription_handler(callback: CallbackQuery):
     
 
 @router.callback_query(F.data.startswith("subscription_plan_"))
-async def subscription_plan_handler(callback: CallbackQuery):
+async def subscription_plan_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = callback.data.split("_")
     type = data[3]
     
     async with AsyncSessionLocal() as session:
         result = await session.execute(db.select(PremiumSubscriptionPlan).filter_by(name=data[2]))
         plan = result.scalar_one_or_none()
-    await callback.message.answer_invoice(
-        title="Learnify Premium",
-        description=f"Learnify Premium на {plan.text_name}",
-        prices=[LabeledPrice(label='Оплата подписки', amount=plan.price)],
-        provider_token='',
-        payload=f'{plan.id} for {type}',
-        currency='XTR',
-        reply_markup=await kb.buy_subscription_keyboard(plan.id, type)
-    )
+        
+        result = await session.execute(db.select(PremiumSubscription).filter_by(user_id=callback.from_user.id))
+        user = result.scalar_one_or_none()
+        
+        payload = f'{plan.id} for {type}'
+        
+        if user and user.balance < plan.price:
+            await callback.message.answer_invoice(
+                title="Learnify Premium",
+                description=f"Learnify Premium на {plan.text_name}",
+                prices=[LabeledPrice(label='Оплата подписки', amount=plan.price)],
+                provider_token='',
+                payload=payload,
+                currency='XTR',
+                reply_markup=await kb.buy_subscription_keyboard(plan.id, type)
+            )
+        else:
+            user.balance -= plan.price
+            await session.commit()
+            
+            state_data = await state.get_data()
+            state_data['sender_username'] = callback.from_user.username
+            
+            await successful_payment(callback.from_user.id, callback.message, None, payload, state_data, bot)
 
 
 @router.pre_checkout_query()
@@ -93,159 +110,12 @@ async def pre_checkout_handler(pre_checkout_query: PreCheckoutQuery):
 
 @router.message(F.successful_payment)
 async def successful_payment_handler(message: Message, state: FSMContext, bot: Bot):
-    payload_parts = message.successful_payment.invoice_payload.split()
     telegram_payment_id = message.successful_payment.telegram_payment_charge_id
     user_id = message.from_user.id
     data = await state.get_data()
+    data['sender_username'] = message.from_user.username
     
-    operation_type = None
-    plan = None
-    amount = 0
-    
-    if payload_parts[0].startswith('replenish'):
-        operation_type = 'replenish'
-        amount = int(payload_parts[0].split('_')[1])
-    else:
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(
-                db.select(PremiumSubscriptionPlan).filter_by(id=int(payload_parts[0]))
-            )
-            plan = result.scalar_one_or_none()
-
-        if not plan:
-            await message.answer("⚠️ Произошла ошибка: тарифный план не найден.")
-            await bot.refund_star_payment(
-                user_id=message.from_user.id,
-                telegram_payment_charge_id=message.successful_payment.telegram_payment_charge_id
-            )
-            logger.error(f"Payment failed: plan not found (payload={payload_parts})")
-            return
-
-        if len(payload_parts) > 2 and payload_parts[2] == 'myself':
-            operation_type = 'myself'
-            amount = plan.price
-        elif len(payload_parts) > 2 and payload_parts[2].startswith('gift'):
-            recipient_user_id = int(payload_parts[2].split('-')[1])
-            operation_type = 'gift'
-            amount = plan.price
-        else:
-            await message.answer("⚠️ Ошибка в данных платежа. Попробуйте снова.")
-            return
-
-
-    async with AsyncSessionLocal() as session:
-        try:
-            result = await session.execute(
-                db.select(PremiumSubscription).filter_by(user_id=user_id)
-            )
-            premium_user = result.scalar_one_or_none()
-            
-            # --- Тип: покупка подписки для себя ---
-            if operation_type == 'myself':
-                transaction_credit = Transaction(
-                    user_id=user_id,
-                    operation_type='credit',
-                    amount=amount,
-                    telegram_transaction_id=telegram_payment_id
-                )
-                transaction_debit = Transaction(
-                    user_id=user_id,
-                    operation_type='debit',
-                    amount=amount
-                )
-                session.add_all([transaction_credit, transaction_debit])
-                await session.commit()
-                
-                result, msg = await create_subscription(session=session, user_id=user_id, plan=plan, premium_user=premium_user)
-
-                if msg:
-                    await message.answer(f'❌ <b>Произошла ошибка:</b>\n{msg}')
-                
-                text = (
-                    "✅ Подписка успешно оформлена!\n\n"
-                    f"🗓️ Действует до: <i>{result.expires_at.strftime('%H:%M:%S %d %B %Y')}</i>\n\n"
-                    "Спасибо за поддержку проекта ❤️\n"
-                    "Приятного использования 🚀"
-                )
-
-            # --- Тип: пополнение баланса ---
-            elif operation_type == 'replenish':
-                transaction = Transaction(
-                    user_id=user_id,
-                    operation_type='credit',
-                    amount=amount,
-                    telegram_transaction_id=telegram_payment_id
-                )
-                session.add(transaction)
-
-                premium_user.balance += amount
-                await session.commit()
-
-                text = (
-                    f"✅ Баланс успешно пополнен!\n\n"
-                    f"💳 Баланс: {premium_user.balance} ⭐️\n"
-                    f"💰 Сумма пополнения: {amount} ⭐️\n\n"
-                    "Спасибо за поддержку проекта ❤️\n"
-                    "Приятного использования 🚀"
-                )
-
-            # --- Тип: подарок ---
-            elif operation_type == 'gift':
-                transaction_credit = Transaction(
-                    user_id=user_id,
-                    operation_type='credit',
-                    amount=amount,
-                    telegram_transaction_id=telegram_payment_id
-                )
-                transaction_debit = Transaction(
-                    user_id=user_id,
-                    operation_type='debit',
-                    amount=amount
-                )
-                session.add_all([transaction_credit, transaction_debit])
-                await session.commit()
-                
-                result, msg = await create_subscription(session=session, user_id=recipient_user_id, plan=plan, premium_user=premium_user)
-
-                if msg:
-                    await message.answer(f'❌ <b>Произошла ошибка:</b>\n{msg}')
-                    return
-                
-                text = (
-                    "🎁 Подарочная подписка успешно оформлена!\n\n"
-                    f"@{data['username']} скоро получит уведомление о вашем подарке 💌"
-                )
-                
-                recipient_text = (
-                    f"🎁 <b>Вам подарили подписку на {plan.text_name}!</b>\n\n"
-                    f"Подарок от: @{message.from_user.username}\n"
-                    f"<blockquote>{data['description']}</blockquote>\n\n"
-                    f"🗓️ Подписка активна до: <b>{result.expires_at.strftime('%d %B %Y %H:%M')}</b>\n\n"
-                    "Приятного использования 🚀"
-                )
-                
-                try:
-                    chat = await bot.get_chat(recipient_user_id)
-                    await bot.send_message(
-                        chat_id=chat.id, text=recipient_text
-                    )
-                except Exception as e:
-                    logger.error()
-                    
-
-            else:
-                text = "⚠️ Неизвестный тип операции"
-                await bot.refund_star_payment(
-                    user_id=message.from_user.id,
-                    telegram_payment_charge_id=message.successful_payment.telegram_payment_charge_id
-                )
-
-            await message.answer(text)
-
-        except Exception as e:
-            await session.rollback()
-            logger.exception(f"Ошибка обработки успешного платежа: {e}")
-            await message.answer("❌ Произошла ошибка при обработке платежа. Попробуйте позже")
+    await successful_payment(user_id, message, telegram_payment_id, message.successful_payment.invoice_payload, data, bot)
             
             
 
@@ -317,12 +187,12 @@ async def username_for_gift_handler(message: Message, state: FSMContext, bot: Bo
             if not user:
                 await message.answer("❌ Пользователь не найден", reply_markup=kb.back_to_menu)
                 return
-            if user.user_id == message.from_user.id:
-                await message.answer(
-                    "❌ Вы не можете подарить подписку себе 😉",
-                    reply_markup=kb.back_to_menu
-                )
-                return
+            # if user.user_id == message.from_user.id:
+            #     await message.answer(
+            #         "❌ Вы не можете подарить подписку себе 😉",
+            #         reply_markup=kb.back_to_menu
+            #     )
+            #     return
         
         await state.update_data(username=user.username)
         await state.update_data(user_id=user.user_id)
@@ -441,7 +311,7 @@ async def select_subject_auto_gdz_handler(callback: CallbackQuery, state: FSMCon
             
             text += (
                 f"📚 <b>{subject_name}</b>\n\n"
-                f"🔗 Выберите ссылку для автоматизации ГДЗ\n\n"
+                f"🔗 Выберите ссылку для автоматизации ГДЗ (gdz.ru)\n\n"
             )
             await state.update_data(subject_id=subject_id)
             await state.update_data(subject_name=subject_name)

@@ -376,7 +376,7 @@ async def deep_links(message, args, bot: Bot, state: FSMContext):
             
             temp_message = await message.answer(f'🔄 Загрузка...')
             
-            text, solutions = await get_gdz_answers(user_id=message.from_user.id, task=homework.task, subject_id=homework.subject_id)
+            text, solutions = await get_gdz_answers(user_id=message.from_user.id, homework=homework, subject_id=homework.subject_id)
             
             await temp_message.delete()
             

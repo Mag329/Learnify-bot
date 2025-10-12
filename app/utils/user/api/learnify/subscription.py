@@ -1,15 +1,17 @@
 from datetime import datetime, timedelta
+import json
 import logging
 from sqlalchemy.orm import selectinload
 from learnifyapi.client import LearnifyAPI
 from learnifyapi.exceptions import APIError
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import LEARNIFY_API_TOKEN
+from app.config.config import DEFAULT_LONG_CACHE_TTL, LEARNIFY_API_TOKEN
 from app.utils.database import (AsyncSessionLocal, Gdz, PremiumSubscription, PremiumSubscriptionPlan,
-                                User, db)
+                                User, db, Transaction)
 from app.utils.user.decorators import handle_api_error
 from app.utils.scheduler import scheduler
+from app.utils.user.cache import redis_client
 
 
 logger = logging.getLogger(__name__)
@@ -110,9 +112,17 @@ async def disable_subscription(user_id):
     
     
 @handle_api_error()
-async def get_gdz_answers(user_id, task, subject_id):
+async def get_gdz_answers(user_id, homework, subject_id):
     if not subject_id:
         return None, None
+    
+    cache_key = f"auto_gdz:{user_id}:{homework.id}:{subject_id}"
+    
+    cached_full = await redis_client.get(cache_key)
+    if cached_full:
+        data = json.loads(cached_full)
+        
+        return data['main_text'], data['solutions']
     
     async with AsyncSessionLocal() as session:
         result = await session.execute(db.select(Gdz).filter_by(user_id=user_id, subject_id=subject_id))
@@ -122,7 +132,7 @@ async def get_gdz_answers(user_id, task, subject_id):
         async with LearnifyAPI(token=LEARNIFY_API_TOKEN) as api:
             gdz = await api.get_gdz_answers(
                 user_id=user_id, 
-                task_text=task, 
+                task_text=homework.task, 
                 book_url=gdz_info.book_url, 
                 search_by=gdz_info.search_by
             )
@@ -156,11 +166,18 @@ async def get_gdz_answers(user_id, task, subject_id):
         )
         
         if not solutions:
-            logger.info(f"[get_gdz_answers] Решения не найдены (user_id={user_id}, subject_id={subject_id}, task='{task}')")
+            logger.info(f"[get_gdz_answers] Решения не найдены (user_id={user_id}, subject_id={subject_id}, task='{homework.task}')")
             return (
                 main_text + "⚠️ К сожалению, ответы по данному заданию не найдены 😔",
                 []
             )
+            
+    cache_data = {
+        "main_text": main_text,
+        "solutions": solutions
+    }
+    ttl = DEFAULT_LONG_CACHE_TTL
+    await redis_client.setex(cache_key, ttl, json.dumps(cache_data))
         
     return main_text, solutions
 
@@ -283,3 +300,159 @@ async def restore_renew_subscription_jobs(bot):
         users = result.scalars().all()
         for user in users:
             await schedule_renew_subscription(user.user_id, user.expires_at, bot)
+
+
+async def successful_payment(user_id, message, telegram_payment_id, payload, data, bot):
+    payload_parts = payload.split()
+    
+    operation_type = None
+    plan = None
+    amount = 0
+    
+    if payload_parts[0].startswith('replenish'):
+        operation_type = 'replenish'
+        amount = int(payload_parts[0].split('_')[1])
+    else:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                db.select(PremiumSubscriptionPlan).filter_by(id=int(payload_parts[0]))
+            )
+            plan = result.scalar_one_or_none()
+
+        if not plan:
+            await message.answer("⚠️ Произошла ошибка: тарифный план не найден.")
+            await bot.refund_star_payment(
+                user_id=user_id,
+                telegram_payment_charge_id=telegram_payment_id
+            )
+            logger.error(f"Payment failed: plan not found (payload={payload_parts})")
+            return
+
+        if len(payload_parts) > 2 and payload_parts[2] == 'myself':
+            operation_type = 'myself'
+            amount = plan.price
+        elif len(payload_parts) > 2 and payload_parts[2].startswith('gift'):
+            recipient_user_id = int(payload_parts[2].split('-')[1])
+            operation_type = 'gift'
+            amount = plan.price
+        else:
+            await message.answer("⚠️ Ошибка в данных платежа. Попробуйте снова.")
+            return
+
+
+    async with AsyncSessionLocal() as session:
+        try:
+            result = await session.execute(
+                db.select(PremiumSubscription).filter_by(user_id=user_id)
+            )
+            premium_user = result.scalar_one_or_none()
+            
+            # --- Тип: покупка подписки для себя ---
+            if operation_type == 'myself':
+                transaction_credit = Transaction(
+                    user_id=user_id,
+                    operation_type='credit',
+                    amount=amount,
+                    telegram_transaction_id=telegram_payment_id
+                )
+                transaction_debit = Transaction(
+                    user_id=user_id,
+                    operation_type='debit',
+                    amount=amount
+                )
+                session.add_all([transaction_credit, transaction_debit])
+                await session.commit()
+                
+                result, msg = await create_subscription(session=session, user_id=user_id, plan=plan, premium_user=premium_user)
+
+                if msg:
+                    await message.answer(f'❌ <b>Произошла ошибка:</b>\n{msg}')
+                
+                text = (
+                    "✅ <b>Подписка успешно оформлена!</b>\n\n"
+                    f"🗓️ <b>Действует до:</b> <i>{result.expires_at.strftime('%d %B %Y, %H:%M')}</i>\n\n"
+                    "Спасибо за поддержку проекта ❤️\n"
+                    "Приятного использования 🚀"
+                )
+
+            # --- Тип: пополнение баланса ---
+            elif operation_type == 'replenish':
+                transaction = Transaction(
+                    user_id=user_id,
+                    operation_type='credit',
+                    amount=amount,
+                    telegram_transaction_id=telegram_payment_id
+                )
+                session.add(transaction)
+
+                premium_user.balance += amount
+                await session.commit()
+
+                text = (
+                    f"✅ Баланс успешно пополнен!\n\n"
+                    f"💳 Баланс: {premium_user.balance} ⭐️\n"
+                    f"💰 Сумма пополнения: {amount} ⭐️\n\n"
+                    "Спасибо за поддержку проекта ❤️\n"
+                    "Приятного использования 🚀"
+                )
+
+            # --- Тип: подарок ---
+            elif operation_type == 'gift':
+                transaction_credit = Transaction(
+                    user_id=user_id,
+                    operation_type='credit',
+                    amount=amount,
+                    telegram_transaction_id=telegram_payment_id
+                )
+                transaction_debit = Transaction(
+                    user_id=user_id,
+                    operation_type='debit',
+                    amount=amount
+                )
+                session.add_all([transaction_credit, transaction_debit])
+                await session.commit()
+                
+                result, msg = await create_subscription(session=session, user_id=recipient_user_id, plan=plan, premium_user=premium_user)
+
+                if msg:
+                    await message.answer(f'❌ <b>Произошла ошибка:</b>\n{msg}')
+                    return
+                
+                text = (
+                    "🎉 <b>Вы оформили подарочную подписку!</b>\n\n"
+                    f"@{data['username']} совсем скоро узнает о вашем сюрпризе 💌\n"
+                    "Спасибо, что делитесь хорошим настроением ✨"
+                )
+                
+                recipient_text = (
+                    f"🎁 <b>Вам подарили подписку на {plan.text_name}!</b>\n\n"
+                    f"👤 <b>Отправитель:</b> @{data['sender_username']}\n"
+                    f"💬 <b>Сообщение:</b> <i>{data['description']}</i>\n\n"
+                    f"🗓️ <b>Подписка активна до:</b> <i>{result.expires_at.strftime('%d %B %Y %H:%M')}</i>\n\n"
+                    "✨ Наслаждайтесь всеми преимуществами подписки и удачного обучения!"
+                )
+                
+                try:
+                    chat = await bot.get_chat(recipient_user_id)
+                    await bot.send_message(
+                        chat_id=chat.id, text=recipient_text
+                    )
+                except Exception as e:
+                    logger.error()
+                    
+
+            else:
+                text = "⚠️ Неизвестный тип операции"
+                await bot.refund_star_payment(
+                    user_id=user_id,
+                    telegram_payment_charge_id=telegram_payment_id
+                )
+
+            await bot.delete_message(chat_id=message.chat.id, message_id=data['main_message_id'])
+            
+            await message.answer(text, reply_markup=kb.back_to_menu)
+
+        except Exception as e:
+            await session.rollback()
+            logger.exception(f"Ошибка обработки платежа: {e}")
+            await message.answer("❌ Произошла ошибка при обработке платежа. Попробуйте позже")

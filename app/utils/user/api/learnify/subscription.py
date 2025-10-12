@@ -438,7 +438,7 @@ async def successful_payment(user_id, message, telegram_payment_id, payload, dat
                         chat_id=chat.id, text=recipient_text
                     )
                 except Exception as e:
-                    logger.error()
+                    pass
                     
 
             else:

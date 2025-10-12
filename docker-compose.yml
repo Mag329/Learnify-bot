@@ -111,7 +111,7 @@ services:
     container_name: learnify_bot_redis
     restart: always
     ports:
-      - "6379:6379"
+      - "${REDIS_EXTERNAL_DOCKER_PORT}:6379"
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes

@@ -1,6 +1,6 @@
 services:
   app:
-    container_name: mesh_bot
+    container_name: learnify_bot
     build: ./
     env_file: .env
     environment:
@@ -9,13 +9,52 @@ services:
     volumes:
       - .:/src
     restart: always
-    # depends_on:
-      # - elasticsearch
+    depends_on:
+      - postgres
     networks:
       - elk
 
+  postgres:
+    image: postgres:17
+    container_name: learnify_postgres
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${PB_USER}
+      POSTGRES_PASSWORD: ${PB_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${PG_EXTERNAL_DOCKER_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data/pgdata
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    command: >
+      postgres -c max_connections=1000
+               -c shared_buffers=256MB
+               -c effective_cache_size=768MB
+               -c maintenance_work_mem=64MB
+               -c checkpoint_completion_target=0.7
+               -c wal_buffers=16MB
+               -c default_statistics_target=100
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${PB_USER} -d $${PG_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    tty: true
+    stdin_open: true
+
   elasticsearch:
     image: elasticsearch:8.5.0
+    container_name: learnify_elasticsearch
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
@@ -29,7 +68,7 @@ services:
       - elk
 
   logstash:
-    container_name: 'learnify-logstash'
+    container_name: learnify_logstash
     image: logstash:8.5.0
     ports:
       - "5000:5000"
@@ -45,6 +84,7 @@ services:
 
   kibana:
     image: kibana:8.5.0
+    container_name: learnify_kibana
     ports:
       - "5601:5601"
     environment:
@@ -68,7 +108,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: mesh_redis
+    container_name: learnify_redis
     restart: always
     ports:
       - "6379:6379"
@@ -81,6 +121,8 @@ services:
 volumes:
   elasticsearch_data:
   redis_data:
+  pgdata:
+    driver: local
 
 networks:
   elk:

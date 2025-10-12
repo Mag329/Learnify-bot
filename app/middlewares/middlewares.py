@@ -88,7 +88,11 @@ class AllowedUsersMiddleware(BaseMiddleware):
                         handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
                         event: TelegramObject,
                         data: Dict[str, Any]):
-        if event.from_user.id in ALLOWED_USERS:
+        if event.message:
+            user_id = event.message.from_user.id
+        elif event.callback_query:
+            user_id = event.callback_query.from_user.id
+        if user_id in ALLOWED_USERS:
             return await handler(event, data)
         else:
-            logging.info(f'User {event.from_user.id} is not allowed')
+            logging.info(f'User {user_id} is not allowed')

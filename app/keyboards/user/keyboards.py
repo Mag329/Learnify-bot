@@ -3,7 +3,7 @@ from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from app.config.config import LEARNIFY_API_TOKEN, LEARNIFY_WEB
-from app.utils.database import (AsyncSessionLocal, PremiumSubscriptionPlan,
+from app.utils.database import (AsyncSessionLocal, PremiumSubscription, PremiumSubscriptionPlan,
                                 Settings, db)
 from app.utils.user.utils import get_emoji_subject, get_student
 
@@ -281,6 +281,47 @@ get_premium = InlineKeyboardMarkup(
     ]
 )
 
+back_to_subscription_settings = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="↪️ Назад", callback_data="back_to_auto_gdz"
+            )
+        ]
+    ]
+)
+
+choose_search_by_auto_gdz = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text='Страницы',
+                callback_data=f"auto_gdz_change_search_by_pages"
+            ),
+            InlineKeyboardButton(
+                text='Номерам',
+                callback_data=f"auto_gdz_change_search_by_numbers"
+            ),
+            InlineKeyboardButton(
+                text='Параграфам',
+                callback_data=f"auto_gdz_change_search_by_paragraphs"
+            )
+        ]
+    ]
+)
+
+set_auto_gdz_links = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text='✏️ Указать',
+                callback_data='subscription_setting_auto_gdz'
+            )
+        ]
+    ]
+)
+
+
 
 async def main(user_id):
     keyboard = ReplyKeyboardBuilder()
@@ -342,6 +383,22 @@ async def choice_subject(user_id, for_):
 
     keyboard.row(InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_{for_}"))
 
+    return keyboard.as_markup()
+
+
+async def auto_gdz_settings(subject_gdz):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(
+        InlineKeyboardButton(
+            text='✏️ Изменить',
+            callback_data=f"change_auto_gdz_{subject_gdz.subject_id}"
+        ),
+        InlineKeyboardButton(
+            text="↪️ Назад", 
+            callback_data="subscription_setting_auto_gdz"
+        )
+    )
+    
     return keyboard.as_markup()
 
 
@@ -451,6 +508,37 @@ async def subscription_keyboard(user_id, subscription):
             )
         
         return keyboard.as_markup()
+    
+    
+async def subscription_settings(user_id):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(db.select(PremiumSubscription).filter_by(user_id=user_id))
+        user = result.scalar_one_or_none()
+        if user:
+            keyboard = InlineKeyboardBuilder()
+            keyboard.row(
+                InlineKeyboardButton(
+                    text=f"{'✅' if user.auto_renew else '❌'} Автопродление подписки",
+                    callback_data="subscription_setting_auto_renew"
+                )
+            )
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="Авто-ГДЗ",
+                    callback_data="subscription_setting_auto_gdz"
+                )
+            )
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="↪️ Назад",
+                    callback_data="back_to_menu"
+                )
+            )
+            
+            return keyboard.as_markup()
+        
+
+
     
 
 async def choose_subscription_plan(type):

@@ -47,3 +47,6 @@ class ChooseUserForGiftState(StatesGroup):
     username = State()
     description = State()
     main_message_id = State()
+    
+class SelectGdzUrlState(StatesGroup):
+    link = State()

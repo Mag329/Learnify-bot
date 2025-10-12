@@ -12,7 +12,7 @@ from octodiary.urls import Systems
 import app.keyboards.user.keyboards as kb
 from app.config.config import (ERROR_408_MESSAGE, ERROR_500_MESSAGE,
                                ERROR_MESSAGE)
-from app.utils.database import (AsyncSessionLocal, Homework,
+from app.utils.database import (AsyncSessionLocal, Gdz, Homework,
                                 PremiumSubscription, SettingDefinition,
                                 Settings, User, UserData, db)
 from app.utils.user.decorators import handle_api_error
@@ -364,6 +364,15 @@ async def deep_links(message, args, bot: Bot, state: FSMContext):
             homework = result.scalar_one_or_none()
             if not homework:
                 message.answer('❌ <b>Ошибка</b>\n\nДомашнее задание не найдено')
+            
+            result = await session.execute(db.select(Gdz).filter_by(user_id=message.from_user.id, subject_id=homework.subject_id))
+            gdz_info = result.scalar_one_or_none()
+            
+            if not gdz_info:
+                text = (
+                    '❌ <b>Не указана ссылка для автоматизации ГДЗ</b>\n\n'
+                )
+                return await message.answer(text, reply_markup=kb.set_auto_gdz_links)
             
             temp_message = await message.answer(f'🔄 Загрузка...')
             

@@ -37,7 +37,7 @@ token_auth = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="🔑 Получить токен", url=f"{LEARNIFY_WEB}/api/v1/api/v1/auth/method/token"
+                text="🔑 Получить токен", url=f"{LEARNIFY_WEB}/api/v1/auth/method/token"
             )
         ],
         [InlineKeyboardButton(text="🔙 Назад", callback_data="choose_login")],

@@ -147,7 +147,7 @@ async def get_gdz_answers(user_id, homework, subject_id):
     
     title_map = {
         "pages": "Страница",
-        "numbers": "Задание",
+        "numbers": "Номер",
         "paragraphs": "Параграф"
     }
     title_label = title_map.get(gdz_info.search_by, "Задание")

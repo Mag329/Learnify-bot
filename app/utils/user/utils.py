@@ -288,7 +288,7 @@ async def parse_and_format_phone(raw_number: str) -> str:
         return "Н/Д"
 
 
-async def deep_links(message, args, bot: Bot, state: FSMContext):
+async def deep_links(message: Message, args, bot: Bot, state: FSMContext):
     if args.startswith("done-homework-"):
         from app.utils.user.api.mes.homeworks import handle_homework_navigation
 
@@ -389,7 +389,7 @@ async def deep_links(message, args, bot: Bot, state: FSMContext):
                 for i in range(0, len(iterable), n):
                     yield iterable[i:i + n]
             
-            for solution in solutions:
+            for num, solution in enumerate(solutions, 1):
                 images = solution['images']
                 text = solution['text']
 
@@ -398,9 +398,9 @@ async def deep_links(message, args, bot: Bot, state: FSMContext):
 
                 for i, image_chunk in enumerate(image_chunks, start=1):
                     if total_parts > 1:
-                        caption = f"{text}\n🧩 Часть {i}/{total_parts}"
+                        caption = f"{num}. {text}\n🧩 Часть {i}/{total_parts}"
                     else:
-                        caption = text
+                        caption = f"{num}. {text}"
 
                     media_group = MediaGroupBuilder(caption=caption)
                     for image in image_chunk:
@@ -410,3 +410,4 @@ async def deep_links(message, args, bot: Bot, state: FSMContext):
                         media=media_group.build(),
                         protect_content=True
                     )
+            await message.answer(text='✅ <b>Выдача завершена</b>', reply_markup=kb.delete_message)

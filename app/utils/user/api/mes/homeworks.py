@@ -10,6 +10,8 @@ from app.utils.database import AsyncSessionLocal, Homework, Settings, db
 from app.utils.user.cache import get_ttl, redis_client
 from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import get_emoji_subject, get_student
+from app.utils.misc import has_numbers
+
 
 # Temp dicts
 temp_events = {}
@@ -112,7 +114,7 @@ async def get_homework(user_id, date_object, direction="right"):
         is_done = task.is_done
 
         async with AsyncSessionLocal() as session:
-            result = await session.execute(db.select(Homework).filter_by(task = description, subject_id=task.subject_id))
+            result = await session.execute(db.select(Homework).filter_by(task=description, subject_id=task.subject_id))
             homework_db = result.scalar_one_or_none()
             if not homework_db:
                 homework_db = Homework(task=description, subject_id=task.subject_id)
@@ -120,7 +122,7 @@ async def get_homework(user_id, date_object, direction="right"):
                 await session.commit()
                 await session.refresh(homework_db)
         
-        gdz_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=autogdz-{homework_db.id}">⚡</a>'
+        gdz_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=autogdz-{homework_db.id}">⚡</a>' if await has_numbers(description) else ''
         
         if settings.enable_homework_done_function:
             link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-{"True" if not is_done else "False"}">'
@@ -263,8 +265,20 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
             text += f"📅 <b>{homework['date'].strftime('%d %B (%a)')}:</b>\n"
             if homework["homework"]:
                 task = homework['homework']
+                
+                async with AsyncSessionLocal() as session:
+                    result = await session.execute(db.select(Homework).filter_by(task=task, subject_id=subject_id))
+                    homework_db = result.scalar_one_or_none()
+                    if not homework_db:
+                        homework_db = Homework(task=task, subject_id=subject_id)
+                        session.add(homework_db)
+                        await session.commit()
+                        await session.refresh(homework_db)
+                
+                gdz_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=autogdz-{homework_db.id}">⚡</a>' if await has_numbers(task) else ''
+                
                 text += f"    📚 <b>Домашние задание:</b>\n"
-                text += f"        - {f'<code>{task}</code>' if 'https://' not in task else f'<i>{task}</i>'}\n"
+                text += f"        - {f'<code>{task}</code>' if 'https://' not in task else f'<i>{task}</i>'} {gdz_link}\n"
 
             if len(homework["materials"]) > 0:
                 text += f"\n    🔗 <b>Для выполнения:</b>\n"
@@ -320,3 +334,4 @@ async def handle_homework_navigation(
         markup = kb.homework
 
     return text, date, markup
+

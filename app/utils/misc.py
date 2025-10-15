@@ -1,4 +1,5 @@
 import os
+import re
 
 import yaml
 
@@ -67,3 +68,7 @@ async def check_subscription(user_id, bot):
         return True
     else:
         return False
+
+
+async def has_numbers(text):
+    return bool(re.search(r'\d', text))

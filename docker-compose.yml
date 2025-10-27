@@ -54,48 +54,48 @@ services:
     tty: true
     stdin_open: true
 
-  # elasticsearch:
-  #   image: elasticsearch:8.5.0
-  #   container_name: learnify_bot_elasticsearch
-  #   environment:
-  #     - discovery.type=single-node
-  #     - ES_JAVA_OPTS=-Xms512m -Xmx512m
-  #     - xpack.security.enabled=false
-  #   restart: always
-  #   ports:
-  #     - "9200:9200"
-  #   volumes:
-  #     - elasticsearch_data:/usr/share/elasticsearch/data
-  #   networks:
-  #     - elk
+  elasticsearch:
+    image: elasticsearch:8.5.0
+    container_name: learnify_bot_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+    restart: always
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - elk
 
-  # logstash:
-  #   container_name: learnify_bot_logstash
-  #   image: logstash:8.5.0
-  #   ports:
-  #     - "5000:5000"
-  #   volumes:
-  #     - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
-  #   environment:
-  #     - LS_JAVA_OPTS=-Xms256m -Xmx256m
-  #   restart: always
-  #   depends_on:
-  #     - elasticsearch
-  #   networks:
-  #     - elk
+  logstash:
+    container_name: learnify_bot_logstash
+    image: logstash:8.5.0
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+    restart: always
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk
 
-  # kibana:
-  #   image: kibana:8.5.0
-  #   container_name: learnify_bot_kibana
-  #   ports:
-  #     - "5601:5601"
-  #   environment:
-  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-  #   restart: always      
-  #   depends_on:
-  #     - elasticsearch
-  #   networks:
-  #     - elk
+  kibana:
+    image: kibana:8.5.0
+    container_name: learnify_bot_kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    restart: always      
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk
     
   alembic:
     build: ./
@@ -119,12 +119,28 @@ services:
     command: redis-server --appendonly yes
     networks:
       - elk
+  
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - elk
 
 volumes:
   elasticsearch_data:
   redis_data:
   pgdata:
     driver: local
+  minio_data:
 
 networks:
   elk:

@@ -81,13 +81,16 @@ async def back_to_homework_callback_handler(callback: CallbackQuery, state: FSMC
 
 @router.callback_query(F.data.startswith("select_subject_homework_"))
 async def subject_homework_callback_handler(callback: CallbackQuery, state: FSMContext):
-    subject_id = int(callback.data.split("_")[-1])
+    data = callback.data.split("_")
+    subject_id = int(data[3])
+    
+    date = datetime.strptime(data[4], "%d-%m-%Y") if data[4] else datetime.now()
 
     await state.update_data(subject_id=subject_id)
-    await state.update_data(date=datetime.now())
+    await state.update_data(date=date)
 
     text = await get_homework_by_subject(
-        callback.from_user.id, subject_id, datetime.now()
+        callback.from_user.id, subject_id, date
     )
 
     await callback.answer()

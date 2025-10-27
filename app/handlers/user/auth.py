@@ -12,7 +12,7 @@ from octodiary.exceptions import APIError
 from octodiary.urls import Systems
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import (AWAIT_RESPONSE_MESSAGE, NO_SUBSCRIPTION_ERROR,
+from app.config.config import (AWAIT_RESPONSE_MESSAGE, NO_SUBSCRIPTION_TO_CHANNEL_ERROR,
                                START_MESSAGE, SUCCESSFUL_AUTH)
 from app.states.user.states import AuthState
 from app.utils.database import AsyncSessionLocal, AuthData, User, db
@@ -114,7 +114,7 @@ async def cmd_start(
                         auth_data.token_expired_at = need_update_date
                         await session.commit()
 
-                        schedule_refresh(user.user_id, need_update_date)
+                        schedule_refresh(user.user_id, need_update_date, bot)
 
                 await save_profile_data(session, user_id, profile.profile, message.from_user.username)
 
@@ -330,7 +330,7 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
 
                     await session.commit()
 
-                    schedule_refresh(user.user_id, need_update_date)
+                    schedule_refresh(user.user_id, need_update_date, bot)
 
                     await ensure_user_settings(session, message.from_user.id)
 

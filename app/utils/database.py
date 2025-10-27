@@ -221,16 +221,15 @@ class Gdz(Base):
     search_by = db.Column(db.String, nullable=True)
 
     
-# class GdzAnswer(Base):
-#     __tablename__ = "gdz_answers"
+class StudentBook(Base):
+    __tablename__ = "student_books"
     
-#     id = db.Column(db.Integer, primary_key=True)
-#     gdz_id = db.Column(db.Integer, db.ForeignKey("gdz.id"), nullable=False)
-#     task_text = db.Column(db.String, nullable=False)
-    
-# class GdzAnswerSolution(Base):
-#     __tablename__ = "gdz_answer_solutions"
-    
-#     id = db.Column(db.Integer, primary_key=True)
-#     gdz_answer_id = db.Column(db.Integer, db.ForeignKey("gdz_answers.id"), nullable=False)
-#     solution_text = db.Column(db.String, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.BigInteger,
+        db.ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    subject_id = db.Column(db.Integer, nullable=True)
+    subject_name = db.Column(db.String, nullable=True)
+    file = db.Column(db.String, nullable=True)

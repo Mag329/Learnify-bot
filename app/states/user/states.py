@@ -50,3 +50,9 @@ class ChooseUserForGiftState(StatesGroup):
     
 class SelectGdzUrlState(StatesGroup):
     link = State()
+    
+class QuickGdzState(StatesGroup):
+    number = State()
+    
+class SelectBookState(StatesGroup):
+    file = State()

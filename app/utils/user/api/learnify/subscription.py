@@ -112,11 +112,14 @@ async def disable_subscription(user_id):
     
     
 @handle_api_error()
-async def get_gdz_answers(user_id, homework, subject_id):
+async def get_gdz_answers(user_id, subject_id, homework=None, number=None):
     if not subject_id:
         return None, None
     
-    cache_key = f"auto_gdz:{user_id}:{homework.id}:{subject_id}"
+    if homework:
+        cache_key = f"auto_gdz:{user_id}:{homework.id}:{subject_id}"
+    else:
+        cache_key = f"auto_gdz:{user_id}:{number}:{subject_id}"
     
     cached_full = await redis_client.get(cache_key)
     if cached_full:
@@ -130,20 +133,27 @@ async def get_gdz_answers(user_id, homework, subject_id):
         
     try:
         async with LearnifyAPI(token=LEARNIFY_API_TOKEN) as api:
-            gdz = await api.get_gdz_answers(
-                user_id=user_id, 
-                task_text=homework.task, 
-                book_url=gdz_info.book_url, 
-                search_by=gdz_info.search_by
-            )
+            if homework:
+                gdz = await api.get_gdz_answers(
+                    user_id=user_id, 
+                    task_text=homework.task, 
+                    book_url=gdz_info.book_url, 
+                    search_by=gdz_info.search_by
+                )
+            else:
+                gdz = await api.get_gdz_answers(
+                    user_id=user_id, 
+                    number=number, 
+                    book_url=gdz_info.book_url, 
+                    search_by=gdz_info.search_by
+                )
     except Exception as e:
         logger.exception(f"[get_gdz_answers] Ошибка Learnify API: {e}")
         return None, None
-        
-    main_text = (
-        f'🧠 <b>Авто-гдз:</b>\n\n'
-        f'📖 <b>Текст задания:</b>\n <code>{gdz.task_text}</code>\n\n'
-    )
+    
+    main_text = f'🧠 <b>Авто-гдз</b>\n\n'
+    
+    main_text += f'📖 <b>Текст задания:</b>\n <code>{gdz.task_text}</code>\n\n' if homework else ''
     
     title_map = {
         "pages": "Страница",
@@ -166,7 +176,7 @@ async def get_gdz_answers(user_id, homework, subject_id):
         )
         
         if not solutions:
-            logger.info(f"[get_gdz_answers] Решения не найдены (user_id={user_id}, subject_id={subject_id}, task='{homework.task}')")
+            logger.info(f"[get_gdz_answers] Решения не найдены (user_id={user_id}, subject_id={subject_id}, task='{homework.task if homework else None}', number={number})")
             return (
                 main_text + "⚠️ К сожалению, ответы по данному заданию не найдены 😔",
                 []

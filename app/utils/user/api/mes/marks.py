@@ -6,7 +6,7 @@ import app.keyboards.user.keyboards as kb
 from app.config import config
 from app.config.config import BASE_QUARTER
 from app.utils.user.decorators import handle_api_error
-from app.utils.user.utils import (get_emoji_subject, get_mark_with_weight,
+from app.utils.user.utils import (generate_deeplink, get_emoji_subject, get_mark_with_weight,
                                   get_student)
 
 
@@ -28,7 +28,7 @@ async def get_marks(user_id, date_object):
         )
         
         subject_name = f'{await get_emoji_subject(mark.subject_name)} {mark.subject_name}'
-        subject_name_with_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=subject-marks-{mark.subject_id}">{subject_name}</a>'
+        subject_name_with_link = f'<a href="{await generate_deeplink(f'subject-marks-{mark.subject_id}')}">{subject_name}</a>'
         
         text += f"<b>{subject_name_with_link}:</b>\n    <i><code>{await get_mark_with_weight(mark.value, mark.weight)} - {mark.control_form_name}</code></i>{mark_comment}\n\n"
 

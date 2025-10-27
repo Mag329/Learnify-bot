@@ -16,7 +16,7 @@ from app.config.config import *
 from app.handlers.admin import panel, payment
 from app.handlers.user import (auth, homeworks, inline_mode, marks, menu,
                                notifications, other, results, schedule,
-                               settings, subscription)
+                               settings, subscription, gdz)
 from app.middlewares.middlewares import AllowedUsersMiddleware, CheckSubscription, LoggingMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
@@ -82,6 +82,7 @@ async def main():
     dp.include_router(results.router)
     if LEARNIFY_API_TOKEN:
         dp.include_router(subscription.router)
+        dp.include_router(gdz.router)
     # dp.include_router(inline_mode.router)
 
     # Admin
@@ -113,7 +114,7 @@ async def main():
     await new_notifications_checker(bot)
     scheduler.add_job(new_notifications_checker, "interval", minutes=1, args=(bot,))
 
-    await restore_refresh_tokens_jobs()
+    await restore_refresh_tokens_jobs(bot)
     await restore_renew_subscription_jobs(bot)
 
     if env.bool("USE_GIGACHAT", default=False):
@@ -121,6 +122,10 @@ async def main():
         scheduler.add_job(
             birthday_checker, trigger="cron", hour=10, minute=0, args=(bot,)
         )
+        
+    from app.minio import init_bucket
+    
+    await init_bucket()
 
     # await replaced_checker(bot)
     # scheduler.add_job(replaced_checker, "interval", minutes=10, args=(bot,))

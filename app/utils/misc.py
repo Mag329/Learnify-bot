@@ -1,11 +1,13 @@
 import os
 import re
-
 import yaml
+from aiogram.fsm.context import FSMContext
+from transliterate import translit
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import (CHANNEL_ID, DEFAULT_MEDIUM_CACHE_TTL,
-                               NO_SUBSCRIPTION_ERROR)
+                               NO_SUBSCRIPTION_TO_CHANNEL_ERROR)
+from app.states.user.states import QuickGdzState
 from app.utils.database import (AsyncSessionLocal, PremiumSubscriptionPlan,
                                 SettingDefinition, db)
 from app.utils.user.cache import redis_client
@@ -72,3 +74,20 @@ async def check_subscription(user_id, bot):
 
 async def has_numbers(text):
     return bool(re.search(r'\d', text))
+
+
+async def clear_state_if_still_waiting(state: FSMContext):
+    current_state = await state.get_state()
+    if current_state == QuickGdzState.number:
+        await state.clear()
+        
+        
+def sanitize_filename(name: str) -> str:
+    """Очистка и нормализация имени файла"""
+    # Транслитерация русских букв → латиница
+    name = translit(name, 'ru', reversed=True)
+    # Пробелы → дефисы
+    name = re.sub(r"\s+", "-", name.strip())
+    # Убираем всё, кроме букв, цифр и дефисов
+    name = re.sub(r"[^a-zA-Z0-9\-]", "", name)
+    return name.lower()

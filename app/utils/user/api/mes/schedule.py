@@ -13,7 +13,7 @@ from app.states.user.states import ScheduleState
 from app.utils.database import AsyncSessionLocal, Settings, db
 from app.utils.user.cache import get_ttl, redis_client
 from app.utils.user.decorators import cache, handle_api_error
-from app.utils.user.utils import EMOJI_NUMBERS, get_emoji_subject, get_student
+from app.utils.user.utils import EMOJI_NUMBERS, generate_deeplink, get_emoji_subject, get_student
 
 # Словарь для хранения задач пользователей
 user_tasks = {}
@@ -116,6 +116,8 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
         start_time = event.start_at.strftime("%H:%M")
         end_time = event.finish_at.strftime("%H:%M")
 
+        subject_name = f'{EMOJI_NUMBERS.get(num, f"{num}️")} <a href="{await generate_deeplink(f'subject-menu-{event.subject_id}-{date_object.strftime("%d_%m_%Y")}')}">{await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b></a>'
+        
         if not short:
             lesson_info = await api.get_lesson_schedule_item(
                 profile_id=user.profile_id,
@@ -124,10 +126,10 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
                 type=event.source,
             )
 
-            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i> {" <code>Н</code>" if event.is_missed_lesson else ""} {" 🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}\n    👤 <i>{lesson_info.teacher.first_name[0]}. {lesson_info.teacher.middle_name[0]}. {lesson_info.teacher.last_name}</i> {" - 🔄 замена" if event.replaced else ""}\n\n'
+            text += f'{subject_name} <i>({start_time}-{end_time})</i> {" <code>Н</code>" if event.is_missed_lesson else ""} {" 🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}\n    👤 <i>{lesson_info.teacher.first_name[0]}. {lesson_info.teacher.middle_name[0]}. {lesson_info.teacher.last_name}</i> {" - 🔄 замена" if event.replaced else ""}\n\n'
         else:
             replaced_text = "\n    👤 - 🔄 замена"
-            text += f'{EMOJI_NUMBERS.get(num, f"{num}️")} {await get_emoji_subject(event.subject_name)} <b>{event.subject_name}</b> <i>({start_time}-{end_time})</i> {" <code>Н</code>" if event.is_missed_lesson else ""} {" 🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}{replaced_text if event.replaced else ""}\n\n'
+            text += f'{subject_name} <i>({start_time}-{end_time})</i> {" <code>Н</code>" if event.is_missed_lesson else ""} {" 🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}{replaced_text if event.replaced else ""}\n\n'
 
     if use_cache:
         cache_data = {"text": text, "date": date_object.strftime("%Y-%m-%d")}

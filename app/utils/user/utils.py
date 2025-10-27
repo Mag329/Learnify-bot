@@ -11,7 +11,8 @@ from octodiary.urls import Systems
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import (ERROR_408_MESSAGE, ERROR_500_MESSAGE,
-                               ERROR_MESSAGE)
+                               ERROR_MESSAGE, NO_PREMIUM_ERROR)
+from app.config import config
 from app.utils.database import (AsyncSessionLocal, Gdz, Homework,
                                 PremiumSubscription, SettingDefinition,
                                 Settings, User, UserData, db)
@@ -289,6 +290,10 @@ async def parse_and_format_phone(raw_number: str) -> str:
         return "Н/Д"
 
 
+async def generate_deeplink(args):
+    return f"https://t.me/{config.BOT_USERNAME}?start={args}"
+
+
 async def deep_links(message: Message, args, bot: Bot, state: FSMContext):
     if args.startswith("done-homework-"):
         from app.utils.user.api.mes.homeworks import handle_homework_navigation
@@ -358,7 +363,7 @@ async def deep_links(message: Message, args, bot: Bot, state: FSMContext):
             premium_user = result.scalar_one_or_none()
             
             if not premium_user or not premium_user.is_active:
-                await message.answer(f'❌ <b>Ошибка</b>\n\nУ вас нет подписки <b>Learnify Premium</b> для доступа к этой функции', reply_markup=kb.get_premium)
+                await message.answer(NO_PREMIUM_ERROR, reply_markup=kb.get_premium)
                 return
             
             result = await session.execute(db.select(Homework).filter_by(id=homework_id))
@@ -377,12 +382,13 @@ async def deep_links(message: Message, args, bot: Bot, state: FSMContext):
             
             temp_message = await message.answer(f'🔄 Загрузка...')
             
-            text, solutions = await get_gdz_answers(user_id=message.from_user.id, homework=homework, subject_id=homework.subject_id)
+            text, solutions = await get_gdz_answers(user_id=message.from_user.id, subject_id=homework.subject_id, homework=homework)
             
             await temp_message.delete()
             
             if not solutions:
                 await message.answer('❌ <b>Ошибка</b>\n\nНе удалось получить ответы', reply_markup=kb.delete_message)
+                return
             
             await message.answer(text, reply_markup=kb.delete_message, protect_content=True)
             
@@ -412,3 +418,32 @@ async def deep_links(message: Message, args, bot: Bot, state: FSMContext):
                         protect_content=True
                     )
             await message.answer(text='✅ <b>Выдача завершена</b>', reply_markup=kb.delete_message)
+            
+    elif args.startswith("subject-menu-"):
+        from app.utils.user.api.mes.homeworks import handle_homework_navigation
+        
+        subject_id = int(args.split("-")[2])
+        date = datetime.strptime(args.split("-")[3], "%d_%m_%Y")
+        
+        await message.delete()
+        
+        api, user = await get_student(message.from_user.id)
+        subjects = await api.get_subjects(
+            student_id=user.student_id, profile_id=user.profile_id
+        )
+        subject_name = next(
+            (subject.subject_name for subject in subjects.payload if subject.subject_id == subject_id),
+            "Неизвестный предмет"
+        )
+    
+        text = (
+            f'{await get_emoji_subject(subject_name)} <b>{subject_name}</b>\n\n'
+            f'⚙️ Доступные разделы:\n'
+            f'  • ⚡ <b>Быстрое ГДЗ</b>\n'
+            f'  • 🏠 <b>Домашнее задание</b>\n'
+            f'  • 🎯 <b>Оценки</b>\n'
+            f'  • 📖 <b>Электронный учебник</b>\n'
+        )
+        
+        await message.answer(text, reply_markup=await kb.subject_menu(subject_id, date))
+        

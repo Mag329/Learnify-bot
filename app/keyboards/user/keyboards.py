@@ -322,6 +322,17 @@ set_auto_gdz_links = InlineKeyboardMarkup(
 )
 
 
+set_student_book = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="✏️ Указать",
+                callback_data="student_book_settings"
+            )
+        ]
+    ]
+)
+
 
 async def main(user_id):
     keyboard = ReplyKeyboardBuilder()
@@ -482,10 +493,6 @@ async def subscription_keyboard(user_id, subscription):
                 InlineKeyboardButton(
                     text="⚙️ Настройки",
                     callback_data="subscription_settings"
-                ),
-                InlineKeyboardButton(
-                    text="❌ Отменить",
-                    callback_data="cancel_subscription"
                 )
             )
             keyboard.row(
@@ -495,9 +502,14 @@ async def subscription_keyboard(user_id, subscription):
                 )
             )
         else:
-            keyboard.row(InlineKeyboardButton(
-                text="✅ Оформить",
-                callback_data="get_subscription"
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="✅ Оформить",
+                    callback_data="get_subscription"
+                ),
+                InlineKeyboardButton(
+                    text="🎁 Подарить", 
+                    callback_data="give_subscription"
                 )
             )
             keyboard.row(
@@ -524,8 +536,14 @@ async def subscription_settings(user_id):
             )
             keyboard.row(
                 InlineKeyboardButton(
-                    text="Авто-ГДЗ",
+                    text="⚡️ Авто-ГДЗ",
                     callback_data="subscription_setting_auto_gdz"
+                )
+            )
+            keyboard.row(
+                InlineKeyboardButton(
+                    text="📖 Учебник",
+                    callback_data="student_book_settings"
                 )
             )
             keyboard.row(
@@ -573,7 +591,7 @@ async def buy_subscription_keyboard(price, for_,):
         if for_ == 'myself':
             text = f"💳 Купить Premium за {price} ⭐️"
         elif for_ == 'replenish':
-            text = f"💳 Полнить баланс на {price} ⭐️"
+            text = f"💳 Пополнить баланс на {price} ⭐️"
         else:
             text = f"🎁 Подарить Premium за {price} ⭐️"
         keyboard.row(
@@ -582,3 +600,79 @@ async def buy_subscription_keyboard(price, for_,):
                 pay=True,
             )
         )
+        
+        
+async def subject_menu(subject_id, date):
+    keyboard = InlineKeyboardBuilder()
+    
+    if LEARNIFY_API_TOKEN:
+        keyboard.row(
+            InlineKeyboardButton(
+                text="⚡️ Быстрое ГДЗ",
+                callback_data=f"quick_gdz_{subject_id}"
+            ),
+            InlineKeyboardButton(
+                text="🏠 ДЗ",
+                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}"
+            )
+        )
+        keyboard.row(
+            InlineKeyboardButton(
+                text="🎯 Оценки",
+                callback_data=f"select_subject_marks_{subject_id}"
+            ),
+            InlineKeyboardButton(
+                text="📖 Учебник",
+                callback_data=f"student_book_{subject_id}"
+            )
+        )
+    else:
+        keyboard.row(
+            InlineKeyboardButton(
+                text="🏠 ДЗ",
+                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}"
+            ),
+            InlineKeyboardButton(
+                text="🎯 Оценки",
+                callback_data=f"select_subject_marks_{subject_id}"
+            )
+        )
+    keyboard.row(
+        InlineKeyboardButton(
+            text="Закрыть",
+            callback_data="delete_message"
+        )
+    )
+    
+    return keyboard.as_markup()
+
+
+
+async def quick_gdz(subject_id, link, search_by):
+    search_by_dict = {
+        'pages': 'страницу',
+        'numbers': 'номер',
+        'paragraphs': 'параграф'
+    }
+    
+    keyboard = InlineKeyboardBuilder()
+    
+    keyboard.row(
+        InlineKeyboardButton(
+            text='🔗 ГДЗ',
+            url=link
+        ),
+        InlineKeyboardButton(
+            text=f'🔎 Выбрать {search_by_dict[search_by]}',
+            callback_data=f"choose_quick_gdz_{subject_id}"
+        )
+    )
+    
+    keyboard.row(
+        InlineKeyboardButton(
+            text="Закрыть",
+            callback_data="delete_message"
+        )
+    )
+    
+    return keyboard.as_markup()

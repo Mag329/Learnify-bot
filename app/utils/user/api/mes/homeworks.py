@@ -9,7 +9,7 @@ from app.config.config import DEFAULT_SHORT_CACHE_TTL
 from app.utils.database import AsyncSessionLocal, Homework, Settings, db
 from app.utils.user.cache import get_ttl, redis_client
 from app.utils.user.decorators import handle_api_error
-from app.utils.user.utils import get_emoji_subject, get_student
+from app.utils.user.utils import generate_deeplink, get_emoji_subject, get_student
 from app.utils.misc import has_numbers
 
 
@@ -122,10 +122,10 @@ async def get_homework(user_id, date_object, direction="right"):
                 await session.commit()
                 await session.refresh(homework_db)
         
-        gdz_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=autogdz-{homework_db.id}">⚡</a>' if await has_numbers(description) else ''
+        gdz_link = f'<a href="{await generate_deeplink(f'autogdz-{homework_db.id}')}">⚡</a>' if await has_numbers(description) else ''
         
         if settings.enable_homework_done_function:
-            link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=done-homework-{task.homework_entry_student_id}-{"True" if not is_done else "False"}">'
+            link = f'<a href="{await generate_deeplink(f'done-homework-{task.homework_entry_student_id}-{"True" if not is_done else "False"}')}">'
             link += "◼️</a>" if not is_done else "✔️</a>"
             description_text = f"<s>{description}</s>" if is_done else description_code
         else:
@@ -136,7 +136,7 @@ async def get_homework(user_id, date_object, direction="right"):
         
 
         subject_name = f'{await get_emoji_subject(task.subject_name)} <b>{task.subject_name}</b>{materials}'
-        subject_name_with_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=subject-homework-{task.subject_id}-{task.date_prepared_for.strftime("%d_%m_%Y")}">{subject_name}</a>'
+        subject_name_with_link = f'<a href="{await generate_deeplink(f'subject-homework-{task.subject_id}-{task.date_prepared_for.strftime("%d_%m_%Y")}')}">{subject_name}</a>'
         
         text += f"{subject_name_with_link}<b>:</b>\n    {link} {description_text}\n\n"
 
@@ -275,7 +275,7 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
                         await session.commit()
                         await session.refresh(homework_db)
                 
-                gdz_link = f'<a href="https://t.me/{config.BOT_USERNAME}?start=autogdz-{homework_db.id}">⚡</a>' if await has_numbers(task) else ''
+                gdz_link = f'<a href="{await generate_deeplink(f'autogdz-{homework_db.id}')}">⚡</a>' if await has_numbers(task) else ''
                 
                 text += f"    📚 <b>Домашние задание:</b>\n"
                 text += f"        - {f'<code>{task}</code>' if 'https://' not in task else f'<i>{task}</i>'} {gdz_link}\n"

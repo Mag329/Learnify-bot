@@ -2,7 +2,9 @@ import asyncio
 import uuid
 from datetime import datetime, timedelta
 from io import BytesIO
+import logging
 
+from aiogram import Bot
 import aiohttp
 import jwt
 import pytz
@@ -12,6 +14,10 @@ from app.config.config import LEARNIFY_WEB
 from app.utils.database import AsyncSessionLocal, AuthData, User, db
 from app.utils.scheduler import scheduler
 from app.utils.user.utils import get_student
+import app.keyboards.user.keyboards as kb
+
+
+logger = logging.getLogger(__name__)
 
 
 async def decode_token(token):
@@ -86,7 +92,7 @@ async def check_qr_login(session):
         return None
 
 
-async def refresh_token(user_id):
+async def refresh_token(user_id, bot: Bot):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             db.select(User).filter_by(user_id=user_id, active=True)
@@ -99,34 +105,49 @@ async def refresh_token(user_id):
             db.select(AuthData).filter_by(user_id=user_id, auth_method="password")
         )
         auth_data: AuthData = result.scalar_one_or_none()
+        
+        
+        try:
+            if auth_data:
+                token = await api.refresh_token(
+                    auth_data.token_for_refresh,
+                    auth_data.client_id,
+                    auth_data.client_secret,
+                )
+                if token:
+                    user.token = token
+                    auth_data.token_for_refresh = api.token_for_refresh
+                    need_update_date = await get_token_expire_date(api.token)
+                    auth_data.token_expired_at = need_update_date
+                    await session.commit()
 
-        if auth_data:
-            token = await api.refresh_token(
-                auth_data.token_for_refresh,
-                auth_data.client_id,
-                auth_data.client_secret,
-            )
-            if token:
-                user.token = token
-                auth_data.token_for_refresh = api.token_for_refresh
-                need_update_date = await get_token_expire_date(api.token)
-                auth_data.token_expired_at = need_update_date
-                await session.commit()
+                    schedule_refresh(user.user_id, need_update_date, bot)
+        except Exception as e:
+            logger.error(f'Error refreshing token for user {user.user_id}: {e}')
+            
+            try:
+                chat = await bot.get_chat(user.user_id)
+                await bot.send_message(
+                    chat_id=chat.id,
+                    text=f"❌ <b>Произошла ошибка при обновление токена доступа МЭШ</b>\nПожалуйста попробуйте авторизоваться заново",
+                    reply_markup=kb.delete_message,
+                )
+            except Exception as e:
+                pass
 
-                schedule_refresh(user.user_id, need_update_date)
 
 
-def schedule_refresh(user_id: int, expires_at: datetime):
+def schedule_refresh(user_id: int, expires_at: datetime, bot: Bot):
     job_id = f"refresh_token_{user_id}"
 
     if expires_at < datetime.now():
-        refresh_token(user_id)
+        refresh_token(user_id, bot)
     else:
         scheduler.add_job(
             refresh_token,
             "date",
             run_date=expires_at,
-            args=[user_id],
+            args=[user_id, bot],
             id=job_id,
             replace_existing=True,
         )
@@ -141,11 +162,11 @@ def delete_refresh_task(user_id):
         pass
 
 
-async def restore_refresh_tokens_jobs():
+async def restore_refresh_tokens_jobs(bot):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             db.select(AuthData).filter_by(auth_method="password")
         )
         tokens = result.scalars().all()
         for token in tokens:
-            schedule_refresh(token.user_id, token.token_expired_at)
+            schedule_refresh(token.user_id, token.token_expired_at, bot)

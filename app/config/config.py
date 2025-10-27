@@ -23,7 +23,8 @@ ERROR_500_MESSAGE = "❌ <b>Произошла ошибка</b>\nВнутрен�
 SUCCESSFUL_AUTH = "✅ <b>Успешная авторизация</b>\n\nВы вошли как <i>{0} {1} {2}</i>"
 UPDATE_NOTIFICATION_HEADER = "🚀 <b>Обновление</b>\n\n"
 UPDATE_NOTIFICATION_FOOTER = f"\n\n\n<i>Версия бота:</i> {BOT_VERSION}"
-NO_SUBSCRIPTION_ERROR = "📢 <b>Для использования бота необходимо подписаться на наш канал!</b>\n\nПосле подписки повторите команду"
+NO_SUBSCRIPTION_TO_CHANNEL_ERROR = "📢 <b>Для использования бота необходимо подписаться на наш канал!</b>\n\nПосле подписки повторите команду"
+NO_PREMIUM_ERROR = f'❌ <b>Ошибка</b>\n\nУ вас нет подписки <b>Learnify Premium</b> для доступа к этой функции'
 
 
 # LOAD
@@ -59,3 +60,9 @@ ALLOWED_USERS = list(map(int, env.list("ALLOWED_USERS", default=[])))
 ONLY_ALLOWED_USERS = env.bool('ONLY_ALLOWED_USERS', default=False)
 REDIS_HOST = env.str("REDIS_HOST", default="localhost")
 REDIS_PORT = env.int("REDIS_PORT", default=6379)
+
+MINIO_ROOT_USER=env.str("MINIO_ROOT_USER", default="minioadmin")
+MINIO_ROOT_PASSWORD=env.str("MINIO_ROOT_PASSWORD", default="minioadmin")
+MINIO_HOST=env.str("MINIO_HOST", default="localhost")
+MINIO_PORT=env.int("MINIO_PORT", default=9000)
+MINIO_BUCKET_NAME = env.str("MINIO_BUCKET_NAME", default="learnify_bot")

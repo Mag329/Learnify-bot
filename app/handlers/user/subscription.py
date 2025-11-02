@@ -58,11 +58,14 @@ async def subscription_page_handler(callback: CallbackQuery, state: FSMContext):
     else:
         text = (
             '💎 <b>Learnify Premium</b>\n\n'
-            'Раскрой весь потенциал бота с Premium-подпиской!\n\n'
+            'Раскройте весь потенциал бота с подпиской <b>Premium</b>!\n\n'
             f'<b>Баланс:</b> {premium_user.balance} ⭐️\n\n'
-            '✨ <b>Доступно:</b>\n'
-            '• Авто-ГДЗ — бот сам подгружает ответы для домашних заданий\n'
-            '• Поддержка развития проекта ❤️\n\n'
+            '✨ <b>Что доступно с Premium:</b>\n'
+            '• 🧠 <b>Авто-ГДЗ</b> — бот автоматически подгружает ответы для домашних заданий\n\n'
+            '• ⚡ <b>Быстрое ГДЗ</b> — быстрый доступ к ГДЗ по предмету через выбор номера или страницы\n\n'
+            '• 📖 <b>Электронные учебники</b> — быстрый доступ к электронной версии учебника\n\n'
+            '• ❤️ <b>Поддержка проекта</b> — вы помогаете развивать Learnify\n\n\n'
+            '<i>Некоторые функции требуют дополнительной настройки перед использованием</i>\n\n'
             '💰 <b>Стоимость:</b> 100 ⭐️ в месяц'
         )
     
@@ -81,9 +84,41 @@ async def get_subscription_handler(callback: CallbackQuery):
 async def subscription_plan_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = callback.data.split("_")
     type = data[3]
+
+    await state.update_data(type=type)
     
     async with AsyncSessionLocal() as session:
         result = await session.execute(db.select(PremiumSubscriptionPlan).filter_by(name=data[2]))
+        plan = result.scalar_one_or_none()
+        
+        await state.update_data(plan=plan.id)
+        
+        text = (
+            '⚠️ <b>Важная информация перед оплатой подписки</b>\n\n'
+            'Пожалуйста, обратите внимание, что <b>отмена подписки не предусмотрена</b>.\n'
+            'Если вы столкнулись с ошибками, некорректной работой бота или неполнотой предоставляемых услуг, '
+            'необходимо обратиться к разработчику для решения проблемы.\n\n'
+            '📌 Контакты разработчика доступны во вкладке <b>«О боте»</b>.\n\n'
+            'Мы всегда готовы помочь и постараемся решить любые вопросы как можно быстрее. '
+            'Оплата подразумевает ваше согласие с этими условиями.'
+        )
+        
+        await callback.answer()
+        await callback.message.edit_text(text, reply_markup=kb.confirm_pay)
+        
+
+@router.callback_query(F.data == "confirm_pay")
+async def confirm_pay_handler(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    
+    if not (data.get('plan') or data.get('type')):
+        await callback.message.answer()
+        await callback.message.edit_text('💎 <b>Learnify Premium</b>\n\nВыберите тарифный план', reply_markup=await kb.choose_subscription_plan('myself'))
+    
+    type = data.get('type')
+    
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(db.select(PremiumSubscriptionPlan).filter_by(id=data.get('plan')))
         plan = result.scalar_one_or_none()
         
         result = await session.execute(db.select(PremiumSubscription).filter_by(user_id=callback.from_user.id))
@@ -95,7 +130,7 @@ async def subscription_plan_handler(callback: CallbackQuery, state: FSMContext, 
             await callback.message.answer_invoice(
                 title="Learnify Premium",
                 description=f"Learnify Premium на {plan.text_name}",
-                prices=[LabeledPrice(label='Оплата подписки', amount=plan.price)],
+                prices=[LabeledPrice(label='Оплата подписки', amount=plan.price-user.balance)],
                 provider_token='',
                 payload=payload,
                 currency='XTR',
@@ -528,3 +563,20 @@ async def student_book_handler(callback: CallbackQuery):
             await callback.message.answer('❌ <b>Ошибка при получении файла</b>', reply_markup=kb.delete_message)
         except Exception as e:
             await callback.message.answer('⚠️ <b>Непредвиденная ошибка</b>', reply_markup=kb.delete_message)
+            
+            
+            
+@router.callback_query(F.data == 'offer_contract')
+async def offer_contract_handler(callback: CallbackQuery):
+    text = (
+        '📄 <b>Договор оферты</b>\n\n'
+        '1️⃣ Оплата подписки на <b>Learnify Premium</b> является акцептом настоящей оферты.\n\n'
+        '2️⃣ Оплата подразумевает ваше согласие с тем, что <b>отмена подписки не предусмотрена</b>.\n\n'
+        '3️⃣ В случае ошибок, некорректной работы бота или неполноты предоставляемых услуг, '
+        'вы имеете право обратиться к разработчику для решения проблемы.\n\n'
+        '4️⃣ Контакты разработчика доступны во вкладке <b>«О боте»</b>.\n\n'
+        '5️⃣ Все спорные вопросы решаются в досудебном порядке путем переговоров.\n\n\n'
+        'Оплата подписки подтверждает ваше согласие с данными условиями.\n\n'
+    )
+        
+    await callback.message.answer(text, reply_markup=kb.back_to_menu)

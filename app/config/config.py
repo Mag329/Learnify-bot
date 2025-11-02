@@ -5,6 +5,8 @@ BOT_VERSION = "1.9.0 (pre-release 2)"
 DEVELOPER = "@Mag329"
 DEVELOPER_SITE = "https://mag329.tech"
 
+BUG_REPORT_URL = 'https://forms.gle/X55ZfURLosXAG5Yw5'
+
 
 # Other
 BASE_QUARTER = 1

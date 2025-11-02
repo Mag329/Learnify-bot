@@ -2,7 +2,7 @@ from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
                            KeyboardButton)
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
-from app.config.config import LEARNIFY_API_TOKEN, LEARNIFY_WEB
+from app.config.config import BUG_REPORT_URL, LEARNIFY_API_TOKEN, LEARNIFY_WEB
 from app.utils.database import (AsyncSessionLocal, PremiumSubscription, PremiumSubscriptionPlan,
                                 Settings, db)
 from app.utils.user.utils import get_emoji_subject, get_student
@@ -137,15 +137,6 @@ notifications_all = InlineKeyboardMarkup(
     ]
 )
 
-# menu = InlineKeyboardMarkup(
-#     inline_keyboard=[
-#         [InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits")],
-#         [InlineKeyboardButton(text="👤 Профиль", callback_data="profile")],
-#         [InlineKeyboardButton(text="📈 Рейтинг", callback_data="rating_rank_class")],
-#         [InlineKeyboardButton(text="🏆 Итоги", callback_data="results")],
-#         [InlineKeyboardButton(text="💳 Подписка", callback_data="subscription_page")],
-#     ]
-# )
 
 visits = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -334,6 +325,20 @@ set_student_book = InlineKeyboardMarkup(
 )
 
 
+confirm_pay = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="💳 Оплатить", callback_data="confirm_pay"
+            ),
+            InlineKeyboardButton(
+                text="↪️ Назад", callback_data="back_to_menu"
+            ),
+        ],
+    ]
+)
+
+
 async def main(user_id):
     keyboard = ReplyKeyboardBuilder()
 
@@ -463,6 +468,7 @@ async def build_settings_nav_keyboard(
                 )
 
     keyboard.row(InlineKeyboardButton(text="🤖 О боте", callback_data="about_bot"))
+    keyboard.row(InlineKeyboardButton(text="🪲 Нашли ошибку?", url=BUG_REPORT_URL))
 
     keyboard.row(
         InlineKeyboardButton(
@@ -495,12 +501,6 @@ async def subscription_keyboard(user_id, subscription):
                     callback_data="subscription_settings"
                 )
             )
-            keyboard.row(
-                InlineKeyboardButton(
-                    text="↪️ Назад", 
-                    callback_data="back_to_menu"
-                )
-            )
         else:
             keyboard.row(
                 InlineKeyboardButton(
@@ -512,12 +512,20 @@ async def subscription_keyboard(user_id, subscription):
                     callback_data="give_subscription"
                 )
             )
-            keyboard.row(
-                InlineKeyboardButton(
-                    text="↪️ Назад", 
-                    callback_data="back_to_menu"
-                )
+        
+        keyboard.row(
+            InlineKeyboardButton(
+                text="📄 Договор оферты",
+                callback_data="offer_contract" 
             )
+        )
+            
+        keyboard.row(
+            InlineKeyboardButton(
+                text="↪️ Назад", 
+                callback_data="back_to_menu"
+            )
+        )
         
         return keyboard.as_markup()
     

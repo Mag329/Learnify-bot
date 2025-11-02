@@ -28,11 +28,13 @@ from app.utils.user.api.learnify.subscription import restore_renew_subscription_
 env = Env()
 env.read_envfile()
 
+
 bot = Bot(
     token=env.str("TOKEN"),
     default=DefaultBotProperties(
         parse_mode=ParseMode.HTML, link_preview_is_disabled=True
-    ),
+    )
+    
 )
 dp = Dispatcher(storage=MemoryStorage())
 

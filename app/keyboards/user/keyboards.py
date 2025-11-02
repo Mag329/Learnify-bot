@@ -282,6 +282,16 @@ back_to_subscription_settings = InlineKeyboardMarkup(
     ]
 )
 
+back_to_subscription_menu = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="↪️ Назад", callback_data="subscription_page"
+            )
+        ]
+    ]
+)
+
 choose_search_by_auto_gdz = InlineKeyboardMarkup(
     inline_keyboard=[
         [
@@ -290,11 +300,11 @@ choose_search_by_auto_gdz = InlineKeyboardMarkup(
                 callback_data=f"auto_gdz_change_search_by_pages"
             ),
             InlineKeyboardButton(
-                text='Номерам',
+                text='Номера',
                 callback_data=f"auto_gdz_change_search_by_numbers"
             ),
             InlineKeyboardButton(
-                text='Параграфам',
+                text='Параграфы',
                 callback_data=f"auto_gdz_change_search_by_paragraphs"
             )
         ]

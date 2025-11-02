@@ -11,12 +11,14 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from envparse import Env
 from pytz import timezone
 
+from app.handlers.user.premium import gdz, subscription
 import app.keyboards.user.keyboards as kb
 from app.config.config import *
 from app.handlers.admin import panel, payment
 from app.handlers.user import (auth, homeworks, inline_mode, marks, menu,
                                notifications, other, results, schedule,
-                               settings, subscription, gdz)
+                               settings)
+from app.handlers.user.premium import router as premium_router
 from app.middlewares.middlewares import AllowedUsersMiddleware, CheckSubscription, LoggingMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
@@ -83,8 +85,7 @@ async def main():
     dp.include_router(menu.router)
     dp.include_router(results.router)
     if LEARNIFY_API_TOKEN:
-        dp.include_router(subscription.router)
-        dp.include_router(gdz.router)
+        dp.include_router(premium_router)
     # dp.include_router(inline_mode.router)
 
     # Admin

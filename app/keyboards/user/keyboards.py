@@ -24,11 +24,11 @@ choice_auth_variant = InlineKeyboardMarkup(
                 text="🔐 Войти по токену", callback_data="auth_with_token"
             )
         ],
-        [
-            InlineKeyboardButton(
-                text="📷 Войти по QR-коду", callback_data="auth_with_qr"
-            )
-        ],
+        # [
+        #     InlineKeyboardButton(
+        #         text="📷 Войти по QR-коду", callback_data="auth_with_qr"
+        #     )
+        # ],
     ]
 )
 

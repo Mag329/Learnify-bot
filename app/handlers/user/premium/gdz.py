@@ -47,7 +47,7 @@ async def subject_homework_callback_handler(callback: CallbackQuery, state: FSMC
             )
             return await callback.message.answer(text, reply_markup=kb.set_auto_gdz_links)
 
-        await callback.message.edit_text('⚡️ <b>Быстрое ГДЗ</b>', reply_markup=await kb.quick_gdz(subject_id, gdz_info.book_url, gdz_info.search_by))
+        await callback.message.answer('⚡️ <b>Быстрое ГДЗ</b>', reply_markup=await kb.quick_gdz(subject_id, gdz_info.book_url, gdz_info.search_by))
         
         
 @router.callback_query(F.data.startswith("choose_quick_gdz_"))

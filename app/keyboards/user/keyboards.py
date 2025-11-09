@@ -91,6 +91,22 @@ subject_homework = InlineKeyboardMarkup(
     ]
 )
 
+subject_homework_with_close = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="⬅️", callback_data="subject_homework_left"),
+            InlineKeyboardButton(text="📅", callback_data="subject_homework_today"),
+            InlineKeyboardButton(text="➡️", callback_data="subject_homework_right"),
+        ],
+        [
+            InlineKeyboardButton(
+                text="📚 Выбрать предмет", callback_data="choose_subject_homework"
+            ),
+        ],
+        [InlineKeyboardButton(text=f"Закрыть", callback_data=f"delete_message")],
+    ]
+)
+
 schedule = InlineKeyboardMarkup(
     inline_keyboard=[
         [
@@ -122,6 +138,17 @@ subject_marks = InlineKeyboardMarkup(
             ),
         ],
         [InlineKeyboardButton(text=f"↪️ Назад", callback_data=f"back_to_marks")],
+    ]
+)
+
+subject_marks_with_close = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="📚 Выбрать предмет", callback_data="choose_subject_marks"
+            ),
+        ],
+        [InlineKeyboardButton(text=f"Закрыть", callback_data=f"delete_message")],
     ]
 )
 
@@ -631,13 +658,13 @@ async def subject_menu(subject_id, date):
             ),
             InlineKeyboardButton(
                 text="🏠 ДЗ",
-                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}"
+                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}_new"
             )
         )
         keyboard.row(
             InlineKeyboardButton(
                 text="🎯 Оценки",
-                callback_data=f"select_subject_marks_{subject_id}"
+                callback_data=f"select_subject_marks_{subject_id}_new"
             ),
             InlineKeyboardButton(
                 text="📖 Учебник",
@@ -648,11 +675,11 @@ async def subject_menu(subject_id, date):
         keyboard.row(
             InlineKeyboardButton(
                 text="🏠 ДЗ",
-                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}"
+                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}_new"
             ),
             InlineKeyboardButton(
                 text="🎯 Оценки",
-                callback_data=f"select_subject_marks_{subject_id}"
+                callback_data=f"select_subject_marks_{subject_id}_new"
             )
         )
     keyboard.row(

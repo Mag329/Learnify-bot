@@ -420,8 +420,6 @@ async def deep_links(message: Message, args, bot: Bot, state: FSMContext):
             await message.answer(text='✅ <b>Выдача завершена</b>', reply_markup=kb.delete_message)
             
     elif args.startswith("subject-menu-"):
-        from app.utils.user.api.mes.homeworks import handle_homework_navigation
-        
         subject_id = int(args.split("-")[2])
         date = datetime.strptime(args.split("-")[3], "%d_%m_%Y")
         

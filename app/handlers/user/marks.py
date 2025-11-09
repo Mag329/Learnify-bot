@@ -76,7 +76,9 @@ async def back_to_marks_callback_handler(callback: CallbackQuery, state: FSMCont
     
 @router.callback_query(F.data.startswith("select_subject_marks_"))
 async def subject_marks_callback_handler(callback: CallbackQuery, state: FSMContext):
-    subject_id = int(callback.data.split("_")[-1])
+    data = callback.data.split("_")
+    subject_id = int(data[3])
+    new_message = True if data[-1] == "new" else False
 
     await state.update_data(subject_id=subject_id)
 
@@ -87,7 +89,7 @@ async def subject_marks_callback_handler(callback: CallbackQuery, state: FSMCont
     await callback.answer()
 
     if text:
-        await callback.message.edit_text(
-            text,
-            reply_markup=kb.subject_marks,
-        )
+        if new_message:
+            await callback.message.answer(text, reply_markup=kb.subject_marks_with_close)
+        else:
+            await callback.message.edit_text(text, reply_markup=kb.subject_marks)

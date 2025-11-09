@@ -83,6 +83,7 @@ async def back_to_homework_callback_handler(callback: CallbackQuery, state: FSMC
 async def subject_homework_callback_handler(callback: CallbackQuery, state: FSMContext):
     data = callback.data.split("_")
     subject_id = int(data[3])
+    new_message = True if data[-1] == "new" else False
     
     date = datetime.strptime(data[4], "%d-%m-%Y") if data[4] else datetime.now()
 
@@ -96,10 +97,10 @@ async def subject_homework_callback_handler(callback: CallbackQuery, state: FSMC
     await callback.answer()
 
     if text:
-        await callback.message.edit_text(
-            text,
-            reply_markup=kb.subject_homework,
-        )
+        if new_message:
+            await callback.message.answer(text, reply_markup=kb.subject_homework_with_close)
+        else:
+            await callback.message.edit_text(text, reply_markup=kb.subject_homework)
 
 
 @router.callback_query(

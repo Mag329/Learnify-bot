@@ -1,9 +1,9 @@
 from miniopy_async import Minio
 
-from app.config.config import MINIO_HOST, MINIO_PORT, MINIO_ROOT_PASSWORD, MINIO_ROOT_USER, MINIO_BUCKET_NAME
+from app.config.config import MINIO_HOST, MINIO_INTERNAL_PORT, MINIO_ROOT_PASSWORD, MINIO_ROOT_USER, MINIO_BUCKET_NAME
 
 client = Minio(
-    f'{MINIO_HOST}:{MINIO_PORT}',
+    f'{MINIO_HOST}:{MINIO_INTERNAL_PORT}',
     access_key=MINIO_ROOT_USER,
     secret_key=MINIO_ROOT_PASSWORD,
     secure=False

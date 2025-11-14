@@ -48,14 +48,6 @@ DEFAULT_CACHE_TTL = env.int("DEFAULT_CACHE_TTL")
 CHANNEL_ID = env.int("CHANNEL_ID", default=None)
 DEV = env.bool("DEV")
 
-if LEARNIFY_API_TOKEN:
-    SUBS_PRICE_DAY = env.int("SUBS_PRICE_DAY", default=5)
-    SUBS_PRICE_WEEK = env.int("SUBS_PRICE_WEEK", default=30)
-    SUBS_PRICE_MONTH = env.int("SUBS_PRICE_MONTH", default=100)
-    SUBS_PRICE_YEAR = env.int("SUBS_PRICE_YEAR", default=1000)
-else:
-    SUBS_PRICE_DAY = SUBS_PRICE_WEEK = SUBS_PRICE_MONTH = SUBS_PRICE_YEAR = 0
-
 
 BOT_USERNAME = None
 ALLOWED_USERS = list(map(int, env.list("ALLOWED_USERS", default=[])))
@@ -66,5 +58,5 @@ REDIS_PORT = env.int("REDIS_PORT", default=6379)
 MINIO_ROOT_USER=env.str("MINIO_ROOT_USER", default="minioadmin")
 MINIO_ROOT_PASSWORD=env.str("MINIO_ROOT_PASSWORD", default="minioadmin")
 MINIO_HOST=env.str("MINIO_HOST", default="localhost")
-MINIO_PORT=env.int("MINIO_PORT", default=9000)
+MINIO_INTERNAL_PORT=env.int("MINIO_INTERNAL_PORT", default=9000)
 MINIO_BUCKET_NAME = env.str("MINIO_BUCKET_NAME", default="learnify_bot")

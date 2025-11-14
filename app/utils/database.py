@@ -157,6 +157,7 @@ class PremiumSubscriptionPlan(Base):
     price = db.Column(db.Integer, nullable=False)
     duration = db.Column(db.Integer, nullable=False)
     ordering = db.Column(db.Integer, default=0)
+    show_in_menu = db.Column(db.Boolean, default=True)
     
     subscriptions = relationship("PremiumSubscription", back_populates="plan_obj")
     

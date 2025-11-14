@@ -104,7 +104,7 @@ async def subscription_plan_handler(callback: CallbackQuery, state: FSMContext, 
         )
         
         await callback.answer()
-        await callback.message.edit_text(text, reply_markup=kb.confirm_pay)
+        await callback.message.answer(text, reply_markup=kb.confirm_pay)
         
 
 @router.callback_query(F.data == "confirm_pay")
@@ -252,8 +252,6 @@ async def username_for_gift_handler(message: Message, state: FSMContext, bot: Bo
         
         await bot.edit_message_text(chat_id=message.from_user.id, message_id=data["main_message_id"], text=text,  reply_markup=kb.back_to_menu)
 
-       
-
 
 @router.message(F.text, StateFilter(ChooseUserForGiftState.description))
 async def description_for_gift_handler(message: Message, state: FSMContext, bot: Bot):
@@ -273,297 +271,13 @@ async def description_for_gift_handler(message: Message, state: FSMContext, bot:
     )
     
     await bot.edit_message_text(chat_id=message.from_user.id, message_id=data["main_message_id"], text=text,  reply_markup=await kb.choose_subscription_plan(f'gift-{data['user_id']}'))
-    
-
-@router.callback_query(F.data == 'subscription_settings')
-async def subscription_settings_handler(callback: CallbackQuery):
-    text = '🎁 <b>Настройки подписки</b>'
-    
-    await callback.answer()
-    await callback.message.edit_text(text, reply_markup=await kb.subscription_settings(callback.from_user.id))
-    
-    
-    
-@router.callback_query(F.data == 'subscription_setting_auto_renew')
-async def subscription_setting_auto_renew_handler(callback: CallbackQuery):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(PremiumSubscription).filter_by(user_id=callback.from_user.id))
-        user = result.scalar_one_or_none()
-        if user:
-            user.auto_renew = not user.auto_renew
-            await session.commit()
-
-            return await subscription_settings_handler(callback)
-        
-
-@router.callback_query(F.data == 'subscription_setting_auto_gdz')
-async def subscription_setting_auto_gdz_handler(callback: CallbackQuery):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(Gdz).filter_by(user_id=callback.from_user.id))
-        gdzs = result.scalars().all()
-        
-        text = (
-            f"⚡ <b>Настройки авто-ГДЗ</b>\n\n"
-            f"📚 Укажите ссылки на ГДЗ, которые хотите автоматизировать\n\n"
-            f"🔗 <b>Текущие предметы:</b>\n"
-            f"{'• ' + '\n• '.join([gdz.subject_name for gdz in gdzs]) if gdzs else '— пока ничего не добавлено —'}\n\n"
-            f"👇 Выберите предмет ниже, чтобы изменить или добавить ссылку"
-        )
-
-        
-        await callback.answer()
-        await callback.message.edit_text(text=text, reply_markup=await kb.choice_subject(callback.from_user.id, 'auto_gdz'))
-
-    
-@router.callback_query(F.data.startswith('select_subject_auto_gdz_'))
-async def select_subject_auto_gdz_handler(callback: CallbackQuery, state: FSMContext):
-    subject_id = int(callback.data.split('_')[-1])
-    
-    text = (
-        f"⚡ <b>Настройки авто-ГДЗ</b>\n\n"
-    )
-    
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(Gdz).filter_by(user_id=callback.from_user.id, subject_id=subject_id))
-        subject_gdz = result.scalar_one_or_none()
-        if subject_gdz:
-            search_by = {
-                'pages': 'страницам',
-                'numbers': 'номерам',
-                'paragraphs': 'параграфам'
-            }
-            
-            text  += (
-                f"📚 <b>{subject_gdz.subject_name}</b>\n"
-                f"🔗 <i>{subject_gdz.book_url}</i>\n"
-                f'<b>Поиск по:</b> {search_by.get(subject_gdz.search_by, "неизвестному типу")}\n\n'
-                f"👇 Выберите действие:"
-            )
-            
-            await callback.answer()
-            return await callback.message.edit_text(text=text, reply_markup=await kb.auto_gdz_settings(subject_gdz=subject_gdz))
-        else:
-            api, user = await get_student(callback.from_user.id)
-            subjects = await api.get_subjects(
-                student_id=user.student_id, profile_id=user.profile_id
-            )
-            subject_name = next(
-                (subject.subject_name for subject in subjects.payload if subject.subject_id == subject_id),
-                "Неизвестный предмет"
-            )
-            
-            text += (
-                f"📚 <b>{subject_name}</b>\n\n"
-                f"🔗 Выберите ссылку для автоматизации ГДЗ (gdz.ru)\n\n"
-            )
-            await state.update_data(subject_id=subject_id)
-            await state.update_data(subject_name=subject_name)
-            await state.update_data(main_message_id=callback.message.message_id)
-            await state.set_state(SelectGdzUrlState.link)
-            
-            await callback.answer()
-            await callback.message.edit_text(text=text, reply_markup=kb.back_to_subscription_settings)
-                
-                
-@router.message(F.text, StateFilter(SelectGdzUrlState.link))
-async def select_gdz_url_handler(message: Message, state: FSMContext, bot: Bot):
-    url = message.text.strip()
-    if 'https://' not in url or 'gdz.ru' not in url:
-        return await message.answer('❌ <b>Неверный формат ссылки</b>\nСсылка должна начинаться с <i>https://gdz.ru</i>', reply_markup=kb.back_to_subscription_settings)
-    
-    data = await state.get_data()
-    await state.update_data(url=url)
-    
-    await message.delete()
-    
-    text = (
-        f"⚡ <b>Настройки авто-ГДЗ</b>\n\n"
-        f"📚 <b>{data['subject_name']}</b>\n"
-        f"🔗 <i>{url}</i>\n\n"
-        f"👇 Выберите тип поиска"
-    )
-    
-    await state.set_state(None)
-    
-    await bot.edit_message_text(chat_id=message.from_user.id, message_id=data["main_message_id"], text=text,  reply_markup=kb.choose_search_by_auto_gdz)
-    
-@router.callback_query(F.data.startswith('auto_gdz_change_search_by_'))
-async def auto_gdz_change_search_by_handler(callback: CallbackQuery, state: FSMContext):
-    search_by = callback.data.split('_')[-1]
-    if search_by not in ['pages', 'numbers', 'paragraphs']:
-        return await callback.answer('❌ <b>Неверный формат данных</b>', show_alert=True)
-    
-    data = await state.get_data()
-    
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(Gdz).filter_by(user_id=callback.from_user.id, subject_id=data['subject_id']))
-        subject_gdz = result.scalar_one_or_none()
-        
-        if subject_gdz:
-            subject_gdz.book_url = data['url']
-            subject_gdz.search_by = search_by
-        else:
-            subject_gdz = Gdz(
-                user_id=callback.from_user.id,
-                subject_id=data['subject_id'],
-                subject_name=data['subject_name'],
-                book_url=data['url'],
-                search_by=search_by
-            )
-            session.add(subject_gdz)
-        await session.commit()
-
-        await callback.answer()
-        return await subscription_setting_auto_gdz_handler(callback)
-    
-
-@router.callback_query(F.data.startswith('change_auto_gdz_'))
-async def change_auto_gdz_handler(callback: CallbackQuery, state: FSMContext):
-    subject_id = int(callback.data.split('_')[-1])
-    
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(Gdz).filter_by(user_id=callback.from_user.id, subject_id=subject_id))
-        subject_gdz = result.scalar_one_or_none()
-    
-    text = (
-        f"📚 <b>{subject_gdz.subject_name}</b>\n\n"
-        f"🔗 Выберите ссылку для автоматизации ГДЗ\n\n"
-    )
-    await state.update_data(subject_id=subject_id)
-    await state.update_data(subject_name=subject_gdz.subject_name)
-    await state.update_data(main_message_id=callback.message.message_id)
-    await state.set_state(SelectGdzUrlState.link)
-    
-    await callback.answer()
-    await callback.message.edit_text(text=text, reply_markup=kb.back_to_subscription_settings)
                 
 
 @router.callback_query(F.data == 'back_to_auto_gdz')
 @router.callback_query(F.data == 'back_to_book')
 async def back_to_auto_gdz_handler(callback: CallbackQuery, state: FSMContext):
+    from .settings import subscription_settings_handler
     return await subscription_settings_handler(callback)
-
-
-@router.callback_query(F.data == 'student_book_settings')
-async def student_book_settings_handler(callback: CallbackQuery):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(StudentBook).filter_by(user_id=callback.from_user.id))
-        books = result.scalars().all()
-        
-        text = (
-            f"📖 <b>Настройка электронных учебников</b>\n\n"
-            f"📚 Отправьте файлы учебников для быстрого доступа к ним\n\n"
-            f"🔗 <b>Текущие предметы:</b>\n"
-            f"{'• ' + '\n• '.join([book.subject_name for book in books]) if books else '— пока ничего не добавлено —'}\n\n"
-            f"👇 Выберите предмет ниже, чтобы изменить или добавить файл учебника"
-        )
-
-        
-        await callback.answer()
-        await callback.message.edit_text(text=text, reply_markup=await kb.choice_subject(callback.from_user.id, 'book'))
-        
-        
-@router.callback_query(F.data.startswith('select_subject_book_'))
-async def select_subject_auto_gdz_handler(callback: CallbackQuery, state: FSMContext):
-    subject_id = int(callback.data.split('_')[-1])
-    
-    await state.update_data(subject_id=subject_id)
-    await state.set_state(SelectBookState.file)
-    
-    await callback.message.edit_text('📖 <b>Отправьте файл учебника</b>', reply_markup=kb.delete_message)
-    
-@router.message(F.document)
-async def select_book_handler(message: Message, state, bot):
-    data = await state.get_data()
-    subject_id = data.get("subject_id")
-
-    if not subject_id:
-        await message.answer("❌ <b>Предмет не найден</b>\nПопробуйте выбрать его заново")
-        return
-
-    api, user = await get_student(message.from_user.id)
-    subjects = await api.get_subjects(
-        student_id=user.student_id, profile_id=user.profile_id
-    )
-    subject_name = next(
-        (subject.subject_name for subject in subjects.payload if subject.subject_id == subject_id),
-        "Неизвестный предмет"
-    )
-
-    _, ext = os.path.splitext(message.document.file_name)
-    ext = ext.lower() or ".pdf"
-    safe_name = sanitize_filename(subject_name)
-    object_name = f"{message.from_user.id}/{subject_id}/{safe_name}{ext}"
-
-    file = await bot.get_file(message.document.file_id)
-    file_path = f"temp_{safe_name}{ext}"
-
-    with open(file_path, "wb") as f:
-        await bot.download_file(file.file_path, f)
-
-    try:
-        await minio_client.fput_object(MINIO_BUCKET_NAME, object_name, file_path)
-        
-        async with AsyncSessionLocal() as session:
-            book = StudentBook(
-                user_id=message.from_user.id,
-                subject_id=subject_id,
-                subject_name=subject_name,
-                file=object_name
-            )
-            session.add(book)
-            await session.commit()
-        
-        await message.answer("✅ Файл успешно загружен", reply_markup=kb.back_to_subscription_settings)
-
-    except S3Error as e:
-        await message.reply(f"❌ <b>Ошибка при загрузке файла</b>")
-    finally:
-        try:
-            os.remove(file_path)
-        except FileNotFoundError:
-            pass
-        
-        
-        
-@router.callback_query(F.data.startswith('student_book_'))
-async def student_book_handler(callback: CallbackQuery):
-    subject_id = int(callback.data.split('_')[-1])
-    
-    await callback.answer()
-    
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(PremiumSubscription).filter_by(user_id=callback.from_user.id))
-        premium_user = result.scalar_one_or_none()
-        
-        if not premium_user or not premium_user.is_active:
-            await callback.message.answer(NO_PREMIUM_ERROR, reply_markup=kb.get_premium)
-            return
-        
-        result = await session.execute(
-            db.select(StudentBook).filter_by(user_id=callback.from_user.id, subject_id=subject_id)
-        )
-        book = result.scalar_one_or_none()
-
-        if not book:
-            await callback.message.answer("❌ <b>Учебник не найден</b>", reply_markup=kb.set_student_book)
-            return
-
-        try:
-            response = await minio_client.get_object(MINIO_BUCKET_NAME, book.file)
-            data = await response.read()
-            await response.release()
-            
-            file_name = book.file.split("/")[-1]
-
-            file = BufferedInputFile(data, filename=file_name)
-            await callback.message.answer_document(document=file)
-
-        except S3Error as e:
-            await callback.message.answer('❌ <b>Ошибка при получении файла</b>', reply_markup=kb.delete_message)
-        except Exception as e:
-            await callback.message.answer('⚠️ <b>Непредвиденная ошибка</b>', reply_markup=kb.delete_message)
-            
             
             
 @router.callback_query(F.data == 'offer_contract')
@@ -578,5 +292,5 @@ async def offer_contract_handler(callback: CallbackQuery):
         '5️⃣ Все спорные вопросы решаются в досудебном порядке путем переговоров.\n\n\n'
         'Оплата подписки подтверждает ваше согласие с данными условиями.\n\n'
     )
-        
-    await callback.message.answer(text, reply_markup=kb.back_to_menu)
+    await callback.answer()
+    await callback.message.answer(text, reply_markup=kb.delete_message)

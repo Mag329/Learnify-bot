@@ -608,7 +608,7 @@ async def choose_subscription_plan(type):
     keyboard = InlineKeyboardBuilder()
     if LEARNIFY_API_TOKEN:
         async with AsyncSessionLocal() as session:
-            result = await session.execute(db.select(PremiumSubscriptionPlan).order_by(PremiumSubscriptionPlan.ordering))
+            result = await session.execute(db.select(PremiumSubscriptionPlan).filter_by(show_in_menu=True).order_by(PremiumSubscriptionPlan.ordering))
             plans = result.scalars().all()
             
         for plan in plans:

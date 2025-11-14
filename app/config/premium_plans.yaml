@@ -4,6 +4,7 @@
   price: 5
   duration: 1
   ordering: 1
+  show_in_menu: true
 
 - name: week
   title: неделя
@@ -11,6 +12,7 @@
   price: 30
   duration: 7
   ordering: 2
+  show_in_menu: true
 
 - name: month
   title: месяц
@@ -18,6 +20,7 @@
   price: 100
   duration: 30
   ordering: 3
+  show_in_menu: true
 
 - name: year
   title: год
@@ -25,3 +28,12 @@
   price: 1000
   duration: 365
   ordering: 4
+  show_in_menu: true
+
+- name: 3_days
+  title: 3 дня
+  text_name: 3 дня
+  price: -1
+  duration: 3
+  ordering: -1
+  show_in_menu: false

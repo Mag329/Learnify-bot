@@ -58,15 +58,31 @@ async def subject_homework_callback_handler(callback: CallbackQuery, state: FSMC
     await state.update_data(subject_id=subject_id)
     await state.set_state(QuickGdzState.number)
     
+    job_id = f"clear_state_{callback.from_user.id}"
+    
+    existing_job = scheduler.get_job(job_id)
+    if existing_job:
+        scheduler.remove_job(job_id)
+    
     scheduler.add_job(
         clear_state_if_still_waiting,
         args=[state],
         trigger='date',
         run_date=datetime.now() + timedelta(minutes=2),
-        id=f"clear_state_{callback.from_user.id}",
+        id=job_id,
     )
     
-    await callback.message.edit_text(f'✏️ <b>Введите номер страницы ГДЗ</b>', reply_markup=kb.delete_message)
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(db.select(Gdz.search_by).filter_by(user_id=callback.from_user.id, subject_id=subject_id))
+        search_by = result.scalar_one_or_none()
+    
+    search_by_list = {
+        'pages': 'страницы',
+        'numbers': 'задания',
+        'paragraphs': 'параграфа'
+    }
+    
+    await callback.message.edit_text(f'✏️ <b>Введите номер {search_by_list.get(search_by, 'задания')} для открытия ГДЗ</b>', reply_markup=kb.delete_message)
         
 
 @router.message(StateFilter(QuickGdzState.number))

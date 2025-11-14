@@ -376,7 +376,7 @@ async def successful_payment(user_id, message, telegram_payment_id, payload, dat
                 result, msg = await create_subscription(session=session, user_id=user_id, plan=plan, premium_user=premium_user)
 
                 if msg:
-                    await message.answer(f'❌ <b>Произошла ошибка:</b>\n{msg}')
+                    return await message.answer(f'❌ <b>Произошла ошибка:</b>\n{msg}')
                 
                 text = (
                     "✅ <b>Подписка успешно оформлена!</b>\n\n"

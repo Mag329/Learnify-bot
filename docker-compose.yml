@@ -122,7 +122,7 @@ services:
   
   minio:
     image: minio/minio
-    container_name: minio
+    container_name: learnify_bot_minio
     ports:
       - "9000:9000"
       - "9001:9001"

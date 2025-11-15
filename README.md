@@ -6,7 +6,7 @@
   <p>
     <img src="https://img.shields.io/github/languages/top/Mag329/Learnify-bot?style=flat-square" alt="Top language" />
     <a href="https://wakatime.com/@Mag329/projects/ccorspbpjf?start=2025-07-18&end=2025-07-24">
-    <img src="https://wakatime.com/badge/user/018b919c-8ec9-4a53-9254-f550cb396443/project/f4f0b31e-7d19-4606-b5af-b56580882357.svg?style=flat-square" alt="wakatime" />
+    <img src="https://wakatime.com/badge/user/018b919c-8ec9-4a53-9254-f550cb396443/project/8c72416b-0bfb-4f0d-ae9d-2e9a92e45935.svg?style=flat-square" alt="wakatime" />
     </a>
   </p>
   <p>

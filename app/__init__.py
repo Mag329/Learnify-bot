@@ -19,7 +19,7 @@ from app.handlers.user import (auth, homeworks, inline_mode, marks, menu,
                                notifications, other, results, schedule,
                                settings)
 from app.handlers.user.premium import router as premium_router
-from app.middlewares.middlewares import AllowedUsersMiddleware, CheckSubscription, LoggingMiddleware
+from app.middlewares.middlewares import AllowedUsersMiddleware, CheckSubscription, LoggingMiddleware, UpdateUsernameMiddleware
 from app.middlewares.stats import StatsMiddleware
 from app.utils.database import Base, engine_db, run_migrations
 from app.utils.misc import (create_premium_subscription_plans_if_not_exists,
@@ -98,6 +98,7 @@ async def main():
     dp.update.middleware(LoggingMiddleware())
     dp.update.middleware(StatsMiddleware())
     dp.update.middleware(CheckSubscription())
+    dp.update.middleware(UpdateUsernameMiddleware())
     
     if ONLY_ALLOWED_USERS:
         dp.update.middleware(AllowedUsersMiddleware())

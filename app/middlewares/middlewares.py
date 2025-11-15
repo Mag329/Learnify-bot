@@ -8,6 +8,7 @@ from envparse import env
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import ALLOWED_USERS, LOG_FILE, NO_SUBSCRIPTION_TO_CHANNEL_ERROR
+from app.utils.database import AsyncSessionLocal, UserData, db
 from app.utils.misc import check_subscription
 from app.utils.user.utils import user_send_message
 
@@ -96,3 +97,26 @@ class AllowedUsersMiddleware(BaseMiddleware):
             return await handler(event, data)
         else:
             logging.info(f'User {user_id} is not allowed')
+            
+            
+class UpdateUsernameMiddleware(BaseMiddleware):
+    async def __call__(self,
+                        handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+                        event: TelegramObject,
+                        data: Dict[str, Any]):
+        if event.message:
+            user_id = event.message.from_user.id
+            username = event.message.from_user.username
+        elif event.callback_query:
+            user_id = event.callback_query.from_user.id
+            username = event.callback_query.from_user.username
+            
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(db.select(UserData).filter_by(user_id=user_id))
+            user_data: UserData = result.scalar_one_or_none()
+            if user_data and user_data.username != username:
+                if username:
+                    user_data.username = username
+                    await session.commit()
+                    return await handler(event, data)
+            return await handler(event, data)

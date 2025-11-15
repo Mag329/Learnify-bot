@@ -7,8 +7,8 @@ from aiogram.exceptions import TelegramBadRequest
 from app.config import config
 from app.utils.admin.utils import admin_required
 import app.keyboards.user.keyboards as kb
-from app.utils.database import AsyncSessionLocal, PremiumSubscriptionPlan, User, db, PremiumSubscription
-from app.utils.user.api.learnify.subscription import create_subscription, disable_subscription
+from app.utils.database import AsyncSessionLocal, PremiumSubscriptionPlan, User, UserData, db, PremiumSubscription
+from app.utils.user.api.learnify.subscription import create_subscription, disable_subscription, get_user_info
 
 router = Router()
 
@@ -216,3 +216,65 @@ async def disable_sub_handler(message: Message, command: CommandObject, bot: Bot
             f"📬 Успешно: <b>{success_count}</b>\n"
             f"⚠️ Ошибок: <b>{failed_count}</b>"
         )
+        
+
+@router.message(Command('check_sub'))
+@admin_required
+async def check_sub_handler(message: Message, command: CommandObject, bot: Bot):
+    if not command.args or not command.args.isdigit():
+        return await message.answer("❗ Формат: /check_sub <user_id>")
+
+    user_id = int(command.args)
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            db.select(UserData).filter_by(user_id=user_id)
+        )
+        user_data = result.scalar_one_or_none()
+
+        result = await session.execute(
+            db.select(PremiumSubscription).filter_by(user_id=user_id)
+        )
+        premium = result.scalar_one_or_none()
+
+        if not user_data:
+            return await message.answer(
+                "❌ Пользователь не найден в базе данных.",
+                reply_markup=kb.delete_message
+            )
+
+        if not premium:
+            return await message.answer(
+                "ℹ️ Пользователь найден, но у него нет подписки.",
+                reply_markup=kb.delete_message
+            )
+
+        result = await session.execute(
+            db.select(PremiumSubscriptionPlan).filter_by(id=premium.plan)
+        )
+        plan = result.scalar_one_or_none()
+
+        subscription_info = await get_user_info(user_id)
+
+        if not subscription_info:
+            return await message.answer(
+                "❌ Не удалось получить данные подписки (внешняя система).",
+                reply_markup=kb.delete_message
+            )
+
+        username = f"@{user_data.username}" if user_data.username else "(без username)"
+        last_name = f"{user_data.last_name[0]}." if user_data.last_name else ""
+
+        text = (
+            f"👤 <b>Пользователь:</b> {username} [{user_id}]\n"
+            f"{user_data.first_name} {last_name}\n\n"
+            
+            f"💎 <b>Тариф:</b> <i>{plan.title if plan else 'Неизвестен'}</i>\n"
+            f"📌 <b>Статус:</b> {'🟢 Активна' if premium.is_active else '🔴 Не активна'}\n"
+            f"🔄 <b>Автопродление:</b> {'🔛 Включено' if premium.auto_renew else '⛔ Выключено'}\n"
+            f"💰 <b>Баланс:</b> {premium.balance} ⭐️\n\n"
+            
+            f"⏳ <b>Действует до:</b> <i>{subscription_info.expires_at.strftime('%H:%M:%S %d %B %Y')}</i>\n"
+        )
+
+        await message.answer(text, reply_markup=kb.delete_message)

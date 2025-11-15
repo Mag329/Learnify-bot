@@ -194,10 +194,17 @@ async def disable_sub_handler(message: Message, command: CommandObject, bot: Bot
                     failed_count += 1
                     continue
                 
+                subscription = await get_user_info(user.user_id)
+                
+                premium_user.is_active = subscription.is_active
+                premium_user.expires_at = subscription.expires_at.replace(tzinfo=None)
+                
+                await session.commit()
+                
                 recipient_text = (
                     "⛔ <b>Ваша подписка была отключена.</b>\n\n"
-                    f"📄 <b>Причина:</b> <i>{reason}</i>\n\n"
-                    "Если вы считаете, что это ошибка, свяжитесь с поддержкой."
+                    f"📄 <b>Причина:</b> <i>{reason if reason else 'причина не указана'}</i>\n\n"
+                    "Если вы считаете, что это ошибка, свяжитесь с разработчиком"
                 )
 
                 try:

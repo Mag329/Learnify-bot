@@ -268,6 +268,11 @@ async def check_sub_handler(message: Message, command: CommandObject, bot: Bot):
                 "❌ Не удалось получить данные подписки (внешняя система).",
                 reply_markup=kb.delete_message
             )
+            
+        premium.is_active = subscription_info.is_active
+        premium.expires_at = subscription_info.expires_at.replace(tzinfo=None)  
+        
+        await session.commit()
 
         username = f"@{user_data.username}" if user_data.username else "(без username)"
         last_name = f"{user_data.last_name[0]}." if user_data.last_name else ""

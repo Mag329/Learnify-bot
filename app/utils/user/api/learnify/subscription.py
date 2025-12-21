@@ -211,7 +211,7 @@ async def renew_subscription(user_id, bot):
                 logger.error(f"Тарифный план для подписки user_id={user_id} отсутствует.")
                 return
 
-            if subscription.auto_renew and subscription.balance >= plan.price:
+            if subscription.auto_renew and subscription.balance >= plan.price and plan.price > 0:
                 result, error = await create_subscription(
                     session=session,
                     user_id=user_id,

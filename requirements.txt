@@ -4,6 +4,7 @@ aiogram==3.22.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.12.15
 aiohttp-retry==2.9.1
+aiohttp_socks==0.10.1
 aiosignal==1.4.0
 alembic==1.14.0
 annotated-types==0.7.0
@@ -66,6 +67,7 @@ pydantic_core==2.23.4
 pyflakes==3.4.0
 PyJWT==2.10.1
 python-logstash==0.4.8
+python-socks==2.7.2
 pytz==2024.2
 PyYAML==6.0.2
 redis==5.2.1

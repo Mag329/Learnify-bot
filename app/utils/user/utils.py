@@ -445,3 +445,55 @@ async def deep_links(message: Message, args, bot: Bot, state: FSMContext):
         
         await message.answer(text, reply_markup=await kb.subject_menu(subject_id, date))
         
+        
+# def build_year_stats_query(user_id: int, year: int):
+#     return {
+#         "size": 0,
+#         "query": {
+#             "bool": {
+#                 "filter": [
+#                     {"term": {"user.user_id": user_id}},  # ⬅️ важно
+#                     {
+#                         "range": {
+#                             "timestamp": {
+#                                 "gte": f"{year}-01-01T00:00:00",
+#                                 "lte": f"{year}-12-31T23:59:59",
+#                             }
+#                         }
+#                     }
+#                 ]
+#             }
+#         },
+#         "aggs": {
+#             "total_actions": {
+#                 "value_count": {"field": "action_type.keyword"}
+#             },
+#             "messages": {
+#                 "filter": {
+#                     "term": {"action_type.keyword": "message"}
+#                 }
+#             },
+#             "callbacks": {
+#                 "filter": {
+#                     "term": {"action_type.keyword": "callback_query"}
+#                 }
+#             },
+#             "active_days": {
+#                 "cardinality": {
+#                     "script": {
+#                         "source": "doc['timestamp'].value.toLocalDate()"
+#                     }
+#                 }
+#             },
+#             "avg_processing_time": {
+#                 "avg": {"field": "processing_time_ms"}
+#             },
+#             "first_seen": {
+#                 "min": {"field": "timestamp"}
+#             },
+#             "last_seen": {
+#                 "max": {"field": "timestamp"}
+#             }
+#         }
+#     }
+

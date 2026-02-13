@@ -60,3 +60,5 @@ MINIO_ROOT_PASSWORD=env.str("MINIO_ROOT_PASSWORD", default="minioadmin")
 MINIO_HOST=env.str("MINIO_HOST", default="localhost")
 MINIO_INTERNAL_PORT=env.int("MINIO_INTERNAL_PORT", default=9000)
 MINIO_BUCKET_NAME = env.str("MINIO_BUCKET_NAME", default="learnify_bot")
+
+TG_PROXY = env.str("TG_PROXY", default=None)

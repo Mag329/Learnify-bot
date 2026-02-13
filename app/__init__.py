@@ -1,4 +1,3 @@
-import asyncio
 import locale
 import logging
 from datetime import datetime
@@ -7,7 +6,10 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.client.session.aiohttp import AiohttpSession
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import aiohttp
+from aiohttp_socks import ProxyConnector
 from envparse import Env
 from pytz import timezone
 
@@ -31,25 +33,18 @@ env = Env()
 env.read_envfile()
 
 
-bot = Bot(
-    token=env.str("TOKEN"),
-    default=DefaultBotProperties(
-        parse_mode=ParseMode.HTML, link_preview_is_disabled=True
-    )
-    
-)
 dp = Dispatcher(storage=MemoryStorage())
 
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
 
-async def on_startup():
+async def on_startup(bot: Bot):
     await bot.send_message(
         env.str("OWNER_ID"), "Бот запущен", reply_markup=kb.delete_message
     )
 
 
-async def on_stop():
+async def on_stop(bot: Bot):
     await bot.send_message(
         env.str("OWNER_ID"), "Бот остановлен", reply_markup=kb.delete_message
     )
@@ -57,6 +52,27 @@ async def on_stop():
 
 async def main():
     logging.info("Starting bot...")
+
+    if TG_PROXY:
+        if TG_PROXY.startswith("http"):
+            # connector = aiohttp.TCPConnector()
+            session = AiohttpSession(proxy=TG_PROXY)
+        elif TG_PROXY.startswith("socks5"):
+            connector = ProxyConnector.from_url(TG_PROXY)
+            client_session = aiohttp.ClientSession(connector=connector)
+            session = AiohttpSession(client_session=client_session)
+            # session = AiohttpSession(proxy=TG_PROXY)
+    else:
+        session = AiohttpSession()
+
+
+    bot = Bot(
+        token=env.str("TOKEN"),
+        session=session,
+        default=DefaultBotProperties(
+            parse_mode=ParseMode.HTML, link_preview_is_disabled=True
+        ) 
+    )
 
     if env.bool("USE_ALEMBIC", default=False):
         logging.info("Run migrations...")
@@ -136,9 +152,12 @@ async def main():
 
     scheduler.start()
 
-    from app.config import config
+    try:
+        from app.config import config
 
-    config.BOT_USERNAME = (await bot.me()).username
-
-    logging.info("Polling bot...")
-    await dp.start_polling(bot)
+        config.BOT_USERNAME = (await bot.me()).username
+        
+        logging.info("Polling bot...")
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()

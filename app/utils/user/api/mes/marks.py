@@ -3,7 +3,7 @@ from loguru import logger
 
 from aiogram.fsm.context import FSMContext
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import BASE_QUARTER
 from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import (

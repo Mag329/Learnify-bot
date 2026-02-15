@@ -9,7 +9,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, LabeledPrice, Message, PreCheckoutQuery
 from aiogram.utils.media_group import MediaGroupBuilder
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import NO_PREMIUM_ERROR
 from app.states.user.states import (
     ChooseAmountForPaymentState,

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from aiogram import Bot
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.utils.database import get_session, User, UserData, db
 from app.utils.user.api.gigachat.birthday import birthday_greeting
 from app.utils.user.api.mes.notifications import get_notifications

@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.states.user.states import ScheduleState
 from app.utils.user.api.mes.schedule import (
     cancel_previous_task,

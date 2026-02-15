@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, Message
 from elasticsearch import AsyncElasticsearch
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import BOT_VERSION, DEVELOPER, DEVELOPER_SITE
 
 # from app.utils.user.utils import build_year_stats_query, get_student

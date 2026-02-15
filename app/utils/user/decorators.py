@@ -5,7 +5,7 @@ from learnifyapi.exceptions import APIError as LearnifyAPIError
 from loguru import logger
 from octodiary.exceptions import APIError
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import (
     ERROR_403_MESSAGE,
     ERROR_408_MESSAGE,

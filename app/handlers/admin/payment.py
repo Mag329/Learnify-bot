@@ -3,7 +3,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config import config
 from app.utils.admin.utils import admin_required
 from app.utils.database import (

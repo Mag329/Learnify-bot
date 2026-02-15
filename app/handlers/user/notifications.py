@@ -2,7 +2,7 @@ from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.utils.user.api.mes.notifications import get_notifications
 
 router = Router()

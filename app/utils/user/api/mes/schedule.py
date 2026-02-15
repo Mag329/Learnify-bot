@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from aiogram.types import Message
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.utils.database import get_session, Settings, db
 from app.utils.user.cache import get_ttl, redis_client
 from app.utils.user.decorators import handle_api_error

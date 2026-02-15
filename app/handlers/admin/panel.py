@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, FSInputFile, Message
 from loguru import logger
 
 import app.keyboards.admin.keyboards as kb
-import app.keyboards.user.keyboards as user_kb
+from app.keyboards import user as user_kb
 from app.config.config import ERRORS_LOG_FILE, LOG_FILE
 from app.states.admin.states import UpdateNotificationState
 from app.utils.admin.utils import admin_required, main_page

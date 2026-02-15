@@ -10,7 +10,7 @@ from aiohttp_socks import ProxyConnector
 from envparse import Env
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import *
 from app.handlers.admin import panel, payment
 from app.handlers.user import (

@@ -8,7 +8,7 @@ from aiogram import Bot
 from aiogram.types import BufferedInputFile
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import LEARNIFY_WEB
 from app.utils.database import get_session, AuthData, User, db
 from app.utils.scheduler import scheduler

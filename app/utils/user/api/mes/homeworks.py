@@ -4,7 +4,7 @@ from loguru import logger
 
 from aiogram.fsm.context import FSMContext
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import DEFAULT_SHORT_CACHE_TTL, LEARNIFY_API_TOKEN
 from app.utils.database import get_session, Homework, Settings, db
 from app.utils.misc import has_numbers

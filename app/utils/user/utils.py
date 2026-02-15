@@ -10,7 +10,7 @@ from loguru import logger
 from octodiary.apis import AsyncMobileAPI, AsyncWebAPI
 from octodiary.urls import Systems
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config import config
 from app.config.config import (
     ERROR_408_MESSAGE,

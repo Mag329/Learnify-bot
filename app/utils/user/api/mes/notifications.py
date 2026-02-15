@@ -3,7 +3,7 @@ from loguru import logger
 
 from octodiary.exceptions import APIError
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import ERROR_403_MESSAGE, ERROR_MESSAGE
 from app.utils.database import get_session, Event, Settings, db
 from app.utils.user.cache import invalidate_cache_for_notification

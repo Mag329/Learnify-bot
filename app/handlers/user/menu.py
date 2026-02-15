@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.utils.user.api.mes.profile import get_profile
 from app.utils.user.api.mes.rating import get_rating_rank_class
 from app.utils.user.api.mes.visits import handle_visits_navigation

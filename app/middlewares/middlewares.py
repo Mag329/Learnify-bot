@@ -5,7 +5,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from envparse import env
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import ALLOWED_USERS, LOG_FILE, NO_SUBSCRIPTION_TO_CHANNEL_ERROR
 from app.utils.database import get_session, UserData, db
 from app.utils.misc import check_subscription

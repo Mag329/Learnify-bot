@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.states.user.states import SettingsEditStates
 from app.utils.database import get_session, SettingDefinition, Settings, db
 from app.utils.user.cache import clear_user_cache

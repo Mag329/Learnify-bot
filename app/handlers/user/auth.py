@@ -11,7 +11,7 @@ from octodiary.apis import AsyncMobileAPI
 from octodiary.exceptions import APIError
 from octodiary.urls import Systems
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import (
     AWAIT_RESPONSE_MESSAGE,
     NO_SUBSCRIPTION_TO_CHANNEL_ERROR,

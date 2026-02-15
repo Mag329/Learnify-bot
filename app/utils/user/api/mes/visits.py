@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from aiogram.fsm.context import FSMContext
 from loguru import logger
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.states.user.states import VisitState
 from app.utils.user.cache import redis_client
 from app.utils.user.decorators import handle_api_error

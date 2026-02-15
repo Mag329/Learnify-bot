@@ -6,7 +6,7 @@ from learnifyapi.client import LearnifyAPI
 from learnifyapi.exceptions import APIError
 from sqlalchemy.orm import selectinload
 
-import app.keyboards.user.keyboards as kb
+from app.keyboards import user as kb
 from app.config.config import DEFAULT_LONG_CACHE_TTL, LEARNIFY_API_TOKEN
 from app.utils.database import (
     get_session,

@@ -1,10 +1,14 @@
-from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
-                           KeyboardButton)
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from app.config.config import BUG_REPORT_URL, LEARNIFY_API_TOKEN, LEARNIFY_WEB
-from app.utils.database import (AsyncSessionLocal, PremiumSubscription, PremiumSubscriptionPlan,
-                                Settings, db)
+from app.utils.database import (
+    get_session,
+    PremiumSubscription,
+    PremiumSubscriptionPlan,
+    Settings,
+    db,
+)
 from app.utils.user.api.mes.results import get_current_period
 from app.utils.user.utils import get_emoji_subject, get_student
 
@@ -16,21 +20,21 @@ start_command = InlineKeyboardMarkup(
 
 choice_auth_variant = InlineKeyboardMarkup(
     inline_keyboard=[
-        # [
-        #     InlineKeyboardButton(
-        #         text="🧑‍💻 Войти по логину", callback_data="auth_with_login"
-        #     )
-        # ],
+        [
+            InlineKeyboardButton(
+                text="🧑‍💻 Войти по логину", callback_data="auth_with_login"
+            )
+        ],
         [
             InlineKeyboardButton(
                 text="🔐 Войти по токену", callback_data="auth_with_token"
             )
         ],
-        # [
-        #     InlineKeyboardButton(
-        #         text="📷 Войти по QR-коду", callback_data="auth_with_qr"
-        #     )
-        # ],
+        [
+            InlineKeyboardButton(
+                text="📷 Войти по QR-коду", callback_data="auth_with_qr"
+            )
+        ],
     ]
 )
 
@@ -126,8 +130,10 @@ mark = InlineKeyboardMarkup(
             InlineKeyboardButton(text="➡️", callback_data="mark_right"),
         ],
         [
-            InlineKeyboardButton(text="📚 Выбрать предмет", callback_data="choose_subject_marks"),
-        ]
+            InlineKeyboardButton(
+                text="📚 Выбрать предмет", callback_data="choose_subject_marks"
+            ),
+        ],
     ]
 )
 
@@ -302,21 +308,13 @@ get_premium = InlineKeyboardMarkup(
 
 back_to_subscription_settings = InlineKeyboardMarkup(
     inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="↪️ Назад", callback_data="back_to_auto_gdz"
-            )
-        ]
+        [InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_auto_gdz")]
     ]
 )
 
 back_to_subscription_menu = InlineKeyboardMarkup(
     inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="↪️ Назад", callback_data="subscription_page"
-            )
-        ]
+        [InlineKeyboardButton(text="↪️ Назад", callback_data="subscription_page")]
     ]
 )
 
@@ -324,17 +322,14 @@ choose_search_by_auto_gdz = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text='Страницы',
-                callback_data=f"auto_gdz_change_search_by_pages"
+                text="Страницы", callback_data=f"auto_gdz_change_search_by_pages"
             ),
             InlineKeyboardButton(
-                text='Номера',
-                callback_data=f"auto_gdz_change_search_by_numbers"
+                text="Номера", callback_data=f"auto_gdz_change_search_by_numbers"
             ),
             InlineKeyboardButton(
-                text='Параграфы',
-                callback_data=f"auto_gdz_change_search_by_paragraphs"
-            )
+                text="Параграфы", callback_data=f"auto_gdz_change_search_by_paragraphs"
+            ),
         ]
     ]
 )
@@ -343,8 +338,7 @@ set_auto_gdz_links = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text='✏️ Указать',
-                callback_data='subscription_setting_auto_gdz'
+                text="✏️ Указать", callback_data="subscription_setting_auto_gdz"
             )
         ]
     ]
@@ -353,12 +347,7 @@ set_auto_gdz_links = InlineKeyboardMarkup(
 
 set_student_book = InlineKeyboardMarkup(
     inline_keyboard=[
-        [
-            InlineKeyboardButton(
-                text="✏️ Указать",
-                callback_data="student_book_settings"
-            )
-        ]
+        [InlineKeyboardButton(text="✏️ Указать", callback_data="student_book_settings")]
     ]
 )
 
@@ -366,12 +355,8 @@ set_student_book = InlineKeyboardMarkup(
 confirm_pay = InlineKeyboardMarkup(
     inline_keyboard=[
         [
-            InlineKeyboardButton(
-                text="💳 Оплатить", callback_data="confirm_pay"
-            ),
-            InlineKeyboardButton(
-                text="↪️ Назад", callback_data="back_to_menu"
-            ),
+            InlineKeyboardButton(text="💳 Оплатить", callback_data="confirm_pay"),
+            InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu"),
         ],
     ]
 )
@@ -402,11 +387,11 @@ async def menu():
 
     keyboard.row(
         InlineKeyboardButton(text="📊 Посещаемость", callback_data="visits"),
-        InlineKeyboardButton(text="👤 Профиль", callback_data="profile")
+        InlineKeyboardButton(text="👤 Профиль", callback_data="profile"),
     )
     keyboard.row(
         InlineKeyboardButton(text="📈 Рейтинг", callback_data="rating_rank_class"),
-        InlineKeyboardButton(text="🏆 Итоги", callback_data="results")
+        InlineKeyboardButton(text="🏆 Итоги", callback_data="results"),
     )
     if LEARNIFY_API_TOKEN:
         keyboard.row(
@@ -444,22 +429,20 @@ async def auto_gdz_settings(subject_gdz):
     keyboard = InlineKeyboardBuilder()
     keyboard.row(
         InlineKeyboardButton(
-            text='✏️ Изменить',
-            callback_data=f"change_auto_gdz_{subject_gdz.subject_id}"
+            text="✏️ Изменить", callback_data=f"change_auto_gdz_{subject_gdz.subject_id}"
         ),
         InlineKeyboardButton(
-            text="↪️ Назад", 
-            callback_data="subscription_setting_auto_gdz"
-        )
+            text="↪️ Назад", callback_data="subscription_setting_auto_gdz"
+        ),
     )
-    
+
     return keyboard.as_markup()
 
 
 async def build_settings_nav_keyboard(
     user_id, definitions, selected_index, is_experimental=False
 ):
-    async with AsyncSessionLocal() as session:
+    async with await get_session() as session:
         result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
         settings: Settings = result.scalar()
 
@@ -518,10 +501,10 @@ async def build_settings_nav_keyboard(
 
 
 async def subscription_keyboard(user_id, subscription):
-    async with AsyncSessionLocal() as session:
-        
+    async with await get_session() as session:
+
         keyboard = InlineKeyboardBuilder()
-        
+
         if subscription and subscription.is_active:
             keyboard.row(
                 InlineKeyboardButton(
@@ -529,89 +512,77 @@ async def subscription_keyboard(user_id, subscription):
                     callback_data="replenish_subscription",
                 ),
                 InlineKeyboardButton(
-                    text="🎁 Подарить", 
-                    callback_data="give_subscription"
-                )
+                    text="🎁 Подарить", callback_data="give_subscription"
+                ),
             )
             keyboard.row(
                 InlineKeyboardButton(
-                    text="⚙️ Настройки",
-                    callback_data="subscription_settings"
+                    text="⚙️ Настройки", callback_data="subscription_settings"
                 )
             )
         else:
             keyboard.row(
                 InlineKeyboardButton(
-                    text="✅ Оформить",
-                    callback_data="get_subscription"
+                    text="✅ Оформить", callback_data="get_subscription"
                 ),
                 InlineKeyboardButton(
-                    text="🎁 Подарить", 
-                    callback_data="give_subscription"
-                )
+                    text="🎁 Подарить", callback_data="give_subscription"
+                ),
             )
-        
+
         keyboard.row(
             InlineKeyboardButton(
-                text="📄 Договор оферты",
-                callback_data="offer_contract" 
+                text="📄 Договор оферты", callback_data="offer_contract"
             )
         )
-            
-        keyboard.row(
-            InlineKeyboardButton(
-                text="↪️ Назад", 
-                callback_data="back_to_menu"
-            )
-        )
-        
+
+        keyboard.row(InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu"))
+
         return keyboard.as_markup()
-    
-    
+
+
 async def subscription_settings(user_id):
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(db.select(PremiumSubscription).filter_by(user_id=user_id))
+    async with await get_session() as session:
+        result = await session.execute(
+            db.select(PremiumSubscription).filter_by(user_id=user_id)
+        )
         user = result.scalar_one_or_none()
         if user:
             keyboard = InlineKeyboardBuilder()
             keyboard.row(
                 InlineKeyboardButton(
                     text=f"{'✅' if user.auto_renew else '❌'} Автопродление подписки",
-                    callback_data="subscription_setting_auto_renew"
+                    callback_data="subscription_setting_auto_renew",
                 )
             )
             keyboard.row(
                 InlineKeyboardButton(
-                    text="⚡️ Авто-ГДЗ",
-                    callback_data="subscription_setting_auto_gdz"
+                    text="⚡️ Авто-ГДЗ", callback_data="subscription_setting_auto_gdz"
                 )
             )
             keyboard.row(
                 InlineKeyboardButton(
-                    text="📖 Учебник",
-                    callback_data="student_book_settings"
+                    text="📖 Учебник", callback_data="student_book_settings"
                 )
             )
             keyboard.row(
-                InlineKeyboardButton(
-                    text="↪️ Назад",
-                    callback_data="back_to_menu"
-                )
+                InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu")
             )
-            
+
             return keyboard.as_markup()
-        
 
-
-    
 
 async def choose_subscription_plan(type):
     keyboard = InlineKeyboardBuilder()
     if LEARNIFY_API_TOKEN:
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(db.select(PremiumSubscriptionPlan).filter_by(show_in_menu=True).order_by(PremiumSubscriptionPlan.ordering))
+        async with await get_session() as session:
+            result = await session.execute(
+                db.select(PremiumSubscriptionPlan)
+                .filter_by(show_in_menu=True)
+                .order_by(PremiumSubscriptionPlan.ordering)
+            )
             plans = result.scalars().all()
-            
+
         for plan in plans:
             keyboard.button(
                 text=f"{plan.title.capitalize()} ({plan.price} ⭐️)",
@@ -621,139 +592,109 @@ async def choose_subscription_plan(type):
         # Автоматически формируем ряды по 2 кнопки
         keyboard.adjust(2)
 
-        keyboard.row(
-            InlineKeyboardButton(
-                text="↪️ Назад", 
-                callback_data="back_to_menu"
-            )
-        )
-        
+        keyboard.row(InlineKeyboardButton(text="↪️ Назад", callback_data="back_to_menu"))
+
         return keyboard.as_markup()
-    
-    
-async def buy_subscription_keyboard(price, for_,):
+
+
+async def buy_subscription_keyboard(
+    price,
+    for_,
+):
     if LEARNIFY_API_TOKEN:
         keyboard = InlineKeyboardBuilder()
-        if for_ == 'myself':
+        if for_ == "myself":
             text = f"💳 Купить Premium за {price} ⭐️"
-        elif for_ == 'replenish':
+        elif for_ == "replenish":
             text = f"💳 Пополнить баланс на {price} ⭐️"
         else:
             text = f"🎁 Подарить Premium за {price} ⭐️"
         keyboard.row(
             InlineKeyboardButton(
-                text=text, 
+                text=text,
                 pay=True,
             )
         )
-        
-        
+
+
 async def subject_menu(subject_id, date):
     keyboard = InlineKeyboardBuilder()
-    
+
     if LEARNIFY_API_TOKEN:
         keyboard.row(
             InlineKeyboardButton(
-                text="⚡️ Быстрое ГДЗ",
-                callback_data=f"quick_gdz_{subject_id}"
+                text="⚡️ Быстрое ГДЗ", callback_data=f"quick_gdz_{subject_id}"
             ),
             InlineKeyboardButton(
                 text="🏠 ДЗ",
-                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}_new"
-            )
+                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}_new",
+            ),
         )
         keyboard.row(
             InlineKeyboardButton(
-                text="🎯 Оценки",
-                callback_data=f"select_subject_marks_{subject_id}_new"
+                text="🎯 Оценки", callback_data=f"select_subject_marks_{subject_id}_new"
             ),
             InlineKeyboardButton(
-                text="📖 Учебник",
-                callback_data=f"student_book_{subject_id}"
-            )
+                text="📖 Учебник", callback_data=f"student_book_{subject_id}"
+            ),
         )
     else:
         keyboard.row(
             InlineKeyboardButton(
                 text="🏠 ДЗ",
-                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}_new"
+                callback_data=f"select_subject_homework_{subject_id}_{date.strftime("%d-%m-%Y")}_new",
             ),
             InlineKeyboardButton(
-                text="🎯 Оценки",
-                callback_data=f"select_subject_marks_{subject_id}_new"
-            )
+                text="🎯 Оценки", callback_data=f"select_subject_marks_{subject_id}_new"
+            ),
         )
-    keyboard.row(
-        InlineKeyboardButton(
-            text="Закрыть",
-            callback_data="delete_message"
-        )
-    )
-    
+    keyboard.row(InlineKeyboardButton(text="Закрыть", callback_data="delete_message"))
+
     return keyboard.as_markup()
 
 
-
 async def quick_gdz(subject_id, link, search_by):
-    search_by_dict = {
-        'pages': 'страницу',
-        'numbers': 'номер',
-        'paragraphs': 'параграф'
-    }
-    
+    search_by_dict = {"pages": "страницу", "numbers": "номер", "paragraphs": "параграф"}
+
     keyboard = InlineKeyboardBuilder()
-    
+
     keyboard.row(
+        InlineKeyboardButton(text="🔗 ГДЗ", url=link),
         InlineKeyboardButton(
-            text='🔗 ГДЗ',
-            url=link
+            text=f"🔎 Выбрать {search_by_dict[search_by]}",
+            callback_data=f"choose_quick_gdz_{subject_id}",
         ),
-        InlineKeyboardButton(
-            text=f'🔎 Выбрать {search_by_dict[search_by]}',
-            callback_data=f"choose_quick_gdz_{subject_id}"
-        )
     )
-    
-    keyboard.row(
-        InlineKeyboardButton(
-            text="Закрыть",
-            callback_data="delete_message"
-        )
-    )
-    
+
+    keyboard.row(InlineKeyboardButton(text="Закрыть", callback_data="delete_message"))
+
     return keyboard.as_markup()
 
 
 async def get_periods_keyboard(period_type, available_periods=None):
     builder = InlineKeyboardBuilder()
-    
+
     if period_type == "quarters":
         all_periods = [
             ("1️⃣", "1 четверть", 1),
             ("2️⃣", "2 четверть", 2),
             ("3️⃣", "3 четверть", 3),
-            ("4️⃣", "4 четверть", 4)
+            ("4️⃣", "4 четверть", 4),
         ]
     elif period_type == "half_years":
-        all_periods = [
-            ("1️⃣", "1 полугодие", 1),
-            ("2️⃣", "2 полугодие", 2)
-        ]
+        all_periods = [("1️⃣", "1 полугодие", 1), ("2️⃣", "2 полугодие", 2)]
     elif period_type == "trimesters":
         all_periods = [
             ("1️⃣", "1 триместр", 1),
             ("2️⃣", "2 триместр", 2),
-            ("3️⃣", "3 триместр", 3)
+            ("3️⃣", "3 триместр", 3),
         ]
     else:
-        all_periods = [
-            ("1️⃣", "Период 1", 1),
-            ("2️⃣", "Период 2", 2)
-        ]
-    
+        all_periods = [("1️⃣", "Период 1", 1), ("2️⃣", "Период 2", 2)]
+
     if available_periods is None:
-        available_periods = [p[2] for p in all_periods] 
-    
+        available_periods = [p[2] for p in all_periods]
+
     for emoji, label, period_num in all_periods:
         if period_num in available_periods:
             callback_data = f"choose_period_{period_num}"
@@ -761,85 +702,78 @@ async def get_periods_keyboard(period_type, available_periods=None):
             builder.button(text=text, callback_data=callback_data)
         else:
             builder.button(
-                text=f"⚫️ {label}",
-                callback_data=f"period_not_available_{period_num}"
+                text=f"⚫️ {label}", callback_data=f"period_not_available_{period_num}"
             )
-    
+
     builder.button(text="↪️ Назад", callback_data="back_to_menu")
-    
+
     if len(all_periods) <= 2:
         builder.adjust(1, 1)
     elif len(all_periods) == 3:
         builder.adjust(2, 1, 1)
     elif len(all_periods) == 4:
         builder.adjust(2, 2, 1)
-    
+
     return builder.as_markup()
 
 
 async def get_results_keyboard(period_system, current_period):
     """Генерирует основную клавиатуру для результатов"""
     builder = InlineKeyboardBuilder()
-    
+
     builder.button(text="⬅️", callback_data="results_left")
     builder.button(text="➡️", callback_data="results_right")
-    
+
     period_names = {
         "quarters": "четверть",
-        "half_years": "полугодие", 
-        "trimesters": "триместр"
+        "half_years": "полугодие",
+        "trimesters": "триместр",
     }
-    
+
     period_label = period_names.get(period_system, "период")
-    
+
     builder.button(text="♻️ Обновить", callback_data="refresh_results")
     builder.button(text="🏆 Общие итоги", callback_data="overall_results")
-    
+
     # Информация о текущем периоде
+    builder.button(text=f"📅 Сменить", callback_data="choose_period")
     builder.button(
-        text=f"📅 Сменить",
-        callback_data="choose_period"
-    )
-    builder.button(
-        text=f"📍 {current_period} {period_label}",
-        callback_data="current_period_info"
+        text=f"📍 {current_period} {period_label}", callback_data="current_period_info"
     )
     builder.button(text="↪️ Назад", callback_data="back_to_menu")
-    
+
     builder.adjust(2, 2, 2, 1)
     return builder.as_markup()
 
 
-async def get_overall_results_keyboard(period_type, current_period, has_more_lines=False):
+async def get_overall_results_keyboard(
+    period_type, current_period, has_more_lines=False
+):
     builder = InlineKeyboardBuilder()
-    
+
     if has_more_lines:
         builder.button(text="⬇️ Показать еще", callback_data="next_line_results")
-    
+
     builder.button(text="📚 Итоги по предметам", callback_data="subjects_results")
-    
+
     period_names = {
         "quarters": "четверть",
         "half_years": "полугодие",
-        "trimesters": "триместр"
+        "trimesters": "триместр",
     }
-    
+
     period_label = period_names.get(period_type, "период")
-    
+
+    builder.button(text=f"📅 Сменить", callback_data="choose_period")
     builder.button(
-        text=f"📅 Сменить",
-        callback_data="choose_period"
-    )
-    builder.button(
-        text=f"📍 {current_period} {period_label}",
-        callback_data="current_period_info"
+        text=f"📍 {current_period} {period_label}", callback_data="current_period_info"
     )
     builder.button(text="♻️ Обновить", callback_data="refresh_results")
     builder.button(text="↪️ Назад", callback_data="back_to_menu")
-    
+
     if has_more_lines:
         builder.adjust(1, 1, 2, 1)
     else:
         builder.adjust(1, 2, 1)
-    
+
     return builder.as_markup()

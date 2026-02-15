@@ -1,53 +1,64 @@
-
 from aiogram import Bot, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
-from aiogram.exceptions import TelegramBadRequest
 
+import app.keyboards.user.keyboards as kb
 from app.config import config
 from app.utils.admin.utils import admin_required
-import app.keyboards.user.keyboards as kb
-from app.utils.database import AsyncSessionLocal, PremiumSubscriptionPlan, User, UserData, db, PremiumSubscription
-from app.utils.user.api.learnify.subscription import create_subscription, disable_subscription, get_user_info
+from app.utils.database import (
+    get_session,
+    PremiumSubscription,
+    PremiumSubscriptionPlan,
+    User,
+    UserData,
+    db,
+)
+from app.utils.user.api.learnify.subscription import (
+    create_subscription,
+    disable_subscription,
+    get_user_info,
+)
 
 router = Router()
 
 
-
-@router.message(Command('refund'))
+@router.message(Command("refund"))
 @admin_required
 async def refund_handler(message: Message, command: CommandObject, bot: Bot):
     try:
         await bot.refund_star_payment(
-            user_id=message.from_user.id,
-            telegram_payment_charge_id=command.args
+            user_id=message.from_user.id, telegram_payment_charge_id=command.args
         )
     except TelegramBadRequest as e:
-        if e.message == 'Bad Request: CHARGE_ALREADY_REFUNDED':
+        if e.message == "Bad Request: CHARGE_ALREADY_REFUNDED":
             await message.answer(
-                '❌ Платеж уже возвращен',
-                reply_markup=kb.delete_message
+                "❌ Платеж уже возвращен", reply_markup=kb.delete_message
             )
-        
-        
-@router.message(Command('give_sub'))
+
+
+@router.message(Command("give_sub"))
 @admin_required
 async def give_sub_handler(message: Message, command: CommandObject, bot: Bot):
     if not command.args:
-        await message.answer("❗ Формат: /give_sub <user_id|id1,id2,...|all> <plan_name> [message]")
+        await message.answer(
+            "❗ Формат: /give_sub <user_id|id1,id2,...|all> <plan_name> [message]"
+        )
         return
-    
+
     data = command.args.split(maxsplit=2)
-    
+
     if len(data) < 2:
-        await message.answer("❗ Формат: /give_sub <user_id|id1,id2,...|all> <plan_name> [message]")
+        await message.answer(
+            "❗ Формат: /give_sub <user_id|id1,id2,...|all> <plan_name> [message]"
+        )
         return
-    
+
     user_id_raw = data[0]
     plan_name = data[1]
     message_sub = data[2] if len(data) > 2 else None
 
-    async with AsyncSessionLocal() as session:
+    async with await get_session() as session:
         result = await session.execute(
             db.select(PremiumSubscriptionPlan).filter_by(name=plan_name)
         )
@@ -56,14 +67,18 @@ async def give_sub_handler(message: Message, command: CommandObject, bot: Bot):
             return await message.answer(f"❌ Подписка '{plan_name}' не найдена")
 
         if user_id_raw == "all":
-            result = await session.execute(db.select(User).filter_by(role='student'))
+            result = await session.execute(db.select(User).filter_by(role="student"))
             users = result.scalars().all()
         else:
             try:
-                user_ids = [int(uid.strip()) for uid in user_id_raw.split(",") if uid.strip().isdigit()]
+                user_ids = [
+                    int(uid.strip())
+                    for uid in user_id_raw.split(",")
+                    if uid.strip().isdigit()
+                ]
             except ValueError:
                 return await message.answer("❌ Указан неверный формат user_id")
-            
+
             if not user_ids:
                 return await message.answer("❌ Не указаны корректные ID пользователей")
 
@@ -87,8 +102,7 @@ async def give_sub_handler(message: Message, command: CommandObject, bot: Bot):
 
                 if not premium_user:
                     premium_user = PremiumSubscription(
-                        user_id=user.user_id,
-                        is_active=False
+                        user_id=user.user_id, is_active=False
                     )
                     session.add(premium_user)
                     await session.commit()
@@ -97,7 +111,7 @@ async def give_sub_handler(message: Message, command: CommandObject, bot: Bot):
                     session=session,
                     user_id=user.user_id,
                     plan=plan,
-                    premium_user=premium_user
+                    premium_user=premium_user,
                 )
 
                 if msg:
@@ -135,34 +149,42 @@ async def give_sub_handler(message: Message, command: CommandObject, bot: Bot):
             f"📬 Успешно: <b>{success_count}</b>\n"
             f"⚠️ Ошибок: <b>{failed_count}</b>"
         )
-        
-        
-@router.message(Command('disable_sub'))
+
+
+@router.message(Command("disable_sub"))
 @admin_required
 async def disable_sub_handler(message: Message, command: CommandObject, bot: Bot):
     if not command.args:
-        await message.answer("❗ Формат: /disable_sub <user_id|id1,id2,...|all> <reason>")
+        await message.answer(
+            "❗ Формат: /disable_sub <user_id|id1,id2,...|all> <reason>"
+        )
         return
-    
+
     data = command.args.split(maxsplit=1)
-    
+
     if len(data) < 1:
-        await message.answer("❗ Формат: /give_sub <user_id|id1,id2,...|all> <plan_name> [message]")
+        await message.answer(
+            "❗ Формат: /give_sub <user_id|id1,id2,...|all> <plan_name> [message]"
+        )
         return
-    
+
     user_id_raw = data[0]
     reason = data[1] if len(data) > 1 else None
 
-    async with AsyncSessionLocal() as session:
+    async with await get_session() as session:
         if user_id_raw == "all":
-            result = await session.execute(db.select(User).filter_by(role='student'))
+            result = await session.execute(db.select(User).filter_by(role="student"))
             users = result.scalars().all()
         else:
             try:
-                user_ids = [int(uid.strip()) for uid in user_id_raw.split(",") if uid.strip().isdigit()]
+                user_ids = [
+                    int(uid.strip())
+                    for uid in user_id_raw.split(",")
+                    if uid.strip().isdigit()
+                ]
             except ValueError:
                 return await message.answer("❌ Указан неверный формат user_id")
-            
+
             if not user_ids:
                 return await message.answer("❌ Не указаны корректные ID пользователей")
 
@@ -193,14 +215,14 @@ async def disable_sub_handler(message: Message, command: CommandObject, bot: Bot
                 if not status:
                     failed_count += 1
                     continue
-                
+
                 subscription = await get_user_info(user.user_id)
-                
+
                 premium_user.is_active = subscription.is_active
                 premium_user.expires_at = subscription.expires_at.replace(tzinfo=None)
-                
+
                 await session.commit()
-                
+
                 recipient_text = (
                     "⛔ <b>Ваша подписка была отключена.</b>\n\n"
                     f"📄 <b>Причина:</b> <i>{reason if reason else 'причина не указана'}</i>\n\n"
@@ -223,9 +245,9 @@ async def disable_sub_handler(message: Message, command: CommandObject, bot: Bot
             f"📬 Успешно: <b>{success_count}</b>\n"
             f"⚠️ Ошибок: <b>{failed_count}</b>"
         )
-        
 
-@router.message(Command('check_sub'))
+
+@router.message(Command("check_sub"))
 @admin_required
 async def check_sub_handler(message: Message, command: CommandObject, bot: Bot):
     if not command.args or not command.args.isdigit():
@@ -233,10 +255,8 @@ async def check_sub_handler(message: Message, command: CommandObject, bot: Bot):
 
     user_id = int(command.args)
 
-    async with AsyncSessionLocal() as session:
-        result = await session.execute(
-            db.select(UserData).filter_by(user_id=user_id)
-        )
+    async with await get_session() as session:
+        result = await session.execute(db.select(UserData).filter_by(user_id=user_id))
         user_data = result.scalar_one_or_none()
 
         result = await session.execute(
@@ -247,13 +267,13 @@ async def check_sub_handler(message: Message, command: CommandObject, bot: Bot):
         if not user_data:
             return await message.answer(
                 "❌ Пользователь не найден в базе данных.",
-                reply_markup=kb.delete_message
+                reply_markup=kb.delete_message,
             )
 
         if not premium:
             return await message.answer(
                 "ℹ️ Пользователь найден, но у него нет подписки.",
-                reply_markup=kb.delete_message
+                reply_markup=kb.delete_message,
             )
 
         result = await session.execute(
@@ -266,12 +286,12 @@ async def check_sub_handler(message: Message, command: CommandObject, bot: Bot):
         if not subscription_info:
             return await message.answer(
                 "❌ Не удалось получить данные подписки (внешняя система).",
-                reply_markup=kb.delete_message
+                reply_markup=kb.delete_message,
             )
-            
+
         premium.is_active = subscription_info.is_active
-        premium.expires_at = subscription_info.expires_at.replace(tzinfo=None)  
-        
+        premium.expires_at = subscription_info.expires_at.replace(tzinfo=None)
+
         await session.commit()
 
         username = f"@{user_data.username}" if user_data.username else "(без username)"
@@ -280,12 +300,10 @@ async def check_sub_handler(message: Message, command: CommandObject, bot: Bot):
         text = (
             f"👤 <b>Пользователь:</b> {username} [{user_id}]\n"
             f"{user_data.first_name} {last_name}\n\n"
-            
             f"💎 <b>Тариф:</b> <i>{plan.title if plan else 'Неизвестен'}</i>\n"
             f"📌 <b>Статус:</b> {'🟢 Активна' if premium.is_active else '🔴 Не активна'}\n"
             f"🔄 <b>Автопродление:</b> {'🔛 Включено' if premium.auto_renew else '⛔ Выключено'}\n"
             f"💰 <b>Баланс:</b> {premium.balance} ⭐️\n\n"
-            
             f"⏳ <b>Действует до:</b> <i>{subscription_info.expires_at.strftime('%H:%M:%S %d %B %Y')}</i>\n"
         )
 

@@ -1,16 +1,15 @@
-BOT_VERSION = "1.9.1.1"
+BOT_VERSION = "1.9.1.2"
 
 
 # Bot info
 DEVELOPER = "@Mag329"
 DEVELOPER_SITE = "https://mag329.tech"
 
-BUG_REPORT_URL = 'https://forms.gle/X55ZfURLosXAG5Yw5'
+BUG_REPORT_URL = "https://forms.gle/X55ZfURLosXAG5Yw5"
 
 
 # Other
 BASE_QUARTER = 1
-LOG_FILE = "logs/bot.log"
 
 
 # MESSAGES
@@ -26,7 +25,7 @@ SUCCESSFUL_AUTH = "✅ <b>Успешная авторизация</b>\n\nВы в
 UPDATE_NOTIFICATION_HEADER = "🚀 <b>Обновление</b>\n\n"
 UPDATE_NOTIFICATION_FOOTER = f"\n\n\n<i>Версия бота:</i> {BOT_VERSION}"
 NO_SUBSCRIPTION_TO_CHANNEL_ERROR = "📢 <b>Для использования бота необходимо подписаться на наш канал!</b>\n\nПосле подписки повторите команду"
-NO_PREMIUM_ERROR = f'❌ <b>Ошибка</b>\n\nУ вас нет подписки <b>Learnify Premium</b> для доступа к этой функции'
+NO_PREMIUM_ERROR = f"❌ <b>Ошибка</b>\n\nУ вас нет подписки <b>Learnify Premium</b> для доступа к этой функции"
 
 
 # LOAD
@@ -51,14 +50,19 @@ DEV = env.bool("DEV")
 
 BOT_USERNAME = None
 ALLOWED_USERS = list(map(int, env.list("ALLOWED_USERS", default=[])))
-ONLY_ALLOWED_USERS = env.bool('ONLY_ALLOWED_USERS', default=False)
+ONLY_ALLOWED_USERS = env.bool("ONLY_ALLOWED_USERS", default=False)
 REDIS_HOST = env.str("REDIS_HOST", default="localhost")
 REDIS_PORT = env.int("REDIS_INTERNAL_PORT", default=6379)
 
-MINIO_ROOT_USER=env.str("MINIO_ROOT_USER", default="minioadmin")
-MINIO_ROOT_PASSWORD=env.str("MINIO_ROOT_PASSWORD", default="minioadmin")
-MINIO_HOST=env.str("MINIO_HOST", default="localhost")
-MINIO_INTERNAL_PORT=env.int("MINIO_INTERNAL_PORT", default=9000)
+MINIO_ROOT_USER = env.str("MINIO_ROOT_USER", default="minioadmin")
+MINIO_ROOT_PASSWORD = env.str("MINIO_ROOT_PASSWORD", default="minioadmin")
+MINIO_HOST = env.str("MINIO_HOST", default="localhost")
+MINIO_INTERNAL_PORT = env.int("MINIO_INTERNAL_PORT", default=9000)
 MINIO_BUCKET_NAME = env.str("MINIO_BUCKET_NAME", default="learnify_bot")
 
 TG_PROXY = env.str("TG_PROXY", default=None)
+
+# Logs
+LOG_FILE = env.str("LOG_FILE", default="logs/bot.log")
+ERRORS_LOG_FILE = env.str("ERRORS_LOG_FILE", default="logs/errors.log")
+LOG_LEVEL = env.str("LOG_LEVEL", default="INFO")

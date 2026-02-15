@@ -1,11 +1,14 @@
 from datetime import datetime
+
 from aiogram import Bot, F, Router
 from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import CallbackQuery, Message
 from elasticsearch import AsyncElasticsearch
+from loguru import logger
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import BOT_VERSION, DEVELOPER, DEVELOPER_SITE
+
 # from app.utils.user.utils import build_year_stats_query, get_student
 
 router = Router()
@@ -13,14 +16,19 @@ router = Router()
 
 @router.callback_query(F.data == "about_bot")
 async def about_bot(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    
+    logger.info(f"User {user_id} requested bot information")
+    
     text = f"🤖 <b>Информация о боте</b>\n    - 📦 <b>Версия бота:</b> {BOT_VERSION}\n    - 👨‍💻 <b>Разработчик:</b> {DEVELOPER}\n    - 🌐 <b>Сайт разработчика:</b> {DEVELOPER_SITE}"
 
     await callback.answer()
     await callback.message.answer(
         text, reply_markup=kb.delete_message, disable_web_page_preview=True
     )
-    
-    
+
+    logger.debug(f"Bot info sent to user {user_id}")
+
 # es = AsyncElasticsearch("http://192.168.3.134:9200")
 # INDEX_NAME = "bot_stats"
 

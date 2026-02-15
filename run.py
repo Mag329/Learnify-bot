@@ -1,35 +1,121 @@
 import asyncio
-import logging
 import os
+import sys
+import socket
+from datetime import datetime
+import json
 
-import coloredlogs
+from loguru import logger
 
 from app import main
-from app.config.config import LOG_FILE
-from app.utils.database import run_migrations
+from app.config.config import LOG_FILE, ERRORS_LOG_FILE, LOG_LEVEL, LOGSTASH_HOST, LOGSTASH_PORT, BOT_VERSION
 
-# Проверяем наличие директории для логов
-log_dir = os.path.dirname(LOG_FILE)  # Получаем путь к папке
+log_dir = os.path.dirname(LOG_FILE)
 
-if log_dir and not os.path.exists(log_dir):  # Если путь не пустой и папки нет
-    os.makedirs(log_dir, exist_ok=True)  # Создаем папку
+if log_dir and not os.path.exists(log_dir):
+    os.makedirs(log_dir, exist_ok=True)
+
+def logstash_sink(message):
+    """Кастомный sink для отправки логов в Logstash по TCP"""
+    try:
+        record = message.record
+        
+        # Формируем документ для Logstash
+        log_entry = {
+            "@timestamp": record["time"].isoformat(),
+            "level": record["level"].name,
+            "logger": record["name"],
+            "module": record["name"],
+            "function": record["function"],
+            "line": record["line"],
+            "message": record["message"],
+            "process_id": record["process"].id,
+            "thread_id": record["thread"].id,
+            "bot_version": BOT_VERSION,
+            "environment": os.getenv("ENVIRONMENT", "development"),
+        }
+        
+        # Добавляем exception если есть
+        if record["exception"]:
+            log_entry["exception"] = str(record["exception"])
+            log_entry["traceback"] = record["exception"].traceback
+        
+        # Отправляем в Logstash
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)  # Таймаут 2 секунды
+        sock.connect((LOGSTASH_HOST, LOGSTASH_PORT))
+        sock.sendall((json.dumps(log_entry, ensure_ascii=False) + "\n").encode("utf-8"))
+        sock.close()
+    except ConnectionRefusedError:
+        # Не логируем через logger чтобы избежать рекурсии
+        print(f"⚠️ Logstash connection refused at {LOGSTASH_HOST}:{LOGSTASH_PORT}")
+    except socket.gaierror:
+        print(f"⚠️ Could not resolve Logstash host: {LOGSTASH_HOST}")
+    except Exception:
+        # Игнорируем ошибки Logstash чтобы не нарушать работу бота
+        pass
+
+logger.remove()
+
+logger.add(
+    sys.stdout,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> <cyan>{name}</cyan>:<cyan>{line}</cyan>[<cyan>{process}</cyan>] <level>{level: <8}</level>: <level>{message}</level>",
+    level=LOG_LEVEL,
+    colorize=True,
+)
+
+logger.add(
+    LOG_FILE,
+    format="{time:YYYY-MM-DD HH:mm:ss} {name}:{line}[{process}] {level}: {message}",
+    level=LOG_LEVEL,
+    encoding="utf-8",
+    rotation="10 MB",
+    retention="30 days",
+    compression="tar",
+)
+
+logger.add(
+    ERRORS_LOG_FILE,
+    format="{time:YYYY-MM-DD HH:mm:ss} {name}:{line}[{process}] {level}: {message}\n{exception}",
+    level="ERROR",
+    encoding="utf-8",
+    rotation="10 MB",
+    retention="30 days",
+    compression="tar",
+    backtrace=True,
+    diagnose=True
+)
+
+if LOGSTASH_HOST and LOGSTASH_PORT:
+    try:
+        logstash_handler = logger.add(
+            logstash_sink,
+            level=LOG_LEVEL,  # Можно изменить на "INFO" если не хотим отправлять DEBUG в Logstash
+            format="{message}",  # Формат не важен, мы формируем JSON вручную
+            serialize=False,  # Не используем встроенную сериализацию
+        )
+        logger.info(f"Logstash logging enabled: {LOGSTASH_HOST}:{LOGSTASH_PORT}")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to enable Logstash logging: {e}")
+else:
+    logger.info("ℹ️ Logstash logging disabled (LOGSTASH_HOST or LOGSTASH_PORT not set)")
+
+if LOG_LEVEL == "DEBUG":
+    logger.debug("=" * 50)
+    logger.debug("DEBUG MODE ENABLED")
+    logger.debug("=" * 50)
+    logger.debug(f"Log file: {LOG_FILE}")
+    logger.debug(f"Current log level: {LOG_LEVEL}")
+else:
+    logger.info(f"Debug messages are hidden (current level: {LOG_LEVEL})")
 
 if __name__ == "__main__":
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-
-    log_format = "%(asctime)s %(name)s[%(process)d] %(levelname)s: %(message)s"
-
-    # Set up colored logging
-    coloredlogs.install(level="INFO", fmt=log_format)
-
-    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(logging.Formatter(log_format))
-
-    logger.addHandler(file_handler)
-
     try:
-        asyncio.run(main())  #
+        logger.info("Starting application...")
+        asyncio.run(main())
     except KeyboardInterrupt:
-        print("Exit")
+        logger.info("Application stopped by user (KeyboardInterrupt)")
+        sys.exit(0)
+    except Exception as e:
+        logger.exception(f"Unhandled exception: {e}")
+        sys.exit(1)

@@ -1,6 +1,6 @@
-import logging
 from datetime import datetime, timedelta
 from typing import Optional
+from loguru import logger
 
 import aiohttp
 from aiogram import Bot, F, Router
@@ -12,21 +12,32 @@ from octodiary.exceptions import APIError
 from octodiary.urls import Systems
 
 import app.keyboards.user.keyboards as kb
-from app.config.config import (AWAIT_RESPONSE_MESSAGE, NO_SUBSCRIPTION_TO_CHANNEL_ERROR,
-                               START_MESSAGE, SUCCESSFUL_AUTH)
+from app.config.config import (
+    AWAIT_RESPONSE_MESSAGE,
+    NO_SUBSCRIPTION_TO_CHANNEL_ERROR,
+    START_MESSAGE,
+    SUCCESSFUL_AUTH,
+)
 from app.states.user.states import AuthState
-from app.utils.database import AsyncSessionLocal, AuthData, User, db
+from app.utils.database import get_session, AuthData, User, db
 from app.utils.misc import check_subscription
-from app.utils.user.api.mes.auth import (check_qr_login, delete_refresh_task,
-                                         get_login_qr_code,
-                                         get_token_expire_date,
-                                         schedule_refresh)
-from app.utils.user.utils import (deep_links, ensure_user_settings,
-                                  get_error_message_by_status, get_student,
-                                  get_web_api, save_profile_data)
+from app.utils.user.api.mes.auth import (
+    check_qr_login,
+    delete_refresh_task,
+    get_login_qr_code,
+    get_token_expire_date,
+    schedule_refresh,
+)
+from app.utils.user.utils import (
+    deep_links,
+    ensure_user_settings,
+    get_error_message_by_status,
+    get_student,
+    get_web_api,
+    save_profile_data,
+)
 
 router = Router()
-logger = logging.getLogger(__name__)
 
 
 @router.message(CommandStart(deep_link=False))
@@ -43,6 +54,7 @@ async def cmd_start(
         message = event
 
         if command.args:
+            logger.debug(f"User {user_id} started with deep link: {command.args}")
             return await deep_links(message, command.args, bot, state)
 
     elif isinstance(event, CallbackQuery):
@@ -50,12 +62,14 @@ async def cmd_start(
         bot = event.bot
         message = event.message
         await event.answer()
+        logger.debug(f"User {user_id} checked subscription")
     else:
         return
 
-    async with AsyncSessionLocal() as session:
+    async with await get_session() as session:
         subscribe_status = await check_subscription(user_id, bot)
         if not subscribe_status:
+            logger.warning(f"User {user_id} not subscribed to channel")
             text = (
                 "📢 <b>Для использования бота необходимо подписаться на наш канал!</b>\n\n"
                 "ℹ️ Там мы публикуем только важные уведомления:\n"
@@ -70,6 +84,7 @@ async def cmd_start(
         user = result.scalar_one_or_none()
 
         if user and user.active:
+            logger.info(f"Active user {user_id} started bot")
             await_message = await message.answer(AWAIT_RESPONSE_MESSAGE)
 
             await ensure_user_settings(session, user_id)
@@ -80,6 +95,7 @@ async def cmd_start(
                 profile = None
 
                 profile_id = (await api.get_users_profile_info())[0].id
+                logger.debug(f"User {user_id} profile_id: {profile_id}")
 
                 profile = await api.get_family_profile(profile_id=profile_id)
 
@@ -102,6 +118,7 @@ async def cmd_start(
                 auth_data: AuthData = result.scalar_one_or_none()
 
                 if auth_data:
+                    logger.debug(f"Refreshing token for user {user_id}")
                     token = await api.refresh_token(
                         auth_data.token_for_refresh,
                         auth_data.client_id,
@@ -114,9 +131,12 @@ async def cmd_start(
                         auth_data.token_expired_at = need_update_date
                         await session.commit()
 
-                        schedule_refresh(user.user_id, need_update_date, bot)
+                        await schedule_refresh(user.user_id, need_update_date, bot, True)
+                        logger.debug(f"Token refresh scheduled for user {user_id}")
 
-                await save_profile_data(session, user_id, profile.profile, message.from_user.username)
+                await save_profile_data(
+                    session, user_id, profile.profile, message.from_user.username
+                )
 
             except APIError as e:
                 logger.error(f"APIError ({e.status_code}) for user {user_id}: {e}")
@@ -130,7 +150,6 @@ async def cmd_start(
             except Exception as e:
                 logger.exception(f"Unhandled exception for user {user_id}: {e}")
 
-                # Редактирование сообщения для необработанных исключений
                 await await_message.edit_text(
                     text="❌ Ошибка авторизации",
                     reply_markup=kb.start_command,
@@ -138,7 +157,6 @@ async def cmd_start(
                 return
 
             await session.commit()
-
             await await_message.delete()
 
             await message.answer(
@@ -155,6 +173,7 @@ async def cmd_start(
                 user = User(user_id=user_id, active=False)
                 session.add(user)
                 await session.commit()
+                logger.info(f"New user {user_id} registered")
 
             await message.answer(
                 text=START_MESSAGE,
@@ -164,27 +183,30 @@ async def cmd_start(
 
 @router.callback_query(F.data == "choose_login")
 async def choose_login_handler(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
     await state.clear()
-
-    # text = (
-    #     "Выберите способ авторизации:\n\n"
-    #     "👤 <b>1. По логину и паролю</b> (рекомендуется)\n"
-    #     "  — Используйте логин и пароль от <a href='https://mos.ru'>mos.ru</a>\n"
-    #     "  — 🔒 Сессия будет активна максимально долго\n\n"
-    #     "🧾 <b>2. Через токен</b>\n"
-    #     "  — Бот отправит ссылку для получения токена, скопируйте её и отправьте ему\n"
-    #     "  — ⏳ Сессия будет активна до 10 дней\n\n"
-    #     "📷 <b>3. Через QR-код</b>\n"
-    #     "  — Отсканируйте QR-код в приложении <b>МЭШ</b>\n"
-    #     "  — ⏳ Сессия ограничена сроком в 10 дней\n\n"
-    #     "<i>⚠️ Рекомендуется использовать авторизацию через логин и пароль, чтобы не входить в аккаунт каждые 10 дней </i>"
-    # )
     
+    logger.info(f"User {user_id} opened login method selection")
+
     text = (
-        "🧾 <b>Авторизация через токен</b>\n"
+        "Выберите способ авторизации:\n\n"
+        "👤 <b>1. По логину и паролю</b> (рекомендуется)\n"
+        "  — Используйте логин и пароль от <a href='https://mos.ru'>mos.ru</a>\n"
+        "  — 🔒 Сессия будет активна максимально долго\n\n"
+        "🧾 <b>2. Через токен</b>\n"
         "  — Бот отправит ссылку для получения токена, скопируйте её и отправьте ему\n"
         "  — ⏳ Сессия будет активна до 10 дней\n\n"
+        "📷 <b>3. Через QR-код</b>\n"
+        "  — Отсканируйте QR-код в приложении <b>МЭШ</b>\n"
+        "  — ⏳ Сессия ограничена сроком в 10 дней\n\n"
+        "<i>⚠️ Рекомендуется использовать авторизацию через логин и пароль, чтобы не входить в аккаунт каждые 10 дней </i>"
     )
+
+    # text = (
+    #     "🧾 <b>Авторизация через токен</b>\n"
+    #     "  — Бот отправит ссылку для получения токена, скопируйте её и отправьте ему\n"
+    #     "  — ⏳ Сессия будет активна до 10 дней\n\n"
+    # )
 
     await callback.answer()
     await callback.message.answer(
@@ -194,23 +216,29 @@ async def choose_login_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "auth_with_login")
 async def login_callback_handler(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
     await callback.answer()
+    
+    logger.info(f"User {user_id} selected login/password auth")
+    
     await callback.message.edit_text(
         text="⚡ Для доступа к информации <b>Московской электронной школы (МЭШ)</b> необходим логин от <b>mos.ru</b>.\n\nВы можете ввести:\n  - 👤 Логин\n  - ✉️ Email\n  - 📱 Номер телефон (в формате +7 без пробелов)\n\n⚠️ <b>Важно:</b> Для авторизации у Вас должен быть привязан номер телефона к аккаунту mos.ru\n\n⚠️ <b>Важно:</b> Мы не сохраняем данные вашей авторизации. Вся информация используется только для подключения к системе и предоставления данных.",
         reply_markup=kb.back_to_choose_auth,
     )
 
     await state.update_data(main_message=callback.message.message_id)
-
     await state.set_state(AuthState.login)
 
 
 @router.message(F.text, AuthState.login)
 async def login_handler(message: Message, state: FSMContext, bot: Bot):
+    user_id = message.from_user.id
     await state.update_data(login=message.text)
 
     data = await state.get_data()
 
+    logger.debug(f"User {user_id} entered login")
+    
     await bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=data["main_message"],
@@ -224,6 +252,7 @@ async def login_handler(message: Message, state: FSMContext, bot: Bot):
 
 @router.message(F.text, AuthState.password)
 async def password_handler(message: Message, state: FSMContext, bot: Bot):
+    user_id = message.from_user.id
     await state.update_data(password=message.text)
 
     data = await state.get_data()
@@ -233,6 +262,8 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
 
         try:
             api = AsyncMobileAPI(system=Systems.MES)
+            logger.debug(f"User {user_id} attempting login with credentials")
+            
             sms_code = await api.login(
                 username=data["login"], password=data["password"]
             )
@@ -240,6 +271,8 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
             await state.update_data(sms_code_class=sms_code)
             await state.update_data(api_class=api)
 
+            logger.debug(f"SMS code request sent for user {user_id}")
+            
             await bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=data["main_message"],
@@ -248,9 +281,7 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
             )
 
         except APIError as e:
-            logger.error(
-                f"APIError ({e.status_code}) for user {message.from_user.id}: {e}"
-            )
+            logger.error(f"APIError ({e.status_code}) for user {user_id}: {e}")
             await state.clear()
 
             await message.edit_text(
@@ -259,9 +290,7 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
             )
 
         except Exception as e:
-            logger.exception(
-                f"Unhandled exception for user {message.from_user.id}: {e}"
-            )
+            logger.exception(f"Unhandled exception for user {user_id}: {e}")
             await state.clear()
 
             await bot.edit_message_text(
@@ -274,6 +303,7 @@ async def password_handler(message: Message, state: FSMContext, bot: Bot):
 
 @router.message(F.text, AuthState.sms_code_class)
 async def sms_handler(message: Message, state: FSMContext, bot: Bot):
+    user_id = message.from_user.id
     data = await state.get_data()
 
     if data["sms_code_class"]:
@@ -282,9 +312,11 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
 
         sms_code_class = data["sms_code_class"]
         api = data["api_class"]
-        async with AsyncSessionLocal() as session:
+        async with await get_session() as session:
             try:
+                logger.debug(f"User {user_id} entering SMS code")
                 token = await sms_code_class.async_enter_code(message.text)
+                await api._login_info['session'].close()
                 if token:
                     result = await session.execute(
                         db.select(User).filter_by(user_id=message.from_user.id)
@@ -294,6 +326,7 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
                         user = User(user_id=message.from_user.id, token=token)
                         session.add(user)
                         await session.commit()
+                        logger.info(f"New user {user_id} created after SMS auth")
 
                     else:
                         user.token = token
@@ -336,13 +369,18 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
 
                     await session.commit()
 
-                    schedule_refresh(user.user_id, need_update_date, bot)
+                    await schedule_refresh(user.user_id, need_update_date, bot)
 
                     await ensure_user_settings(session, message.from_user.id)
 
                     await save_profile_data(
-                        session, message.from_user.id, profile.profile, message.from_user.username
+                        session,
+                        message.from_user.id,
+                        profile.profile,
+                        message.from_user.username,
                     )
+                    
+                    logger.success(f"User {user_id} successfully authenticated via SMS")
 
                     await message.answer(
                         text=SUCCESSFUL_AUTH.format(
@@ -354,6 +392,7 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
                     )
 
                 else:
+                    logger.warning(f"User {user_id} entered invalid SMS code")
                     await state.clear()
                     await message.answer(
                         "❌ Неверный код подтверждения. Попробуйте авторизоваться снова.",
@@ -362,9 +401,7 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
                     return
 
             except APIError as e:
-                logger.error(
-                    f"APIError ({e.status_code}) for user {message.from_user.id}: {e}"
-                )
+                logger.error(f"APIError ({e.status_code}) for user {user_id}: {e}")
                 await state.clear()
 
                 await message.edit_text(
@@ -373,9 +410,7 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
                 )
 
             except Exception as e:
-                logger.exception(
-                    f"Unhandled exception for user {message.from_user.id}: {e}"
-                )
+                logger.exception(f"Unhandled exception for user {user_id}: {e}")
                 await state.clear()
 
                 # Редактирование сообщения для необработанных исключений
@@ -389,7 +424,11 @@ async def sms_handler(message: Message, state: FSMContext, bot: Bot):
 
 @router.callback_query(F.data == "exit_from_account")
 async def confirm_exit_from_account(callback: CallbackQuery):
+    user_id = callback.from_user.id
     await callback.answer()
+    
+    logger.info(f"User {user_id} requested account exit")
+    
     await callback.message.answer(
         "❗ Вы уверены, что хотите выйти из аккаунта?", reply_markup=kb.confirm_exit
     )
@@ -397,7 +436,9 @@ async def confirm_exit_from_account(callback: CallbackQuery):
 
 @router.callback_query(F.data == "confirm_exit_from_account")
 async def exit_from_account(callback: CallbackQuery):
-    async with AsyncSessionLocal() as session:
+    user_id = callback.from_user.id
+    
+    async with await get_session() as session:
         result = await session.execute(
             db.select(User).filter_by(user_id=callback.from_user.id)
         )
@@ -411,7 +452,9 @@ async def exit_from_account(callback: CallbackQuery):
                 "🚪 Вы вышли из аккаунта", reply_markup=kb.start_command
             )
             delete_refresh_task(user.user_id)
+            logger.info(f"User {user_id} logged out, refresh task deleted")
         else:
+            logger.warning(f"User {user_id} not found during logout attempt")
             await callback.answer()
             await callback.message.edit_text(
                 "❌ Ошибка выхода из аккаунта", reply_markup=kb.start_command
@@ -420,15 +463,20 @@ async def exit_from_account(callback: CallbackQuery):
 
 @router.callback_query(F.data == "decline_exit_from_account")
 async def decline_exit_from_account(callback: CallbackQuery):
+    user_id = callback.from_user.id
     await callback.answer()
     await callback.message.delete()
+    logger.debug(f"User {user_id} cancelled account exit")
 
 
 @router.callback_query(F.data == "auth_with_token")
 async def auth_by_token_callback_handler(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
     await state.set_state(AuthState.token)
     await state.update_data(main_message=callback.message.message_id)
 
+    logger.info(f"User {user_id} selected token auth")
+    
     await callback.answer()
     text = (
         "🔐 <b>Авторизация по токену</b>\n\n"
@@ -446,18 +494,21 @@ async def auth_by_token_callback_handler(callback: CallbackQuery, state: FSMCont
 
 @router.message(AuthState.token)
 async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
+    user_id = message.from_user.id
     token = message.text
 
     await message.delete()
 
     data = await state.get_data()
     if not data["main_message"]:
+        logger.warning(f"User {user_id} token auth without main_message")
         return await message.answer(
             "❌ Ошибка авторизации",
             reply_markup=kb.start_command,
         )
 
     if not token.startswith("eyJhb"):
+        logger.warning(f"User {user_id} provided invalid token format")
         return await bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=data["main_message"],
@@ -467,6 +518,7 @@ async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
 
     token_expire_timestamp = await get_token_expire_date(token, 0)
     if token_expire_timestamp - datetime.now() < timedelta(hours=1):
+        logger.warning(f"User {user_id} provided token that expires in <1 hour")
         return await message.answer(
             "❌ Токен истечёт меньше, чем через час\nПопробуйте авторизоваться заново через сайт <a href='https://mos.ru'>mos.ru</a>, или выберите другой способ авторизации",
             reply_markup=kb.start_command,
@@ -474,7 +526,7 @@ async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
 
     await state.clear()
 
-    async with AsyncSessionLocal() as session:
+    async with await get_session() as session:
         result = await session.execute(
             db.select(User).filter_by(user_id=message.from_user.id)
         )
@@ -520,11 +572,15 @@ async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
 
         await ensure_user_settings(session, message.from_user.id)
 
-        await save_profile_data(session, message.from_user.id, profile.profile, message.from_user.username)
+        await save_profile_data(
+            session, message.from_user.id, profile.profile, message.from_user.username
+        )
 
         await bot.delete_message(
             chat_id=message.from_user.id, message_id=data["main_message"]
         )
+        
+        logger.success(f"User {user_id} successfully authenticated via token")
 
         await message.answer(
             text=SUCCESSFUL_AUTH.format(
@@ -538,6 +594,10 @@ async def token_message_handler(message: Message, state: FSMContext, bot: Bot):
 
 @router.callback_query(F.data == "auth_with_qr")
 async def auth_by_qr_callback_handler(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    
+    logger.info(f"User {user_id} selected QR auth")
+    
     async with aiohttp.ClientSession() as http_session:
         status, qr_code = await get_login_qr_code(http_session)
         if not status:
@@ -558,12 +618,17 @@ async def auth_by_qr_callback_handler(callback: CallbackQuery, state: FSMContext
         qr_code_message = await callback.message.answer_photo(
             qr_code, caption=text, reply_markup=kb.back_to_choose_auth
         )
+        
+        logger.debug(f"Waiting for QR scan by user {user_id}")
         token = await check_qr_login(http_session)
+        
         if not token:
+            logger.warning(f"QR login timeout for user {user_id}")
             await qr_code_message.delete()
             await callback.message.answer("⏳ Время ожидания истекло. Попробуйте снова")
+            return
 
-        async with AsyncSessionLocal() as session:
+        async with await get_session() as session:
             result = await session.execute(
                 db.select(User).filter_by(user_id=callback.from_user.id)
             )
@@ -609,9 +674,16 @@ async def auth_by_qr_callback_handler(callback: CallbackQuery, state: FSMContext
 
             await ensure_user_settings(session, callback.from_user.id)
 
-            await save_profile_data(session, callback.from_user.id, profile.profile, callback.from_user.username)
+            await save_profile_data(
+                session,
+                callback.from_user.id,
+                profile.profile,
+                callback.from_user.username,
+            )
 
             await qr_code_message.delete()
+            
+            logger.success(f"User {user_id} successfully authenticated via QR")
 
             await callback.message.answer(
                 text=SUCCESSFUL_AUTH.format(

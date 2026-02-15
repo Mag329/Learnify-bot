@@ -2,8 +2,7 @@ from datetime import datetime, timedelta
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (InlineQuery, InlineQueryResultArticle,
-                           InputTextMessageContent)
+from aiogram.types import InlineQuery, InlineQueryResultArticle, InputTextMessageContent
 
 from app.utils.user.api.mes.homeworks import get_homework
 from app.utils.user.api.mes.replaces import get_replaces

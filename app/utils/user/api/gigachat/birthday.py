@@ -1,5 +1,5 @@
-import logging
 import re
+from loguru import logger
 
 from envparse import Env
 from gigachat import GigaChat
@@ -8,21 +8,27 @@ from gigachat.models import Chat, Messages, MessagesRole
 env = Env()
 env.read_envfile()
 
-logger = logging.getLogger(__name__)
-
 TOKEN = env.str("GIGACHAT_TOKEN")
 
 ALLOWED_HTML_TAGS = {"b", "i", "u", "code", "pre", "a"}
 
 
 async def sanitize_html(text: str) -> str:
-    """Удаляет неподдерживаемые HTML-теги"""
-    # Удаляем <br>, <div>, и т.д.
+    logger.debug(f"Sanitizing HTML text, original length: {len(text)}")
+    
+    original_length = len(text)
     text = re.sub(r"<(?!\/?(b|i|u|code|pre|a)\b)[^>]*>", "", text)
+    
+    if len(text) != original_length:
+        logger.debug(f"Removed {original_length - len(text)} characters during HTML sanitization")
+    
     return text
 
 
+
 async def birthday_greeting(name):
+    logger.info(f"Generating birthday greeting for {name} using GigaChat")
+    
     payload = Chat(
         messages=[
             Messages(
@@ -45,18 +51,23 @@ async def birthday_greeting(name):
         temperature=0.5,
         max_tokens=200,
     )
+    
+    logger.debug(f"GigaChat request payload created, max_tokens=200, temperature=0.5")
 
     try:
         with GigaChat(credentials=TOKEN, verify_ssl_certs=False) as giga:
             response = giga.chat(payload)
 
-        logger.info(f"GigaChat raw response: {response}")
+        logger.info(f"GigaChat response received successfully")
+        logger.debug(f"GigaChat raw response: {response}")
 
         text = response.choices[0].message.content.strip()
+        logger.debug(f"Raw response text length: {len(text)} characters")
 
         clean_text = await sanitize_html(text)
 
-        logger.info(f"Final cleaned text: {clean_text}")
+        logger.success(f"Birthday greeting generated successfully for {name}")
+        logger.debug(f"Final cleaned text: {clean_text}")
 
         return clean_text
 

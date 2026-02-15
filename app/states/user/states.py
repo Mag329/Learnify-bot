@@ -41,18 +41,21 @@ class SettingsEditStates(StatesGroup):
 class ChooseAmountForPaymentState(StatesGroup):
     amount = State()
     main_message_id = State()
-    
+
 
 class ChooseUserForGiftState(StatesGroup):
     username = State()
     description = State()
     main_message_id = State()
-    
+
+
 class SelectGdzUrlState(StatesGroup):
     link = State()
-    
+
+
 class QuickGdzState(StatesGroup):
     number = State()
-    
+
+
 class SelectBookState(StatesGroup):
     file = State()

@@ -1,10 +1,14 @@
 from datetime import datetime
 
-from aiogram.types import (InlineKeyboardButton, InlineKeyboardMarkup,
-                           KeyboardButton, ReplyKeyboardMarkup)
+from aiogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+)
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
-from app.utils.database import AsyncSessionLocal, Settings, db
+from app.utils.database import get_session, Settings, db
 
 panel = InlineKeyboardMarkup(
     inline_keyboard=[

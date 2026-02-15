@@ -1,5 +1,3 @@
-import io
-import logging
 import os
 from datetime import datetime, timedelta
 from loguru import logger
@@ -20,7 +18,7 @@ from miniopy_async.error import S3Error
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import MINIO_BUCKET_NAME, NO_PREMIUM_ERROR
-from app.minio import client as minio_client
+from app.minio import get_minio_client
 from app.states.user.states import (
     ChooseAmountForPaymentState,
     ChooseUserForGiftState,
@@ -46,7 +44,6 @@ from app.utils.user.api.learnify.subscription import (
 from app.utils.user.utils import get_student
 
 router = Router()
-logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == "student_book_settings")
@@ -139,17 +136,27 @@ async def select_book_handler(message: Message, state, bot):
     logger.debug(f"File downloaded to {file_path}")
     
     try:
+        minio_client = await get_minio_client()
         await minio_client.fput_object(MINIO_BUCKET_NAME, object_name, file_path)
         logger.debug(f"File uploaded to MinIO: {object_name}")
         
         async with await get_session() as session:
-            book = StudentBook(
-                user_id=message.from_user.id,
-                subject_id=subject_id,
-                subject_name=subject_name,
-                file=object_name,
+            result = await session.execute(
+            db.select(StudentBook).filter_by(
+                    user_id=user_id, subject_id=subject_id
+                )
             )
-            session.add(book)
+            book = result.scalar_one_or_none()
+            if not book:
+                book = StudentBook(
+                    user_id=message.from_user.id,
+                    subject_id=subject_id,
+                    subject_name=subject_name,
+                    file=object_name,
+                )
+                session.add(book)
+            else:
+                book.file = object_name
             await session.commit()
             
             logger.success(f"Book record created for user {user_id}, subject {subject_name}")
@@ -208,6 +215,7 @@ async def student_book_handler(callback: CallbackQuery):
 
         try:
             logger.debug(f"Fetching book from MinIO: {book.file}")
+            minio_client = await get_minio_client()
             response = await minio_client.get_object(MINIO_BUCKET_NAME, book.file)
             data = await response.read()
             await response.release()

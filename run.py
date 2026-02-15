@@ -46,13 +46,7 @@ def logstash_sink(message):
         sock.connect((LOGSTASH_HOST, LOGSTASH_PORT))
         sock.sendall((json.dumps(log_entry, ensure_ascii=False) + "\n").encode("utf-8"))
         sock.close()
-    except ConnectionRefusedError:
-        # Не логируем через logger чтобы избежать рекурсии
-        print(f"⚠️ Logstash connection refused at {LOGSTASH_HOST}:{LOGSTASH_PORT}")
-    except socket.gaierror:
-        print(f"⚠️ Could not resolve Logstash host: {LOGSTASH_HOST}")
     except Exception:
-        # Игнорируем ошибки Logstash чтобы не нарушать работу бота
         pass
 
 logger.remove()

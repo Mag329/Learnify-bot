@@ -20,7 +20,7 @@ from miniopy_async.error import S3Error
 
 import app.keyboards.user.keyboards as kb
 from app.config.config import MINIO_BUCKET_NAME, NO_PREMIUM_ERROR
-from app.minio import client as minio_client
+from app.minio import get_minio_client
 from app.states.user.states import (
     ChooseAmountForPaymentState,
     ChooseUserForGiftState,

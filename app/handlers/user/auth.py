@@ -131,7 +131,7 @@ async def cmd_start(
                         auth_data.token_expired_at = need_update_date
                         await session.commit()
 
-                        await schedule_refresh(user.user_id, need_update_date, bot, True)
+                        await schedule_refresh(user.user_id, need_update_date, bot)
                         logger.debug(f"Token refresh scheduled for user {user_id}")
 
                 await save_profile_data(

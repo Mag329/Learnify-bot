@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024-2026 Mag329
+#
+# SPDX-License-Identifier: MIT
+
 from app.keyboards.user.auth import *
 from app.keyboards.user.different import *
 from app.keyboards.user.homeworks import *

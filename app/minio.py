@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024-2026 Mag329
+#
+# SPDX-License-Identifier: MIT
+
 from loguru import logger
 from miniopy_async import Minio
 

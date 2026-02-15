@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024-2026 Mag329
+#
+# SPDX-License-Identifier: MIT
+
 - name: day
   title: день
   text_name: 1 день

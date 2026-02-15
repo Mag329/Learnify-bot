@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024-2026 Mag329
+#
+# SPDX-License-Identifier: MIT
+
 from collections import defaultdict
 from loguru import logger
 

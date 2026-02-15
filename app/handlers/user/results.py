@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024-2026 Mag329
+#
+# SPDX-License-Identifier: MIT
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery

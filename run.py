@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024-2026 Mag329
+#
+# SPDX-License-Identifier: MIT
+
 import asyncio
 import os
 import sys
@@ -16,7 +20,6 @@ if log_dir and not os.path.exists(log_dir):
     os.makedirs(log_dir, exist_ok=True)
 
 def logstash_sink(message):
-    """Кастомный sink для отправки логов в Logstash по TCP"""
     try:
         record = message.record
         

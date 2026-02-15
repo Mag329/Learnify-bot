@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024-2026 Mag329
+#
+# SPDX-License-Identifier: MIT
+
 from typing import Any, Awaitable, Callable, Dict
 from loguru import logger
 

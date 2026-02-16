@@ -49,7 +49,7 @@ env.read_envfile()
 
 
 dp = Dispatcher(storage=MemoryStorage())
-bot = None
+bot_instance = None
 
 try:
     locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
@@ -96,6 +96,8 @@ async def main():
         session = AiohttpSession()
 
     # Создание бота
+    global bot_instance
+    
     try:
         bot = Bot(
             token=env.str("TOKEN"),
@@ -104,6 +106,8 @@ async def main():
                 parse_mode=ParseMode.HTML, link_preview_is_disabled=True
             ),
         )
+        
+        bot_instance = bot
         logger.info("Bot instance created")
     except Exception as e:
         logger.exception(f"Failed to create bot instance: {e}")

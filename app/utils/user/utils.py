@@ -78,7 +78,7 @@ SUBSCRIPT_MAP = str.maketrans("12345", "₁₂₃₄₅")
 
 
 async def user_send_message(user_id, message, markup=None):
-    from app import bot
+    from app import bot_instance as bot
 
     try:
         chat = await bot.get_chat(user_id)

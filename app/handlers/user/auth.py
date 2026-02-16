@@ -114,29 +114,29 @@ async def cmd_start(
 
                 await session.commit()
 
-                result = await session.execute(
-                    db.select(AuthData).filter_by(
-                        user_id=user_id, auth_method="password"
-                    )
-                )
-                auth_data: AuthData = result.scalar_one_or_none()
+                # result = await session.execute(
+                #     db.select(AuthData).filter_by(
+                #         user_id=user_id, auth_method="password"
+                #     )
+                # )
+                # auth_data: AuthData = result.scalar_one_or_none()
 
-                if auth_data:
-                    logger.debug(f"Refreshing token for user {user_id}")
-                    token = await api.refresh_token(
-                        auth_data.token_for_refresh,
-                        auth_data.client_id,
-                        auth_data.client_secret,
-                    )
-                    if token:
-                        user.token = token
-                        auth_data.token_for_refresh = api.token_for_refresh
-                        need_update_date = await get_token_expire_date(api.token)
-                        auth_data.token_expired_at = need_update_date
-                        await session.commit()
+                # if auth_data:
+                    # logger.debug(f"Refreshing token for user {user_id}")
+                    # token = await api.refresh_token(
+                    #     auth_data.token_for_refresh,
+                    #     auth_data.client_id,
+                    #     auth_data.client_secret,
+                    # )
+                    # if token:
+                    #     user.token = token
+                    #     auth_data.token_for_refresh = api.token_for_refresh
+                    #     need_update_date = await get_token_expire_date(api.token)
+                    #     auth_data.token_expired_at = need_update_date
+                    #     await session.commit()
 
-                        await schedule_refresh(user.user_id, need_update_date, bot)
-                        logger.debug(f"Token refresh scheduled for user {user_id}")
+                    #     await schedule_refresh(user.user_id, need_update_date, bot)
+                    #     logger.debug(f"Token refresh scheduled for user {user_id}")
 
                 await save_profile_data(
                     session, user_id, profile.profile, message.from_user.username

@@ -344,15 +344,10 @@ async def get_results(
         "trimesters": f"{period_number} триместр",
     }
 
-    async with await get_session() as session:
-        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
-        settings: Settings = result.scalar_one_or_none()
-
-    use_cache = settings and settings.experimental_features and settings.use_cache
     cache_key = f"results:{user_id}:{period_type}:{period_number}"
-    logger.debug(f"Cache key: {cache_key}, use_cache={use_cache}")
+    logger.debug(f"Cache key: {cache_key}")
 
-    if use_cache and not cache_bypass:
+    if not cache_bypass:
         cached_data = await redis_client.get(cache_key)
         if cached_data:
             logger.debug(f"Cache hit for results: user {user_id}, period {period_number}")
@@ -719,10 +714,9 @@ async def get_results(
 
     logger.success(f"Results generated for user {user_id}, period {period_number}")
     
-    if use_cache:
-        ttl = await get_ttl()
-        await redis_client.setex(cache_key, ttl, json.dumps(result))
-        logger.debug(f"Cached results for user {user_id}, key: {cache_key}, TTL: {ttl}")
+    ttl = await get_ttl()
+    await redis_client.setex(cache_key, ttl, json.dumps(result))
+    logger.debug(f"Cached results for user {user_id}, key: {cache_key}, TTL: {ttl}")
 
     return result
 

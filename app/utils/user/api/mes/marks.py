@@ -9,6 +9,7 @@ from aiogram.fsm.context import FSMContext
 
 from app.keyboards import user as kb
 from app.config.config import BASE_QUARTER
+from app.utils.user.cache import redis_client
 from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import (
     generate_deeplink,
@@ -21,6 +22,17 @@ from app.utils.user.utils import (
 @handle_api_error()
 async def get_marks(user_id, date_object):
     logger.info(f"Getting marks for user {user_id}, date: {date_object.strftime('%Y-%m-%d')}")
+    
+    cache_key = f"marks:{user_id}:{date_object.strftime('%Y-%m-%d')}"
+    logger.debug(f"Cache key: {cache_key}")
+
+    # Пытаемся получить данные из кэша
+    cached_text = await redis_client.get(cache_key)
+    if cached_text:
+        logger.debug(
+            f"Cache hit for marks: user {user_id}, date {date_object.strftime('%Y-%m-%d')}"
+        )
+        return cached_text
     
     api, user = await get_student(user_id)
     if not api or not user:
@@ -61,12 +73,25 @@ async def get_marks(user_id, date_object):
         text = f'❌ <b>У вас нет оценок </b>{date_object.strftime("%d %B (%a)")}'
 
     logger.info(f"Successfully formatted {marks_count} marks for user {user_id}")
+    
+    await redis_client.setex(cache_key, 7200, text)
+    logger.debug(f"Cached marks for user {user_id} with TTL 7200s")
+    
     return text
 
 
 @handle_api_error()
 async def get_marks_by_subject(user_id, subject_id):
     logger.info(f"Getting marks by subject for user {user_id}, subject_id: {subject_id}")
+    
+    # ! Need add date_object for cache after split marks by periods
+    
+    cache_key = f"marks_subject:{user_id}:{subject_id}"
+
+    cache_redis = await redis_client.get(cache_key)
+    if cache_redis:
+        logger.debug(f"Cache key: {cache_key}")
+        return cache_redis
     
     api, user = await get_student(user_id)
     if not api or not user:
@@ -128,6 +153,10 @@ async def get_marks_by_subject(user_id, subject_id):
         text += "\n"
 
     logger.info(f"Successfully formatted marks for subject {marks_for_subject.subject_name}: {periods_count} periods, {marks_count} total marks")
+    
+    await redis_client.setex(cache_key, 7200, text)
+    logger.debug(f"Cached marks by subject for user {user_id} with TTL 7200s")
+    
     return text
 
 

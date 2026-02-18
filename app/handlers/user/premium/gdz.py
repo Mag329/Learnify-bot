@@ -41,7 +41,6 @@ from app.utils.user.api.learnify.subscription import (
 from app.utils.user.utils import get_student
 
 router = Router()
-logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data.startswith("quick_gdz_"))

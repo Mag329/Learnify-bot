@@ -74,6 +74,7 @@ class StatsMiddleware(BaseMiddleware):
 
             # Формируем документ для отправки в Logstash
             doc = {
+                "event_type": "stats", 
                 "user": user_info,
                 "action_type": action_type,
                 "action_data": action_data,
@@ -81,7 +82,7 @@ class StatsMiddleware(BaseMiddleware):
                 "processing_time_ms": processing_time,
                 "bot_version": BOT_VERSION,
             }
-
+            
             # Отправляем данные в Logstash
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

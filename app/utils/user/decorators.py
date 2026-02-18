@@ -115,21 +115,6 @@ def cache(ttl=None):
                 )
                 return await func(*args, **kwargs)
 
-            async with await get_session() as session:
-                result = await session.execute(
-                    db.select(Settings).filter_by(user_id=user_id)
-                )
-                settings: Settings = result.scalar_one_or_none()
-                if settings and not (
-                    settings.experimental_features and settings.use_cache
-                ):
-                    logger.debug(
-                        f"Cache disabled for user {user_id}, executing {func.__name__}"
-                    )
-                    return await func(*args, **kwargs)
-                elif settings:
-                    logger.debug(f"Cache enabled for user {user_id}")
-
             cache_key = f"{func.__name__}:{user_id}:{date_object.strftime('%Y-%m-%d')}"
             logger.debug(f"Cache key: {cache_key}")
 
@@ -203,21 +188,6 @@ def cache_text_only(ttl=None):
             if date_object and hasattr(date_object, "strftime"):
                 cache_key_parts.append(f"date:{date_object.strftime('%Y-%m-%d')}")
                 logger.debug(f"Found date_object={date_object.strftime('%Y-%m-%d')}")
-
-            async with await get_session() as session:
-                result = await session.execute(
-                    db.select(Settings).filter_by(user_id=user_id)
-                )
-                settings: Settings = result.scalar_one_or_none()
-                if settings and not (
-                    settings.experimental_features and settings.use_cache
-                ):
-                    logger.debug(
-                        f"Cache disabled for user {user_id}, executing {func.__name__}"
-                    )
-                    return await func(*args, **kwargs)
-                elif settings:
-                    logger.debug(f"Cache enabled for user {user_id}")
 
             # Создаем ключ кэша
             cache_key = f"text_only:{func.__name__}:{':'.join(cache_key_parts)}"

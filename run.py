@@ -25,6 +25,7 @@ def logstash_sink(message):
         
         # Формируем документ для Logstash
         log_entry = {
+            "event_type": "log", 
             "@timestamp": record["time"].isoformat(),
             "level": record["level"].name,
             "logger": record["name"],

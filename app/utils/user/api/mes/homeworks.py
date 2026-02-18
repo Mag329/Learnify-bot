@@ -23,18 +23,12 @@ temp_events = {}
 @handle_api_error()
 async def get_homework(user_id, date_object, direction="right"):
     logger.info(f"Getting homework for user {user_id}, date: {date_object.strftime('%Y-%m-%d')}, direction: {direction}")
-    
-    async with await get_session() as session:
-        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
-        settings: Settings = result.scalar_one_or_none()
 
-    use_cache = settings and settings.experimental_features and settings.use_cache
     cache_key = f"homeworks:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction if direction != 'to_date' else 'today'}"
-
-    logger.debug(f"Cache key: {cache_key}, use_cache={use_cache}")
+    logger.debug(f"Cache key: {cache_key}")
     
     # Чтение кэша только если это не "to_date"
-    if use_cache and direction != "to_date":
+    if direction != "to_date":
         cached_full = await redis_client.get(cache_key)
         if cached_full:
             logger.debug(f"Cache hit for homework: user {user_id}, date {date_object.strftime('%Y-%m-%d')}")
@@ -197,7 +191,7 @@ async def get_homework(user_id, date_object, direction="right"):
         text = f'❌ <b>У вас нет домашних заданий на </b>{date_object.strftime("%d %B (%a)")}'
         logger.debug(f"No homeworks found for user {user_id} on {date_object.strftime('%Y-%m-%d')}")
 
-    if date_object == original_date and use_cache:
+    if date_object == original_date:
         cache_data = {"text": text, "date": date_object.strftime("%Y-%m-%d")}
         ttl = await get_ttl()
         await redis_client.setex(cache_key, ttl, json.dumps(cache_data))
@@ -214,20 +208,12 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
     
     date_object = date_object - timedelta(days=date_object.weekday())
 
-    async with await get_session() as session:
-        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
-        settings: Settings = result.scalar_one_or_none()
-        if settings and settings.experimental_features and settings.use_cache:
-            cache_key = f"homework_subject:{user_id}:{subject_id}:{date_object.strftime('%Y-%m-%d')}"
+    cache_key = f"homework_subject:{user_id}:{subject_id}:{date_object.strftime('%Y-%m-%d')}"
 
-            cache_redis = await redis_client.get(cache_key)
-            if cache_redis:
-                logger.debug(f"Cache hit for subject homework: user {user_id}, subject {subject_id}")
-                return cache_redis
-
-            use_cache = True
-        else:
-            use_cache = False
+    cache_redis = await redis_client.get(cache_key)
+    if cache_redis:
+        logger.debug(f"Cache hit for subject homework: user {user_id}, subject {subject_id}")
+        return cache_redis
 
     api, user = await get_student(user_id)
     if not api or not user:
@@ -393,9 +379,8 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
     else:
         logger.info(f"Subject homework formatted: {days_with_homework} days with homework, {days_without_homework} without")
 
-    if use_cache:
-        await redis_client.setex(cache_key, DEFAULT_SHORT_CACHE_TTL, text)
-        logger.debug(f"Cached subject homework for user {user_id}, key: {cache_key}, TTL: {DEFAULT_SHORT_CACHE_TTL}")
+    await redis_client.setex(cache_key, DEFAULT_SHORT_CACHE_TTL, text)
+    logger.debug(f"Cached subject homework for user {user_id}, key: {cache_key}, TTL: {DEFAULT_SHORT_CACHE_TTL}")
 
     return text
 

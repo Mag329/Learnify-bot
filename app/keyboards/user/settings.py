@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-from aiogram.types import InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.config.config import BUG_REPORT_URL
@@ -68,3 +68,14 @@ async def build_settings_nav_keyboard(
     )
 
     return keyboard.as_markup()
+
+
+back_to_main_settings = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="🔙 Назад", callback_data="back_to_main_settings"
+            )
+        ]
+    ]
+)

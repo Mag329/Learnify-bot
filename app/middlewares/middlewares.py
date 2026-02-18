@@ -80,16 +80,24 @@ class AllowedUsersMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: Dict[str, Any],
     ):
-        if event.message:
+        user_id = None
+        
+        if hasattr(event, "message") and event.message and event.message.from_user:
             user_id = event.message.from_user.id
-        elif event.callback_query:
+        elif hasattr(event, "callback_query") and event.callback_query and event.callback_query.from_user:
             user_id = event.callback_query.from_user.id
-        if user_id in ALLOWED_USERS:
-            logger.debug(f"User {user_id} is in allowed users list")
-            return await handler(event, data)
-        else:
-            logger.warning(f"User {user_id} is not in allowed users list, blocking access")
-            return None
+        elif hasattr(event, "inline_query") and event.inline_query and event.inline_query.from_user:
+            user_id = event.inline_query.from_user.id
+        
+        if user_id is not None:
+            if user_id in ALLOWED_USERS:
+                logger.debug(f"User {user_id} is in allowed users list")
+                return await handler(event, data)
+            else:
+                logger.warning(f"User {user_id} is not in allowed users list, blocking access")
+                return None
+        logger.warning(f"Cannot determine user_id for event {event}, blocking access")
+        return None
 
 
 class UpdateUsernameMiddleware(BaseMiddleware):
@@ -99,14 +107,18 @@ class UpdateUsernameMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: Dict[str, Any],
     ):
-        if event.message:
+        user_id = None
+        username = None
+
+        if hasattr(event, "message") and event.message and event.message.from_user:
             user_id = event.message.from_user.id
             username = event.message.from_user.username
-        elif event.callback_query:
+        elif hasattr(event, "callback_query") and event.callback_query and event.callback_query.from_user:
             user_id = event.callback_query.from_user.id
             username = event.callback_query.from_user.username
-        else:
-            return await handler(event, data)
+        elif hasattr(event, "inline_query") and event.inline_query and event.inline_query.from_user:
+            user_id = event.inline_query.from_user.id
+            username = event.inline_query.from_user.username
         
         async with await get_session() as session:
             result = await session.execute(

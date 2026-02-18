@@ -27,30 +27,19 @@ user_tasks = {}
 async def get_schedule(user_id, date_object, short=True, direction="right"):
     logger.info(f"Getting schedule for user {user_id}, date: {date_object.strftime('%Y-%m-%d')}, short={short}, direction={direction}")
     
-    async with await get_session() as session:
-        result = await session.execute(db.select(Settings).filter_by(user_id=user_id))
-        settings: Settings = result.scalar_one_or_none()
-        
-        use_cache = False
-        
-        if settings and settings.experimental_features and settings.use_cache:
-            short_cache_key = f"get_schedule:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}:short"
-            full_cache_key = f"get_schedule:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}:full"
+    short_cache_key = f"get_schedule:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}:short"
+    full_cache_key = f"get_schedule:{user_id}:{date_object.strftime('%Y-%m-%d')}:{direction}:full"
 
-            if not short:
-                cached_full = await redis_client.get(full_cache_key)
-                if cached_full:
-                    logger.debug(f"Cache hit for full schedule: user {user_id}, date {date_object.strftime('%Y-%m-%d')}")
-                    data = json.loads(cached_full)
-                    return data["text"], datetime.strptime(data["date"], "%Y-%m-%d")
-                else:
-                    logger.debug(f"Cache miss for full schedule: user {user_id}, date {date_object.strftime('%Y-%m-%d')}")
-
-            use_cache = True
-            logger.debug(f"Cache enabled for user {user_id}")
+    if not short:
+        cached_full = await redis_client.get(full_cache_key)
+        if cached_full:
+            logger.debug(f"Cache hit for full schedule: user {user_id}, date {date_object.strftime('%Y-%m-%d')}")
+            data = json.loads(cached_full)
+            return data["text"], datetime.strptime(data["date"], "%Y-%m-%d")
         else:
-            logger.debug(f"Cache disabled for user {user_id}")
+            logger.debug(f"Cache miss for full schedule: user {user_id}, date {date_object.strftime('%Y-%m-%d')}")
 
+    logger.debug(f"Cache enabled for user {user_id}")
     try:
         api, user = await get_student(user_id)
         if not api or not user:
@@ -163,17 +152,16 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
             replaced_text = "\n    👤 - 🔄 замена"
             text += f'{subject_name} <i>({start_time}-{end_time})</i> {" <code>Н</code>" if event.is_missed_lesson else ""} {" 🟢" if event.start_at < datetime.now(timezone.utc) and datetime.now(timezone.utc) < event.finish_at else ""}\n    📍 {event.room_number}{replaced_text if event.replaced else ""}\n\n'
 
-    if use_cache:
-        cache_data = {"text": text, "date": date_object.strftime("%Y-%m-%d")}
+    cache_data = {"text": text, "date": date_object.strftime("%Y-%m-%d")}
 
-        ttl = await get_ttl()
+    ttl = await get_ttl()
 
-        if short and date_object == original_date:
-            await redis_client.setex(short_cache_key, ttl, json.dumps(cache_data))
-            logger.debug(f"Cached short schedule for user {user_id}, key: {short_cache_key}, TTL: {ttl}")
-        else:
-            await redis_client.setex(full_cache_key, ttl, json.dumps(cache_data))
-            logger.debug(f"Cached full schedule for user {user_id}, key: {full_cache_key}, TTL: {ttl}")
+    if short and date_object == original_date:
+        await redis_client.setex(short_cache_key, ttl, json.dumps(cache_data))
+        logger.debug(f"Cached short schedule for user {user_id}, key: {short_cache_key}, TTL: {ttl}")
+    else:
+        await redis_client.setex(full_cache_key, ttl, json.dumps(cache_data))
+        logger.debug(f"Cached full schedule for user {user_id}, key: {full_cache_key}, TTL: {ttl}")
     
     logger.info(f"Schedule retrieved for user {user_id}, {lessons_count} lessons on {date_object.strftime('%Y-%m-%d')}")
     return text, date_object

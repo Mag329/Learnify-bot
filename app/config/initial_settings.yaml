@@ -62,5 +62,5 @@
   label: Использовать кэширование для запросов
   type: bool
   ordering: 1
-  visible: true
+  visible: false
   experimental: true

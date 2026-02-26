@@ -147,7 +147,7 @@ async def get_notifications(user_id, all=True, is_checker=False):
                 detail = f"<b>Изменение оценки:</b>\n            <i><code>{n.old_mark_value} -> {await get_mark_with_weight(n.new_mark_value, n.new_mark_weight)} - {n.control_form_name}</code></i>"
                 processed_types["update_mark"] = processed_types.get("update_mark", 0) + 1
             elif n.event_type == "delete_mark":
-                detail = f"<b>Удаление оценки:</b>\n            <i><code>{n.old_mark_value} - {n.control_form_name}</code></i>"
+                detail = f"<b>Удаление оценки:</b>\n            <i><code>{await get_mark_with_weight(n.old_mark_value, n.old_mark_weight)} - {n.control_form_name}</code></i>"
                 processed_types["delete_mark"] = processed_types.get("delete_mark", 0) + 1
             elif n.event_type in {"create_homework", "update_homework"}:
                 action = (

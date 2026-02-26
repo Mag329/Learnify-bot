@@ -127,7 +127,7 @@ async def get_student(user_id, active=True) -> list[AsyncMobileAPI, User]:
 
 
 @handle_api_error()
-async def get_web_api(user_id, active=True):
+async def get_web_api(user_id, active=True) -> list[AsyncWebAPI, User]:
     logger.debug(f"Getting web API for user {user_id}, active={active}")
 
     async with await get_session() as session:

@@ -77,7 +77,7 @@ async def get_cache(key):
 
 
 async def clear_user_cache(user_id: str):
-    pattern = f"*:{user_id}:*"
+    pattern = f"*{user_id}*"
 
     deleted = 0
     async for key in redis_client.scan_iter(match=pattern):

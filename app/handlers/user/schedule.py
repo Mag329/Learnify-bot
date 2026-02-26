@@ -13,10 +13,7 @@ from loguru import logger
 from app.keyboards import user as kb
 from app.states.user.states import ScheduleState
 from app.utils.user.api.mes.schedule import (
-    cancel_previous_task,
     get_schedule,
-    update_detailed_schedule,
-    user_tasks,
 )
 
 router = Router()
@@ -41,13 +38,6 @@ async def schedule_handler(message: Message, state: FSMContext):
             text,
             reply_markup=kb.schedule,
         )
-
-        # Отменяем предыдущую задачу и создаём новую
-        await cancel_previous_task(user_id)
-        user_tasks[message.from_user.id] = asyncio.create_task(
-            update_detailed_schedule(schedule_message, user_id, new_date)
-        )
-        logger.debug(f"Created background task for detailed schedule update for user {user_id}")
     else:
         logger.warning(f"No schedule data returned for user {user_id}")
 
@@ -75,13 +65,6 @@ async def schedule_left_callback_handler(callback: CallbackQuery, state: FSMCont
             text,
             reply_markup=kb.schedule,
         )
-
-        # Отменяем предыдущую задачу и создаём новую
-        await cancel_previous_task(user_id)
-        user_tasks[callback.from_user.id] = asyncio.create_task(
-            update_detailed_schedule(callback.message, user_id, new_date)
-        )
-        logger.debug(f"Created background task for detailed schedule update for user {user_id}")
     else:
         logger.warning(f"No schedule data returned for user {user_id} on {new_date.strftime('%Y-%m-%d')}")
 
@@ -109,13 +92,6 @@ async def schedule_right_callback_handler(callback: CallbackQuery, state: FSMCon
             text,
             reply_markup=kb.schedule,
         )
-
-        # Отменяем предыдущую задачу и создаём новую
-        await cancel_previous_task(user_id)
-        user_tasks[callback.from_user.id] = asyncio.create_task(
-            update_detailed_schedule(callback.message, user_id, new_date)
-        )
-        logger.debug(f"Created background task for detailed schedule update for user {user_id}")
     else:
         logger.warning(f"No schedule data returned for user {user_id} on {new_date.strftime('%Y-%m-%d')}")
 
@@ -141,12 +117,5 @@ async def schedule_today_callback_handler(callback: CallbackQuery, state: FSMCon
             text,
             reply_markup=kb.schedule,
         )
-
-        # Отменяем предыдущую задачу и создаём новую
-        await cancel_previous_task(user_id)
-        user_tasks[user_id] = asyncio.create_task(
-            update_detailed_schedule(callback.message, user_id, new_date)
-        )
-        logger.debug(f"Created background task for detailed schedule update for user {user_id}")
     else:
         logger.warning(f"No schedule data returned for user {user_id} for today")

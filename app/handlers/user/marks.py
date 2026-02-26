@@ -95,10 +95,13 @@ async def subject_marks_callback_handler(callback: CallbackQuery, state: FSMCont
     new_message = True if data[-1] == "new" else False
 
     await state.update_data(subject_id=subject_id)
+    
     logger.info(f"User {user_id} requested marks for subject_id={subject_id}")
 
-    text = await get_marks_by_subject(user_id, subject_id)
+    text, periods = await get_marks_by_subject(user_id, subject_id)
 
+    await state.update_data(periods=periods)
+    
     await callback.answer()
 
     if new_message:
@@ -109,3 +112,52 @@ async def subject_marks_callback_handler(callback: CallbackQuery, state: FSMCont
     else:
         await callback.message.edit_text(text, reply_markup=kb.subject_marks)
         logger.debug(f"Subject marks updated in existing message for user {user_id}")
+
+
+@router.callback_query(F.data == "choose_period_marks")
+async def choose_period_marks_callback_handler(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    await callback.answer()
+    
+    logger.info(f"User {user_id} choosing period for marks")
+
+    data = await state.get_data()
+    periods = data.get("periods", None)
+    active_period = data.get("period_num", None)
+    if not active_period:
+        active_period = next((p['num'] for p in periods if p['current']), 1)
+        
+    print(active_period)
+    
+    if not periods:
+        await callback.message.edit_text(
+            "Выберите предмет",
+            reply_markup=await kb.choice_subject(user_id, "marks"),
+        )
+        return
+    
+    await callback.message.edit_text(
+        text="Выберите период",
+        reply_markup=await kb.get_marks_periods_keyboard(periods, active_period),
+    )
+    
+@router.callback_query(F.data.startswith("select_period_marks_"))
+async def period_marks_callback_handler(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    period_num = int(callback.data.split("_")[-1])
+    
+    data = await state.get_data()
+    subject_id = data.get("subject_id", None)
+    
+    await state.update_data(period_num=period_num)
+    logger.info(f"User {user_id} requested marks for period_id={period_num}")
+    
+    await callback.answer()
+
+    text, periods = await get_marks_by_subject(user_id, subject_id, period_num)
+    
+    await state.update_data(periods=periods)
+    
+    if text:
+        await callback.message.edit_text(text, reply_markup=kb.subject_marks)
+        logger.debug(f"Subject marks got {period_num} period message for user {user_id}")

@@ -20,13 +20,7 @@ router = Router()
 async def settings(message: Message):
     logger.info(f"User {message.from_user.id} opened settings menu")
     await send_settings_editor(message, selected_index=0, is_experimental=False)
-
-
-@router.message(F.text == "🧪 Экспериментальные")
-async def experimental_settings(message: Message):
-    logger.info(f"User {message.from_user.id} opened experimental settings menu")
-    await send_settings_editor(message, selected_index=0, is_experimental=True)
-
+    
 
 @router.callback_query(F.data.startswith(("nav_up_settings:", "nav_down_settings:")))
 async def nav_settings_handler(callback: CallbackQuery):
@@ -95,6 +89,8 @@ async def edit_setting(callback: CallbackQuery, state: FSMContext):
             await callback.answer("Настройки не найдены", show_alert=True)
             return
 
+        await clear_user_cache(callback.from_user.id)
+        
         # Если тип bool — инвертируем и сохраняем
         if definition.type == "bool":
             current_value = getattr(settings, definition.key, False)

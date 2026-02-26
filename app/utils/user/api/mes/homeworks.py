@@ -137,9 +137,7 @@ async def get_homework(user_id, date_object, direction="right"):
     
     for task in sorted_homeworks:
         description = task.description.rstrip("\n")
-        materials_amount = sum(
-            1 for m in task.materials if m.type not in ["attachments"]
-        )
+        materials_amount = len(task.materials)
         materials = (
             f"<i> (Для выполнения: {materials_amount})</i>" if materials_amount else ""
         )
@@ -274,14 +272,16 @@ async def get_homework_by_subject(user_id, subject_id, date_object):
                 try:
                     if len(material.urls) != 0:
                         for url in material.urls:
-                            materials.append(
-                                {
-                                    "url": url.url,
-                                    "title": material.title,
-                                    "material_type_name": material.type_name,
-                                    "material_type": material.type,
-                                }
-                            )
+                            material_url = url.get('url')
+                            if material != None:
+                                materials.append(
+                                    {
+                                        "url": material_url,
+                                        "title": material.title,
+                                        "material_type_name": material.type_name,
+                                        "material_type": material.type,
+                                    }
+                                )
                     else:
                         activity_url = await api.get_activity_launch_link(
                             homework_entry_id=homework.homework_entry_id,

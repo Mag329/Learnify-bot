@@ -211,7 +211,41 @@ async def next_line_handler(callback: CallbackQuery, state: FSMContext):
                 period_type, period_number, has_more_lines=False
             ),
         )
+        
 
+@router.callback_query(F.data == "show_all_lines_results")
+async def show_all_lines_handler(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    await callback.answer()
+
+    data = await state.get_data()
+    line = data.get("line", 1)
+    period_type = data.get("period_type", "quarters")
+    period_number = data.get("period_number", 1)
+
+    text_lines = data.get("text", [])
+
+
+    if line < len(text_lines):
+        await state.update_data(line=len(text_lines))
+
+        text = "\n".join(text_lines)
+        logger.debug(f"User {user_id} showing all results lines")
+
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=await kb.get_overall_results_keyboard(
+                period_type, period_number, has_more_lines=True
+            ),
+        )
+    else:
+        logger.debug(f"User {user_id} reached end of results")
+        await callback.message.edit_text(
+            text=callback.message.html_text,
+            reply_markup=await kb.get_overall_results_keyboard(
+                period_type, period_number, has_more_lines=False
+            ),
+        )
 
 @router.callback_query(F.data == "choose_period")
 async def choose_period_handler(callback: CallbackQuery, state: FSMContext):

@@ -54,7 +54,7 @@
 - key: experimental_features
   label: Включить экспериментальные функции
   type: bool
-  ordering: 8
+  ordering: 9
   visible: true
   experimental: false
 
@@ -64,3 +64,10 @@
   ordering: 1
   visible: false
   experimental: true
+
+- key: show_active_break_in_schedule
+  label: Показывать активные перемены в расписании
+  type: bool
+  ordering: 8
+  visible: true
+  experimental: false

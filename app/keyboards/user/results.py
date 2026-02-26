@@ -95,6 +95,7 @@ async def get_overall_results_keyboard(
 
     if has_more_lines:
         builder.button(text="⬇️ Показать еще", callback_data="next_line_results")
+        builder.button(text="📋 Показать все", callback_data=("show_all_lines_results"))
 
     builder.button(text="📚 Итоги по предметам", callback_data="subjects_results")
 

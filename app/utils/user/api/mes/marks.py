@@ -2,13 +2,14 @@
 #
 # SPDX-License-Identifier: MIT
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import json
 from loguru import logger
 
 from aiogram.fsm.context import FSMContext
 
 from app.keyboards import user as kb
-from app.config.config import BASE_QUARTER
+from app.config.config import DEFAULT_LONG_CACHE_TTL
 from app.utils.user.cache import redis_client
 from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import (
@@ -81,17 +82,25 @@ async def get_marks(user_id, date_object):
 
 
 @handle_api_error()
-async def get_marks_by_subject(user_id, subject_id):
+async def get_marks_by_subject(user_id, subject_id, need_period=False):
     logger.info(f"Getting marks by subject for user {user_id}, subject_id: {subject_id}")
     
-    # ! Need add date_object for cache after split marks by periods
+    current_period_cache_key = f"current_period:{user_id}:{subject_id}"
     
-    cache_key = f"marks_subject:{user_id}:{subject_id}"
-
-    cache_redis = await redis_client.get(cache_key)
-    if cache_redis:
-        logger.debug(f"Cache key: {cache_key}")
-        return cache_redis
+    if not need_period:
+        if await redis_client.exists(current_period_cache_key):
+            current_period = int(await redis_client.get(current_period_cache_key))
+            need_period = current_period
+        
+    cache_key = f"marks_subject:{user_id}:{subject_id}:{need_period}"
+        
+    if need_period:
+        cached = await redis_client.get(cache_key)
+        if cached:
+            logger.debug(f"Cache key: {cache_key}")
+            data = json.loads(cached)
+            return data['text'], data['periods']
+        
     
     api, user = await get_student(user_id)
     if not api or not user:
@@ -106,58 +115,89 @@ async def get_marks_by_subject(user_id, subject_id):
     if not marks_for_subject:
         logger.warning(f"No data returned for subject {subject_id}")
         return f'❌ <b>Ошибка</b>\n\nНе удалось получить оценки по предмету'
-    
-    text = f"🎓 <b>Оценки по {marks_for_subject.subject_name}</b>:\n\n"
 
+    subject_name_with_emoji = f'{await get_emoji_subject(marks_for_subject.subject_name)} {marks_for_subject.subject_name}'
+    
     if not marks_for_subject.periods:
         logger.info(f"No periods found for subject {marks_for_subject.subject_name}")
-        text += "    ❌ <i>У вас нет оценок</i>"
+        text = f"🎓 <b>Оценки по {subject_name_with_emoji}</b>\n    ❌ <i>У вас нет оценок</i>"
         return text
     
-    periods_count = 0
+    period_num = 0
     marks_count = 0
-
-    for period in marks_for_subject.periods:
-        if not period.title.startswith(str(BASE_QUARTER)):
-            logger.debug(f"Skipping period {period.title} (not starting with {BASE_QUARTER})")
-            continue
-        
-        periods_count += 1
-        period_marks_count = len(period.marks)
-        marks_count += period_marks_count
-        
-        logger.debug(f"Processing period {period.title}: {period_marks_count} marks, avg: {period.value}")
-        
-        text += (
-            f"📊 <i>Средний балл:</i> {period.value}\n"
-            f"🧮 <i>Всего оценок:</i> {len(period.marks)}\n"
-        )
-
-        for mark in period.marks:
-            mark_text = await get_mark_with_weight(mark.value, mark.weight)
-            date_str = f"📅 {mark.date.strftime('%d.%m.%Y')}" if mark.date else ""
-
-            control_form_name = (
-                f"📘 {mark.control_form_name}\n" if mark.control_form_name else ""
-            )
-            comment = f"💬 <code>{mark.comment}</code>\n" if mark.comment else ""
-
-            text += (
-                f"\n<blockquote>{mark_text}</blockquote>\n"
-                f"{date_str}\n"
-                f"{control_form_name}"
-                f"{comment}"
-                f"───────────────\n"
-            )
-
-        text += "\n"
-
-    logger.info(f"Successfully formatted marks for subject {marks_for_subject.subject_name}: {periods_count} periods, {marks_count} total marks")
+    now = datetime.now()
     
-    await redis_client.setex(cache_key, 7200, text)
+    
+    for period in marks_for_subject.periods:
+        period_num += 1
+        
+        if period.start < now < period.end:            
+            current_period = period_num
+            await redis_client.setex(current_period_cache_key, DEFAULT_LONG_CACHE_TTL, str(current_period))
+
+            if not need_period:
+                need_period = current_period
+        
+        
+        if need_period == period_num:
+            text = f"🎓 <b>Оценки по {subject_name_with_emoji}</b> ({period.title}):\n\n"
+        
+            period_marks_count = len(period.marks)
+            marks_count += period_marks_count
+            
+            logger.debug(f"Processing period {period.title}: {period_marks_count} marks, avg: {period.value}")
+            
+            marks = []
+            for mark in period.marks:
+                if mark.value.isdigit():
+                    mark_value = int(mark.value)
+                    weight = int(mark.weight)
+                    marks.extend([mark_value] * weight)
+            
+            text += (
+                f"📊 <i>Средний балл:</i> {period.value}\n"
+                f"🧮 <i>Всего оценок:</i> {len(marks)}\n"
+            )
+
+            for mark in period.marks:
+                mark_text = await get_mark_with_weight(mark.value, mark.weight)
+                date_str = f"📅 {mark.date.strftime('%d.%m.%Y')}" if mark.date else ""
+
+                control_form_name = (
+                    f"📘 {mark.control_form_name}\n" if mark.control_form_name else ""
+                )
+                comment = f"💬 <code>{mark.comment}</code>\n" if mark.comment else ""
+
+                text += (
+                    f"\n<blockquote>{mark_text}</blockquote>\n"
+                    f"{date_str}\n"
+                    f"{control_form_name}"
+                    f"{comment}"
+                    f"───────────────\n"
+                )
+
+            text += "\n"
+            
+    periods = [
+        {
+            'num': num, 
+            'title': period.title, 
+            'current': True if current_period == num else False
+        } 
+        for num, period in enumerate(marks_for_subject.periods, start=1)
+    ]
+
+    logger.info(f"Successfully formatted marks for subject {marks_for_subject.subject_name}: period {period_num}, {marks_count} total marks")
+    
+    cache_data = {
+        'text': text,
+        'periods': periods
+    }
+    
+    await redis_client.setex(cache_key, 7200, json.dumps(cache_data, ensure_ascii=False))
     logger.debug(f"Cached marks by subject for user {user_id} with TTL 7200s")
     
-    return text
+    return text, periods
 
 
 async def handle_marks_navigation(user_id: int, state: FSMContext, direction: str):

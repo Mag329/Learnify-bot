@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-BOT_VERSION = "1.9.1.7"
+BOT_VERSION = "1.9.1.8"
 
 
 # Bot info

@@ -9,6 +9,7 @@ import yaml
 from aiogram.fsm.context import FSMContext
 from loguru import logger
 from transliterate import translit
+import pymorphy3
 
 from app.config.config import (
     CHANNEL_ID,
@@ -22,6 +23,9 @@ from app.utils.database import (
     db,
 )
 from app.utils.user.cache import redis_client
+
+
+morph = pymorphy3.MorphAnalyzer()
 
 
 async def create_settings_definitions_if_not_exists():

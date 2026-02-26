@@ -455,9 +455,13 @@ async def get_results(
         )
 
         if target_period is not None:
-            marks = [
-                int(mark.value) for mark in target_period.marks if mark.value.isdigit()
-            ]
+            marks = []
+            for mark in target_period.marks:
+                if mark.value.isdigit():
+                    mark_value = int(mark.value)
+                    weight = int(mark.weight)
+                    marks.extend([mark_value] * weight)
+
             if marks:
                 subject_info["total_marks"] = len(marks)
                 subject_info["frequent_grade"] = mode(marks)

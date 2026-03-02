@@ -153,12 +153,12 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
             if subject_exists:
                 deeplink = f'<a href="{await generate_deeplink(f'subject-menu-{activity.lesson.subject_id}-{date_object.strftime("%d_%m_%Y")}')}">{await get_emoji_subject(activity.lesson.subject_name)} <b>{activity.lesson.subject_name}</b></a>'
             else:
-                deeplink = f'<b>{await get_emoji_subject(activity.lesson.subject_name)}</b>'
+                deeplink = f'<b>{await get_emoji_subject(activity.lesson.subject_name)} {activity.lesson.subject_name}</b>'
 
             subject_name = f'{EMOJI_NUMBERS.get(num, f"{num}️")} {deeplink}'
 
 
-            text += f'{subject_name} <i>({start_time}-{end_time})</i> {" <code>Н</code>" if activity.lesson.is_missed_lesson else ""} {" 🟢" if datetime.fromtimestamp(activity.begin_utc, tz=timezone.utc) < now and now < datetime.fromtimestamp(activity.end_utc, tz=timezone.utc) else ""}\n    📍 {activity.room_number}\n    👤 <i>{activity.lesson.teacher.first_name[0]}. {activity.lesson.teacher.middle_name[0]}. {activity.lesson.teacher.last_name}</i> {" - 🔄 замена" if activity.lesson.replaced else ""}\n\n'
+            text += f'{subject_name} <i>({start_time}-{end_time})</i> {" <code>Н</code>" if activity.lesson.is_missed_lesson else ""} {" 🟢" if datetime.fromtimestamp(activity.begin_utc, tz=timezone.utc) < now and now < datetime.fromtimestamp(activity.end_utc, tz=timezone.utc) else ""}\n    📍 {activity.room_number if activity.room_number else 'Н/Д'}\n    👤 <i>{activity.lesson.teacher.first_name[0]}. {activity.lesson.teacher.middle_name[0]}. {activity.lesson.teacher.last_name}</i> {" - 🔄 замена" if activity.lesson.replaced else ""}\n\n'
         
         elif activity.type == "BREAK" and settings.show_active_break_in_schedule:
             break_start = datetime.fromtimestamp(activity.begin_utc, tz=timezone.utc)
@@ -167,6 +167,10 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
             moscow_tz = pytz.timezone('Europe/Moscow')
             
             if break_start < now < break_end:
+                break_time = break_end - break_start
+                if break_time >= timedelta(minutes=45):
+                    continue
+                
                 break_start_time = break_start.astimezone(moscow_tz).strftime("%H:%M")
                 break_end_time = break_end.astimezone(moscow_tz).strftime("%H:%M")
                 

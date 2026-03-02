@@ -158,8 +158,8 @@ async def birthday_checker(bot: Bot):
             birthday = user.birthday
             if birthday is None:
                 continue
-
-            if birthday.date() == today:
+            
+            if birthday.day == today.day and birthday.month == today.month:
                 birthday_count += 1
                 logger.info(
                     f"Today is {user.first_name}'s (ID: {user.user_id}) birthday!"

@@ -6,7 +6,7 @@ BOT_VERSION = "1.9.2.3"
 
 
 # Bot info
-DEVELOPER = "@Mag329"
+DEVELOPER = "@LearnifySupport"
 DEVELOPER_SITE = "https://mag329.tech"
 
 BUG_REPORT_URL = "https://forms.gle/X55ZfURLosXAG5Yw5"

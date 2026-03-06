@@ -5,7 +5,7 @@
 
   <p>
     <img src="https://img.shields.io/github/languages/top/Mag329/Learnify-bot?style=flat-square" alt="Top language" />
-    <a href="https://wakatime.com/@Mag329/projects/ccorspbpjf?start=2025-07-18&end=2025-07-24">
+    <a href="https://wakatime.com/@Mag329/projects/ccorspbpjf">
     <img src="https://wakatime.com/badge/user/018b919c-8ec9-4a53-9254-f550cb396443/project/8c72416b-0bfb-4f0d-ae9d-2e9a92e45935.svg?style=flat-square" alt="wakatime" />
     </a>
   </p>
@@ -13,7 +13,6 @@
     <a href="https://t.me/Learnify_mes_bot">
       <img src="https://img.shields.io/badge/Бот-Learnify-0088CC?logo=telegram&logoColor=white&style=flat-square" alt="Telegram бот" />
     </a>
-    &nbsp;
     <a href="https://t.me/bot_learnify">
       <img src="https://img.shields.io/badge/Канал-Learnify_News-0088CC?logo=telegram&logoColor=white&style=flat-square" alt="Telegram Channel" />
     </a>
@@ -28,11 +27,11 @@
 ## Интерфейс
 <div align=center style="padding: 30px">
 
-  <img src="https://share.mag329.tech/api/shares/nMGN4WmiY8iCzMlw/files/8a39d2df-3bc2-4b44-b213-38960ba805ed" alt="Schedule" width="250" style="border-radius: 5%;" />
+  <img src="https://share.mag329.tech/api/shares/CVsowr7ELUgB5F3f/files/e21bbf92-db9d-4555-a03a-17fea696487d" alt="Schedule" width="1000" style="border-radius: 5%;" />
 
-  <img src="https://share.mag329.tech/api/shares/vvjLM6YQoK4jQOWB/files/f839ea1a-f9f4-4467-a761-c08f1c7a8167" alt="Schedule" width="250" style="border-radius: 5%;" />
+  <img src="https://share.mag329.tech/api/shares/CVsowr7ELUgB5F3f/files/6786f9aa-a956-43da-b0a5-cc8bbcd85975" alt="Schedule" width="1000" style="border-radius: 5%;" />
 
-  <img src="https://share.mag329.tech/api/shares/7BtPzYBOZTGJiVbt/files/bc7b8601-b575-4531-ab2f-e79c57bf51d2" alt="Schedule" width="250" style="border-radius: 5%;" />
+  <img src="https://share.mag329.tech/api/shares/CVsowr7ELUgB5F3f/files/a646d828-8ac9-404e-80f8-9f421543237d" alt="Schedule" width="1000" style="border-radius: 5%;" />
 </div>
 
 ---

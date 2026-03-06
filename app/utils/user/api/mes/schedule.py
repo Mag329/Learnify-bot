@@ -93,9 +93,10 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
             )
             lessons_count = 0
             for activity in schedule.activities:
-                if activity.type != "LESSON":
+                if activity.type == "LESSON" and activity.lesson and activity.lesson.lesson_education_type == 'OO':
+                    lessons_count += 1
+                else:
                     continue
-                lessons_count += 1
 
             if lessons_count <= 0:
                 empty_days += 1
@@ -124,6 +125,9 @@ async def get_schedule(user_id, date_object, short=True, direction="right"):
     
     for activity in schedule.activities:
         if activity.type == "LESSON":
+            if activity.lesson.lesson_education_type != 'OO' and not settings.show_additional_lessons_in_schedule:
+                continue
+            
             lessons_count += 1
             num += 1
 

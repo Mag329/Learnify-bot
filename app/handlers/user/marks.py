@@ -126,8 +126,6 @@ async def choose_period_marks_callback_handler(callback: CallbackQuery, state: F
     active_period = data.get("period_num", None)
     if not active_period:
         active_period = next((p['num'] for p in periods if p['current']), 1)
-        
-    print(active_period)
     
     if not periods:
         await callback.message.edit_text(

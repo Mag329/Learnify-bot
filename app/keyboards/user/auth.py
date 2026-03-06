@@ -4,7 +4,7 @@
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from app.config.config import LEARNIFY_WEB
+from app.config.config import BOT_CHANNEL, LEARNIFY_WEB
 
 start_command = InlineKeyboardMarkup(
     inline_keyboard=[
@@ -76,7 +76,7 @@ link_to_channel = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="🔗 Перейти в канал", url="https://t.me/bot_learnify"
+                text="🔗 Перейти в канал", url=BOT_CHANNEL
             )
         ]
     ]
@@ -86,7 +86,7 @@ check_subscribe = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="🔗 Перейти в канал", url="https://t.me/bot_learnify"
+                text="🔗 Перейти в канал", url=BOT_CHANNEL
             )
         ],
         [InlineKeyboardButton(text="🔎 Проверить", callback_data="check_subscription")],

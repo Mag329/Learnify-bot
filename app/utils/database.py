@@ -224,6 +224,7 @@ class Settings(Base):
     enable_homework_done_function = db.Column(db.Boolean, default=True)
     experimental_features = db.Column(db.Boolean, default=False)
     show_active_break_in_schedule = db.Column(db.Boolean, default=True)
+    show_additional_lessons_in_schedule = db.Column(db.Boolean, default=False)
 
     # Exremental features
     use_cache = db.Column(db.Boolean, default=False)

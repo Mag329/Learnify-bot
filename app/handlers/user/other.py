@@ -11,7 +11,7 @@ from elasticsearch import AsyncElasticsearch
 from loguru import logger
 
 from app.keyboards import user as kb
-from app.config.config import BOT_VERSION, DEVELOPER, DEVELOPER_SITE
+from app.config.config import BOT_VERSION, DEVELOPER, BOT_CHANNEL
 
 # from app.utils.user.utils import build_year_stats_query, get_student
 
@@ -24,7 +24,7 @@ async def about_bot(callback: CallbackQuery):
     
     logger.info(f"User {user_id} requested bot information")
     
-    text = f"🤖 <b>Информация о боте</b>\n    - 📦 <b>Версия бота:</b> {BOT_VERSION}\n    - 👨‍💻 <b>Разработчик:</b> {DEVELOPER}\n    - 🌐 <b>Сайт разработчика:</b> {DEVELOPER_SITE}"
+    text = f"🤖 <b>Информация о боте</b>\n    - 📦 <b>Версия бота:</b> {BOT_VERSION}\n    - 👨‍💻 <b>Разработчик:</b> {DEVELOPER}\n    - 📫 <b>Канал бота:</b> {BOT_CHANNEL}"
 
     await callback.answer()
     await callback.message.answer(

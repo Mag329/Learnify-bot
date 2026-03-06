@@ -12,6 +12,38 @@ from app.states.user.states import VisitState
 from app.utils.user.cache import redis_client
 from app.utils.user.decorators import handle_api_error
 from app.utils.user.utils import get_student
+from app.utils.misc import morph
+
+
+def format_time(time_string):
+    parts = time_string.split('.')
+    
+    hours = 0
+    minutes = 0
+    
+    for part in parts:
+        part = part.strip()
+        if 'ч' in part:
+            hours = int(part.replace('ч', '').strip())
+        elif 'мин' in part:
+            minutes = int(part.replace('мин', '').strip())
+            
+    hour_word = morph.parse('час')[0]
+    minute_word = morph.parse('минута')[0]
+    
+    # Склоняем слова в соответствии с числами
+    hour_form = hour_word.make_agree_with_number(hours).word
+    minute_form = minute_word.make_agree_with_number(minutes).word
+    
+    # Формируем результат
+    if hours > 0 and minutes > 0:
+        return f"{hours} {hour_form} {minutes} {minute_form}"
+    elif hours > 0:
+        return f"{hours} {hour_form}"
+    elif hours == 0 and minutes == 0:
+        return 'Н/Д'
+    else:
+        return f"{minutes} {minute_form}"
 
 
 @handle_api_error()
@@ -67,7 +99,7 @@ async def get_visits(user_id, date_object):
     for visit in visits:
         text += f'📅 <b>{visit.date.strftime("%d %B (%a)")}:</b>\n'
         for visit_in_day in visit.visits:
-            text += f"    🔒 {visit_in_day.in_}\n    ⏱️ {visit_in_day.duration}\n    🔓 {visit_in_day.out}\n\n"
+            text += f"    🔒 {visit_in_day.in_}\n    ⏱️ {format_time(visit_in_day.duration)}\n    🔓 {visit_in_day.out}\n\n"
 
     # Сохраняем в кэш
     await redis_client.setex(cache_key, 7200, text)

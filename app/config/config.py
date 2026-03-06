@@ -2,18 +2,15 @@
 #
 # SPDX-License-Identifier: MIT
 
-BOT_VERSION = "1.9.2.3"
+BOT_VERSION = "1.9.2.4"
 
 
 # Bot info
 DEVELOPER = "@LearnifySupport"
-DEVELOPER_SITE = "https://mag329.tech"
+BOT_CHANNEL = "https://t.me/bot_learnify"
 
 BUG_REPORT_URL = "https://forms.gle/X55ZfURLosXAG5Yw5"
 
-
-# Other
-BASE_QUARTER = 1
 
 
 # MESSAGES

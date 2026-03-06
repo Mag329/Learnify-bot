@@ -54,7 +54,7 @@
 - key: experimental_features
   label: Включить экспериментальные функции
   type: bool
-  ordering: 9
+  ordering: 30
   visible: true
   experimental: false
 
@@ -66,8 +66,15 @@
   experimental: true
 
 - key: show_active_break_in_schedule
-  label: Показывать активные перемены в расписании
+  label: Показывать активные перемены в расписание
   type: bool
   ordering: 8
+  visible: true
+  experimental: false
+
+- key: show_additional_lessons_in_schedule
+  label: Показывать дополнительные занятия в расписание
+  type: bool
+  ordering: 9
   visible: true
   experimental: false

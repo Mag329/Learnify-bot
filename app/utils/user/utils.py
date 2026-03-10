@@ -457,8 +457,9 @@ async def deep_links(message: Message, args, bot: Bot, state: FSMContext):
 
         await message.delete()
 
-        text = await get_marks_by_subject(message.from_user.id, subject_id=subject_id)
+        text, periods = await get_marks_by_subject(message.from_user.id, subject_id=subject_id)
 
+        await state.update_data(periods=periods)
         await state.update_data(subject_id=subject_id)
 
         await message.answer(text, reply_markup=kb.subject_marks)

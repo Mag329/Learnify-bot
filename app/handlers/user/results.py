@@ -235,7 +235,7 @@ async def show_all_lines_handler(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text(
             text=text,
             reply_markup=await kb.get_overall_results_keyboard(
-                period_type, period_number, has_more_lines=True
+                period_type, period_number, has_more_lines=False
             ),
         )
     else:
@@ -278,7 +278,14 @@ async def period_select_handler(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     await callback.answer()
 
-    period_number = int(callback.data.split("_")[2])
+    period_number = callback.data.split("_")[2]
+    if period_number == 'year':
+        period_number = -1
+    elif period_number.isdigit():
+        period_number = int(period_number)
+    else:
+        return
+    
     data = await state.get_data()
     period_type = data.get("period_type", "quarters")
 
@@ -336,25 +343,12 @@ async def current_period_info_handler(callback: CallbackQuery, state: FSMContext
     period_type = data.get("period_type", "quarters")
     period_number = data.get("period_number", 1)
 
-    period_names = {
-        "quarters": {
-            1: "1 четверть",
-            2: "2 четверть",
-            3: "3 четверть",
-            4: "4 четверть",
-        },
-        "half_years": {1: "1 полугодие", 2: "2 полугодие"},
-        "trimesters": {1: "1 триместр", 2: "2 триместр", 3: "3 триместр"},
-    }
-
-    current_period_name = period_names.get(period_type, {}).get(
-        period_number, f"Период {period_number}"
-    )
+    current_period_name = await get_period_display_name(period_type, period_number)
 
     logger.debug(f"User {user_id} requested info for {current_period_name}")
     
     await callback.answer(
-        f"📊 Вы просматриваете результаты за {current_period_name}", show_alert=True
+        f"📊 Вы просматриваете результаты за {current_period_name.capitalize()}", show_alert=True
     )
 
 

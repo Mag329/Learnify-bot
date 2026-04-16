@@ -54,11 +54,13 @@ async def get_marks_periods_keyboard(periods, active_period):
     for period in periods:
         builder.button(text=f"{'⚫️ ' if period['num'] == active_period else ''}{period['title']}", callback_data=f"select_period_marks_{period['num']}")
     
+    builder.button(text=f'{'⚫️ ' if active_period == -1 else ''}🗓️ Год', callback_data='select_period_marks_year')
+    
     if len(periods) <= 2:
-        builder.adjust(1, 1)
+        builder.adjust(1, 1, 1)
     elif len(periods) == 3:
-        builder.adjust(2, 1, 1)
+        builder.adjust(2, 1, 1, 1)
     elif len(periods) == 4:
-        builder.adjust(2, 2, 1)
+        builder.adjust(2, 2, 1, 1)
         
     return builder.as_markup()

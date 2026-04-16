@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-BOT_VERSION = "1.9.2.5"
+BOT_VERSION = "1.9.2.6"
 
 
 # Bot info
@@ -62,6 +62,7 @@ MINIO_INTERNAL_PORT = env.int("MINIO_INTERNAL_PORT", default=9000)
 MINIO_BUCKET_NAME = env.str("MINIO_BUCKET_NAME", default="learnify_bot")
 
 TG_PROXY = env.str("TG_PROXY", default=None)
+TELEGRAM_BOT_API = env.str("TELEGRAM_BOT_API", default=None)
 
 # Logs
 LOG_FILE = env.str("LOG_FILE", default="logs/bot.log")

@@ -153,7 +153,7 @@ async def get_notifications(user_id, all=True, is_checker=False):
                 action = (
                     "Новое домашние задание"
                     if n.event_type == "create_homework"
-                    else "Изменение домашних задания"
+                    else "Изменение домашнего задания"
                 )
                 detail = f"<b>{action}:</b>\n            <i><code>{n.new_hw_description.rstrip()}</code></i>"
                 processed_types[n.event_type] = processed_types.get(n.event_type, 0) + 1

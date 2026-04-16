@@ -82,7 +82,7 @@ async def get_marks(user_id, date_object):
 
 
 @handle_api_error()
-async def get_marks_by_subject(user_id, subject_id, need_period=False):
+async def get_marks_by_subject(user_id, subject_id, need_period=False, all_=False):
     logger.info(f"Getting marks by subject for user {user_id}, subject_id: {subject_id}")
     
     current_period_cache_key = f"current_period:{user_id}:{subject_id}"
@@ -94,7 +94,7 @@ async def get_marks_by_subject(user_id, subject_id, need_period=False):
         
     cache_key = f"marks_subject:{user_id}:{subject_id}:{need_period}"
         
-    if need_period:
+    if need_period and not all_:
         cached = await redis_client.get(cache_key)
         if cached:
             logger.debug(f"Cache key: {cache_key}")
@@ -105,7 +105,7 @@ async def get_marks_by_subject(user_id, subject_id, need_period=False):
     api, user = await get_student(user_id)
     if not api or not user:
         logger.error(f"Failed to get student data for user {user_id}")
-        return f'❌ <b>Ошибка</b>\n\nНе удалось получить данные ученика'
+        return f'❌ <b>Ошибка</b>\n\nНе удалось получить данные ученика', []
 
     logger.debug(f"Fetching marks for subject {subject_id} from API")
     marks_for_subject = await api.get_subject_marks_for_subject(
@@ -114,21 +114,27 @@ async def get_marks_by_subject(user_id, subject_id, need_period=False):
 
     if not marks_for_subject:
         logger.warning(f"No data returned for subject {subject_id}")
-        return f'❌ <b>Ошибка</b>\n\nНе удалось получить оценки по предмету'
+        return f'❌ <b>Ошибка</b>\n\nНе удалось получить оценки по предмету', []
 
     subject_name_with_emoji = f'{await get_emoji_subject(marks_for_subject.subject_name)} {marks_for_subject.subject_name}'
     
     if not marks_for_subject.periods:
         logger.info(f"No periods found for subject {marks_for_subject.subject_name}")
         text = f"🎓 <b>Оценки по {subject_name_with_emoji}</b>\n    ❌ <i>У вас нет оценок</i>"
-        return text
+        return text, []
     
     period_num = 0
-    marks_count = 0
     now = datetime.now()
     
     
+    text = f"🎓 <b>Оценки по {subject_name_with_emoji}</b>\n\n" if all_ else ''
+    
+    all_marks = []
+    marks_count_all = 0
+    
     for period in marks_for_subject.periods:
+        marks_count = 0
+        
         period_num += 1
         
         if period.start < now < period.end:            
@@ -139,24 +145,28 @@ async def get_marks_by_subject(user_id, subject_id, need_period=False):
                 need_period = current_period
         
         
-        if need_period == period_num:
-            text = f"🎓 <b>Оценки по {subject_name_with_emoji}</b> ({period.title}):\n\n"
-        
+        if need_period == period_num or all_:
+            if not all_:
+                text = f"🎓 <b>Оценки по {subject_name_with_emoji}</b> ({period.title}):\n\n"
+            else:
+                text += f'<b>{period.title}:</b>\n\n'
+                
+                
             period_marks_count = len(period.marks)
             marks_count += period_marks_count
+            marks_count_all += period_marks_count
             
             logger.debug(f"Processing period {period.title}: {period_marks_count} marks, avg: {period.value}")
             
-            marks = []
             for mark in period.marks:
                 if mark.value.isdigit():
                     mark_value = int(mark.value)
                     weight = int(mark.weight)
-                    marks.extend([mark_value] * weight)
+                    all_marks.extend([mark_value] * weight)
             
             text += (
                 f"📊 <i>Средний балл:</i> {period.value}\n"
-                f"🧮 <i>Всего оценок:</i> {len(marks)}\n"
+                f"🧮 <i>Всего оценок:</i> {marks_count}\n"
             )
 
             for mark in period.marks:
@@ -186,6 +196,12 @@ async def get_marks_by_subject(user_id, subject_id, need_period=False):
         } 
         for num, period in enumerate(marks_for_subject.periods, start=1)
     ]
+    
+    if all_:
+        text += (
+                f"📊 <i>Средний балл за год:</i> {period.value}\n"
+                f"🧮 <i>Всего оценок за год:</i> {marks_count_all}\n\n"
+            )
 
     logger.info(f"Successfully formatted marks for subject {marks_for_subject.subject_name}: period {period_num}, {marks_count} total marks")
     

@@ -5,6 +5,8 @@
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
+from app.utils.user.api.mes.results import get_period_display_name
+
 get_results = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="🏆 Подвести итоги", callback_data="results")],
@@ -47,32 +49,26 @@ async def get_periods_keyboard(period_type, available_periods=None):
                 text=f"⚫️ {label}", callback_data=f"period_not_available_{period_num}"
             )
 
+    builder.button(text='🗓️ Год', callback_data="choose_period_year")
+    
     builder.button(text="↪️ Назад", callback_data="back_to_menu")
 
     if len(all_periods) <= 2:
-        builder.adjust(1, 1)
+        builder.adjust(2, 1)
     elif len(all_periods) == 3:
-        builder.adjust(2, 1, 1)
+        builder.adjust(2, 1, 1, 1)
     elif len(all_periods) == 4:
-        builder.adjust(2, 2, 1)
+        builder.adjust(2, 2, 1, 1)
 
     return builder.as_markup()
 
 
-async def get_results_keyboard(period_system, current_period):
+async def get_results_keyboard(period_type, current_period):
     """Генерирует основную клавиатуру для результатов"""
     builder = InlineKeyboardBuilder()
 
     builder.button(text="⬅️", callback_data="results_left")
     builder.button(text="➡️", callback_data="results_right")
-
-    period_names = {
-        "quarters": "четверть",
-        "half_years": "полугодие",
-        "trimesters": "триместр",
-    }
-
-    period_label = period_names.get(period_system, "период")
 
     builder.button(text="♻️ Обновить", callback_data="refresh_results")
     builder.button(text="🏆 Общие итоги", callback_data="overall_results")
@@ -80,7 +76,7 @@ async def get_results_keyboard(period_system, current_period):
     # Информация о текущем периоде
     builder.button(text=f"📅 Сменить", callback_data="choose_period")
     builder.button(
-        text=f"📍 {current_period} {period_label}", callback_data="current_period_info"
+        text=f"📍 {(await get_period_display_name(period_type, current_period)).capitalize()}", callback_data="current_period_info"
     )
     builder.button(text="↪️ Назад", callback_data="back_to_menu")
 
@@ -99,17 +95,9 @@ async def get_overall_results_keyboard(
 
     builder.button(text="📚 Итоги по предметам", callback_data="subjects_results")
 
-    period_names = {
-        "quarters": "четверть",
-        "half_years": "полугодие",
-        "trimesters": "триместр",
-    }
-
-    period_label = period_names.get(period_type, "период")
-
     builder.button(text=f"📅 Сменить", callback_data="choose_period")
     builder.button(
-        text=f"📍 {current_period} {period_label}", callback_data="current_period_info"
+        text=f"📍 {(await get_period_display_name(period_type, current_period)).capitalize()}", callback_data="current_period_info"
     )
     builder.button(text="♻️ Обновить", callback_data="refresh_results")
     builder.button(text="↪️ Назад", callback_data="back_to_menu")

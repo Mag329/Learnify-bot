@@ -90,15 +90,26 @@ async def back_to_marks_callback_handler(callback: CallbackQuery, state: FSMCont
 @router.callback_query(F.data.startswith("select_subject_marks_"))
 async def subject_marks_callback_handler(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
-    data = callback.data.split("_")
-    subject_id = int(data[3])
-    new_message = True if data[-1] == "new" else False
+    data_msg = callback.data.split("_")
+    subject_id = int(data_msg[3])
+    new_message = True if data_msg[-1] == "new" else False
 
     await state.update_data(subject_id=subject_id)
     
+    data = await state.get_data()
+    periods = data.get("periods", None)
+    active_period = data.get("period_num", False)
+    if not active_period and periods:
+        active_period = next((p['num'] for p in periods if p['current']), 1)
+    
     logger.info(f"User {user_id} requested marks for subject_id={subject_id}")
 
-    text, periods = await get_marks_by_subject(user_id, subject_id)
+    if active_period == -1:
+        all_ = True
+    else:
+        all_ = False
+    
+    text, periods = await get_marks_by_subject(user_id, subject_id, active_period, all_)
 
     await state.update_data(periods=periods)
     
@@ -142,7 +153,14 @@ async def choose_period_marks_callback_handler(callback: CallbackQuery, state: F
 @router.callback_query(F.data.startswith("select_period_marks_"))
 async def period_marks_callback_handler(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
-    period_num = int(callback.data.split("_")[-1])
+    command = callback.data.split("_")[-1]
+    
+    if command != 'year':
+        period_num = int(command)
+        all_ = False
+    else:
+        period_num = -1
+        all_ = True
     
     data = await state.get_data()
     subject_id = data.get("subject_id", None)
@@ -152,7 +170,7 @@ async def period_marks_callback_handler(callback: CallbackQuery, state: FSMConte
     
     await callback.answer()
 
-    text, periods = await get_marks_by_subject(user_id, subject_id, period_num)
+    text, periods = await get_marks_by_subject(user_id, subject_id, period_num, all_)
     
     await state.update_data(periods=periods)
     

@@ -228,8 +228,9 @@ async def student_book_handler(callback: CallbackQuery):
 
             file_name = book.file.split("/")[-1]
             file = BufferedInputFile(data, filename=file_name)
-            
+            temp_message = await callback.message.answer(f"Загрузка...")
             await callback.message.answer_document(document=file)
+            await temp_message.delete()
             logger.success(f"Book sent to user {user_id}, file: {file_name}")
 
         except S3Error as e:

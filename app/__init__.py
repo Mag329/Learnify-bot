@@ -8,6 +8,7 @@ import locale
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiohttp_socks import ProxyConnector
@@ -78,7 +79,11 @@ async def main():
     polling_task = None
 
     # Настройка прокси
-    if TG_PROXY:
+    if TELEGRAM_BOT_API:
+        api = TelegramAPIServer.from_base(TELEGRAM_BOT_API)
+        session = AiohttpSession(api=api)
+    
+    elif TG_PROXY:
         logger.info(f"Using proxy: {TG_PROXY}")
         if TG_PROXY.startswith("http"):
             session = AiohttpSession(proxy=TG_PROXY)

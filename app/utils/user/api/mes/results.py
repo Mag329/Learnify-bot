@@ -239,20 +239,23 @@ async def get_current_period(api, user, period_type):
 
 
 async def get_period_display_name(period_type, period_number):
-    period_names = {
-        "quarters": {
-            1: "1 четверть",
-            2: "2 четверть",
-            3: "3 четверть",
-            4: "4 четверть",
-        },
-        "half_years": {1: "1 полугодие", 2: "2 полугодие"},
-        "trimesters": {1: "1 триместр", 2: "2 триместр", 3: "3 триместр"},
-    }
+    if period_number == -1:
+        name = 'год'
+    else:
+        period_names = {
+            "quarters": {
+                1: "1 четверть",
+                2: "2 четверть",
+                3: "3 четверть",
+                4: "4 четверть",
+            },
+            "half_years": {1: "1 полугодие", 2: "2 полугодие"},
+            "trimesters": {1: "1 триместр", 2: "2 триместр", 3: "3 триместр"},
+        }
 
-    name = period_names.get(period_type, {}).get(
-        period_number, f"Период {period_number}"
-    )
+        name = period_names.get(period_type, {}).get(
+            period_number, f"Период {period_number}"
+        )
     logger.debug(f"Period display name for {period_type} {period_number}: {name}")
     return name
 
@@ -411,13 +414,19 @@ async def get_results(
         
     logger.debug(f"Found {len(periods)} periods")
 
-    if period_number > len(periods):
+    if period_number == -1:
+        # За весь учебный год
+        period_start = periods[0][0]
+        period_end = periods[-1][1]
+        logger.info(f"Full year period: {period_start} - {period_end}")
+
+    elif period_number > len(periods) or period_number < 1:
         error_msg = f"Запрошен период {period_number}, но доступно только {len(periods)} периодов"
         logger.error(error_msg)
         raise ValueError(error_msg)
-
-    period_start, period_end = periods[period_number - 1]
-    logger.info(f"Period {period_number}: {period_start} - {period_end}")
+    else:
+        period_start, period_end = periods[period_number - 1]
+        logger.info(f"Period {period_number}: {period_start} - {period_end}")
 
     # Определение названия периода
     if detected_period_type in period_name_templates:
@@ -450,32 +459,41 @@ async def get_results(
             "mark": "Н/Д",
         }
 
-        target_period = next(
-            (p for p in subject_marks_info.periods if p.title == target_title), None
-        )
+        if period_number == -1:
+            target_periods = [p for p in subject_marks_info.periods if p]
+        else:
+            target_period = next(
+                (p for p in subject_marks_info.periods if p and p.title == target_title),
+                None
+            )
+            target_periods = [target_period] if target_period else []
 
-        if target_period is not None:
-            marks = []
+        all_marks = []
+        
+        for target_period in target_periods:
+            if not target_period:
+                continue
+            
             for mark in target_period.marks:
                 if mark.value.isdigit():
                     mark_value = int(mark.value)
                     weight = int(mark.weight)
-                    marks.extend([mark_value] * weight)
+                    all_marks.extend([mark_value] * weight)
+        
+        if all_marks:
+            subject_info["total_marks"] = len(all_marks)
+            subject_info["frequent_grade"] = mode(all_marks)
+            subject_info["marks_count"] = dict(Counter(all_marks))
+            marks_by_grade.update(all_marks)
+            subject_info["mark"] = round(sum(all_marks) / len(all_marks), 2)
 
-            if marks:
-                subject_info["total_marks"] = len(marks)
-                subject_info["frequent_grade"] = mode(marks)
-                subject_info["marks_count"] = dict(Counter(marks))
-                marks_by_grade.update(marks)
-                subject_info["mark"] = target_period.value
+            global_marks.extend(all_marks)
 
-                global_marks.extend(marks)
-
-                if len(marks) > max_marks_subject_amount:
-                    max_marks_subject_name = subject.subject_name
-                    max_marks_subject_amount = len(marks)
-                
-                logger.debug(f"Subject {subject.subject_name}: {len(marks)} marks, avg grade {target_period.value}")
+            if len(all_marks) > max_marks_subject_amount:
+                max_marks_subject_name = subject.subject_name
+                max_marks_subject_amount = len(all_marks)
+            
+            logger.debug(f"Subject {subject.subject_name}: {len(all_marks)} marks, avg grade {target_period.value}")
 
             subject_data.append(subject_info)
             
@@ -733,12 +751,12 @@ async def results_format(
     marks_emoji = {5: "5️⃣", 4: "4️⃣", 3: "3️⃣", 2: "2️⃣"}
 
     period_display = (
-        await get_period_display_name(period_type, period_number)
+        (await get_period_display_name(period_type, period_number)).capitalize()
         if period_type
         else f"{period_number} период"
     )
     logger.debug(f"Period display: {period_display}")
-
+    
     if state == "subjects":
         if subject is None or subject not in range(len(data["subjects"])):
             logger.error(f"Invalid subject index: {subject}, available: 0-{len(data['subjects'])-1}")

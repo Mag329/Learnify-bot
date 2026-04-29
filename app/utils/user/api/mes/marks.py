@@ -199,7 +199,7 @@ async def get_marks_by_subject(user_id, subject_id, need_period=False, all_=Fals
     
     if all_:
         text += (
-                f"📊 <i>Средний балл за год:</i> {period.value}\n"
+                f"📊 <i>Средний балл за год:</i> {(sum(all_marks) / len(all_marks)):.2f}\n"
                 f"🧮 <i>Всего оценок за год:</i> {marks_count_all}\n\n"
             )
 
